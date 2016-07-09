@@ -1,0 +1,7 @@
+[package]
+name = "ai_2048"
+version = "0.1.0"
+authors = ["Victor Gavrish <victor_gavrish@epam.com>"]
+
+[dependencies]
+rand = "*"
