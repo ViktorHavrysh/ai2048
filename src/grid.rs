@@ -8,17 +8,20 @@
 //! standard game of 2048 is `65,536`, and that is represented by the value `16`, so a byte is
 //! more than enough storage for a single cell. `0` stays a `0`.
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Hash, Copy, Clone, Debug)]
 pub struct Grid {
     grid: [[u8; 4]; 4],
 }
 
+#[derive(Eq, PartialEq, Hash, Copy, Clone, Debug)]
 pub enum Move {
     Left,
     Right,
     Up,
     Down,
 }
+
+pub static MOVES: &'static [Move] = &[ Move::Left, Move::Right, Move::Up, Move::Down ];
 
 impl Grid {
     /// Creates a new `Grid` from an array of human input.
@@ -55,13 +58,14 @@ impl Grid {
         &self.grid
     }
 
-    /// Returns a reference of the inner representation of the `Grid` as a flat array of `u8`.
+    /// Gets a reference to the inner representation of the `Grid` as a flat array of `u8`.
     pub fn flatten(&self) -> &[u8; 16] {
         use std::mem;
         unsafe { mem::transmute(&self.grid) }
     }
 
-    /// Adds a random tile (10% a `2`, 90% a `4`) to a random empty cell on the board.
+    /// Adds a random tile (10% of times a `2`, 90% of times a `4`) to a random empty cell on the
+    /// board.
     pub fn add_random_tile(&self) -> Grid {
         use std::mem;
         use rand;
@@ -74,11 +78,10 @@ impl Grid {
         let empty_cell_count = flat.iter().filter(|&&v| v == 0).count();
 
         let create_four = rng.gen_weighted_bool(10);
-        let value = if create_four {1} else {2};
+        let value = if create_four { 1 } else { 2 };
         let mut position = rng.gen_range(0, empty_cell_count);
 
-        for x in 0..16
-        {
+        for x in 0..16 {
             if flat[x] != 0 {
                 continue;
             }
@@ -91,28 +94,26 @@ impl Grid {
             position = position - 1;
         }
 
-        let grid: [[u8; 4]; 4] = unsafe { mem::transmute(flat) };
-
-        Grid { grid: grid }
+        Grid { grid: unsafe { mem::transmute(flat) } }
     }
 
     /// Returns a `Grid` that would result from making a certain `Move` in the current state.
     pub fn make_move(&self, mv: Move) -> Grid {
         match mv {
-            Move::Left  => self.move_left(),
+            Move::Left => self.move_left(),
             Move::Right => self.move_right(),
-            Move::Up    => self.move_up(),
-            Move::Down  => self.move_down()
+            Move::Up => self.move_up(),
+            Move::Down => self.move_down()
         }
     }
 
-    /// Returns all possible `Grid`s that can result of the computer spawning a `2` in a random
+    /// Returns all possible `Grid`s that can result from the computer spawning a `2` in a random
     /// empty cell.
     pub fn get_possible_grids_with2(&self) -> Vec<Grid> {
         self.get_possible_grids(1)
     }
 
-    /// Returns all possible `Grid`s that can result of the computer spawning a `2` in a random
+    /// Returns all possible `Grid`s that can result from the computer spawning a `2` in a random
     /// empty cell.
     pub fn get_possible_grids_with4(&self) -> Vec<Grid> {
         self.get_possible_grids(2)
@@ -325,8 +326,9 @@ fn parse_to_logspace(n: u32) -> Option<u8> {
         _ => (n as f64).log2()
     };
 
-    if (log.round() - log) < 1e-10 {
-        Some(log.round() as u8)
+    let rounded = log.round();
+    if (rounded - log) < 1e-10 {
+        Some(rounded as u8)
     } else {
         None
     }
@@ -338,12 +340,14 @@ mod tests {
 
     #[test]
     fn can_create_empty_grid() {
-        let expected = Grid{ grid: [
+        let expected = Grid {
+            grid: [
                 [0, 0, 0, 0],
                 [0, 0, 0, 0],
                 [0, 0, 0, 0],
                 [0, 0, 0, 0],
-            ] };
+            ]
+        };
 
         let actual = Grid::empty();
 
@@ -353,18 +357,18 @@ mod tests {
     #[test]
     fn can_create_grid_from_human_input() {
         let expected: [[u8; 4]; 4] = [
-                [0, 1, 2, 3],
-                [4, 5, 6, 7],
-                [8, 9, 10, 11],
-                [12, 13, 14, 15]
-            ];
+            [0, 1, 2, 3],
+            [4, 5, 6, 7],
+            [8, 9, 10, 11],
+            [12, 13, 14, 15]
+        ];
 
         let actual = Grid::new(&[
-                [0, 2, 4, 8],
-                [16, 32, 64, 128],
-                [256, 512, 1024, 2048],
-                [4096, 8192, 16384, 32768]
-            ]);
+            [0, 2, 4, 8],
+            [16, 32, 64, 128],
+            [256, 512, 1024, 2048],
+            [4096, 8192, 16384, 32768]
+        ]);
 
         assert!(actual.is_some());
         assert_eq!(&expected, actual.unwrap().get_grid());
@@ -373,11 +377,11 @@ mod tests {
     #[test]
     fn can_return_none_on_invalid_input() {
         let result = Grid::new(&[
-                [0, 1, 2, 3],
-                [4, 5, 6, 7],
-                [8, 9, 10, 11],
-                [12, 13, 14, 15]
-            ]);
+            [0, 1, 2, 3],
+            [4, 5, 6, 7],
+            [8, 9, 10, 11],
+            [12, 13, 14, 15]
+        ]);
 
         assert!(result.is_none());
     }
@@ -399,11 +403,11 @@ mod tests {
     fn can_to_string() {
         // arrange
         let grid = Grid::new(&[
-                [0, 2, 4, 8],
-                [16, 32, 64, 128],
-                [256, 512, 1024, 2048],
-                [4096, 8192, 16384, 32768]
-            ]).unwrap();
+            [0, 2, 4, 8],
+            [16, 32, 64, 128],
+            [256, 512, 1024, 2048],
+            [4096, 8192, 16384, 32768]
+        ]).unwrap();
 
         let mut expected = String::new();
         expected.push_str("     0     2     4     8\n");
@@ -422,17 +426,17 @@ mod tests {
     fn can_make_move_left() {
         // arrange
         let grid = Grid::new(&[
-                [2, 2, 4, 4],
-                [0, 2, 2, 0],
-                [0, 2, 2, 2],
-                [2, 0, 0, 2]
-            ]).unwrap();
+            [2, 2, 4, 4],
+            [0, 2, 2, 0],
+            [0, 2, 2, 2],
+            [2, 0, 0, 2]
+        ]).unwrap();
         let expected = Grid::new(&[
-                [4, 8, 0, 0],
-                [4, 0, 0, 0],
-                [4, 2, 0, 0],
-                [4, 0, 0, 0]
-            ]).unwrap();
+            [4, 8, 0, 0],
+            [4, 0, 0, 0],
+            [4, 2, 0, 0],
+            [4, 0, 0, 0]
+        ]).unwrap();
 
         // act
         let actual = grid.make_move(Move::Left);
@@ -445,17 +449,17 @@ mod tests {
     fn can_make_move_right() {
         // arrange
         let grid = Grid::new(&[
-                [2, 2, 4, 4],
-                [0, 2, 2, 0],
-                [0, 2, 2, 2],
-                [2, 0, 0, 2]
-            ]).unwrap();
+            [2, 2, 4, 4],
+            [0, 2, 2, 0],
+            [0, 2, 2, 2],
+            [2, 0, 0, 2]
+        ]).unwrap();
         let expected = Grid::new(&[
-                [0, 0, 4, 8],
-                [0, 0, 0, 4],
-                [0, 0, 2, 4],
-                [0, 0, 0, 4]
-            ]).unwrap();
+            [0, 0, 4, 8],
+            [0, 0, 0, 4],
+            [0, 0, 2, 4],
+            [0, 0, 0, 4]
+        ]).unwrap();
 
         // act
         let actual = grid.make_move(Move::Right);
@@ -468,17 +472,17 @@ mod tests {
     fn can_make_move_up() {
         // arrange
         let grid = Grid::new(&[
-                [2, 2, 4, 4],
-                [0, 2, 2, 0],
-                [0, 2, 2, 2],
-                [2, 0, 0, 2]
-            ]).unwrap();
+            [2, 2, 4, 4],
+            [0, 2, 2, 0],
+            [0, 2, 2, 2],
+            [2, 0, 0, 2]
+        ]).unwrap();
         let expected = Grid::new(&[
-                [4, 4, 4, 4],
-                [0, 2, 4, 4],
-                [0, 0, 0, 0],
-                [0, 0, 0, 0]
-            ]).unwrap();
+            [4, 4, 4, 4],
+            [0, 2, 4, 4],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0]
+        ]).unwrap();
 
         // act
         let actual = grid.make_move(Move::Up);
@@ -491,17 +495,17 @@ mod tests {
     fn can_make_move_down() {
         // arrange
         let grid = Grid::new(&[
-                [2, 2, 4, 4],
-                [0, 2, 2, 0],
-                [0, 2, 2, 2],
-                [2, 0, 0, 2]
-            ]).unwrap();
+            [2, 2, 4, 4],
+            [0, 2, 2, 0],
+            [0, 2, 2, 2],
+            [2, 0, 0, 2]
+        ]).unwrap();
         let expected = Grid::new(&[
-                [0, 0, 0, 0],
-                [0, 0, 0, 0],
-                [0, 2, 4, 4],
-                [4, 4, 4, 4]
-            ]).unwrap();
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 2, 4, 4],
+            [4, 4, 4, 4]
+        ]).unwrap();
 
         // act
         let actual = grid.make_move(Move::Down);
@@ -514,37 +518,37 @@ mod tests {
     fn can_get_possible_grids_with2() {
         // arrange
         let grid = Grid::new(&[
-                [0, 8, 8, 8],
-                [8, 8, 0, 8],
-                [8, 8, 8, 0],
-                [8, 0, 8, 8]
-            ]).unwrap();
+            [0, 8, 8, 8],
+            [8, 8, 0, 8],
+            [8, 8, 8, 0],
+            [8, 0, 8, 8]
+        ]).unwrap();
 
         let expected = vec![
-            Grid::new(&[
-                [2, 8, 8, 8],
-                [8, 8, 0, 8],
-                [8, 8, 8, 0],
-                [8, 0, 8, 8]
-            ]).unwrap(),
-            Grid::new(&[
-                [0, 8, 8, 8],
-                [8, 8, 2, 8],
-                [8, 8, 8, 0],
-                [8, 0, 8, 8]
-            ]).unwrap(),
-            Grid::new(&[
-                [0, 8, 8, 8],
-                [8, 8, 0, 8],
-                [8, 8, 8, 2],
-                [8, 0, 8, 8]
-            ]).unwrap(),
-            Grid::new(&[
-                [0, 8, 8, 8],
-                [8, 8, 0, 8],
-                [8, 8, 8, 0],
-                [8, 2, 8, 8]
-            ]).unwrap()];
+        Grid::new(&[
+            [2, 8, 8, 8],
+            [8, 8, 0, 8],
+            [8, 8, 8, 0],
+            [8, 0, 8, 8]
+        ]).unwrap(),
+        Grid::new(&[
+            [0, 8, 8, 8],
+            [8, 8, 2, 8],
+            [8, 8, 8, 0],
+            [8, 0, 8, 8]
+        ]).unwrap(),
+        Grid::new(&[
+            [0, 8, 8, 8],
+            [8, 8, 0, 8],
+            [8, 8, 8, 2],
+            [8, 0, 8, 8]
+        ]).unwrap(),
+        Grid::new(&[
+            [0, 8, 8, 8],
+            [8, 8, 0, 8],
+            [8, 8, 8, 0],
+            [8, 2, 8, 8]
+        ]).unwrap()];
 
         // act
         let actual = grid.get_possible_grids_with2();
@@ -557,37 +561,37 @@ mod tests {
     fn can_get_possible_grids_with4() {
         // arrange
         let grid = Grid::new(&[
-                [0, 8, 8, 8],
-                [8, 8, 0, 8],
-                [8, 8, 8, 0],
-                [8, 0, 8, 8]
-            ]).unwrap();
+            [0, 8, 8, 8],
+            [8, 8, 0, 8],
+            [8, 8, 8, 0],
+            [8, 0, 8, 8]
+        ]).unwrap();
 
         let expected = vec![
-            Grid::new(&[
-                [4, 8, 8, 8],
-                [8, 8, 0, 8],
-                [8, 8, 8, 0],
-                [8, 0, 8, 8]
-            ]).unwrap(),
-            Grid::new(&[
-                [0, 8, 8, 8],
-                [8, 8, 4, 8],
-                [8, 8, 8, 0],
-                [8, 0, 8, 8]
-            ]).unwrap(),
-            Grid::new(&[
-                [0, 8, 8, 8],
-                [8, 8, 0, 8],
-                [8, 8, 8, 4],
-                [8, 0, 8, 8]
-            ]).unwrap(),
-            Grid::new(&[
-                [0, 8, 8, 8],
-                [8, 8, 0, 8],
-                [8, 8, 8, 0],
-                [8, 4, 8, 8]
-            ]).unwrap()];
+        Grid::new(&[
+            [4, 8, 8, 8],
+            [8, 8, 0, 8],
+            [8, 8, 8, 0],
+            [8, 0, 8, 8]
+        ]).unwrap(),
+        Grid::new(&[
+            [0, 8, 8, 8],
+            [8, 8, 4, 8],
+            [8, 8, 8, 0],
+            [8, 0, 8, 8]
+        ]).unwrap(),
+        Grid::new(&[
+            [0, 8, 8, 8],
+            [8, 8, 0, 8],
+            [8, 8, 8, 4],
+            [8, 0, 8, 8]
+        ]).unwrap(),
+        Grid::new(&[
+            [0, 8, 8, 8],
+            [8, 8, 0, 8],
+            [8, 8, 8, 0],
+            [8, 4, 8, 8]
+        ]).unwrap()];
 
         // act
         let actual = grid.get_possible_grids_with4();
