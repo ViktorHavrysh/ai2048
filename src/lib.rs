@@ -2,6 +2,5 @@
 
 extern crate rand;
 
-mod tests;
 mod grid;
 mod search_tree;

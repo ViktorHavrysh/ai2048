@@ -21,12 +21,12 @@ pub enum Move {
     Down,
 }
 
-pub static MOVES: &'static [Move] = &[ Move::Left, Move::Right, Move::Up, Move::Down ];
+pub static MOVES: [Move; 4] = [Move::Left, Move::Right, Move::Up, Move::Down];
 
 impl Grid {
-    /// Creates a new `Grid` from an array of human input.
+    /// Creates a new `Grid` from an array of human-looking numbers.
     pub fn new(grid: &[[u32; 4]; 4]) -> Option<Grid> {
-        let mut result = [[0u8; 4]; 4];
+        let mut result = [[0; 4]; 4];
 
         for x in 0..4 {
             for y in 0..4 {
@@ -68,8 +68,7 @@ impl Grid {
     /// board.
     pub fn add_random_tile(&self) -> Grid {
         use std::mem;
-        use rand;
-        use rand::Rng;
+        use rand::{self, Rng};
 
         let mut rng = rand::thread_rng();
 
@@ -78,7 +77,11 @@ impl Grid {
         let empty_cell_count = flat.iter().filter(|&&v| v == 0).count();
 
         let create_four = rng.gen_weighted_bool(10);
-        let value = if create_four { 1 } else { 2 };
+        let value = if create_four {
+            1
+        } else {
+            2
+        };
         let mut position = rng.gen_range(0, empty_cell_count);
 
         for x in 0..16 {
@@ -103,7 +106,7 @@ impl Grid {
             Move::Left => self.move_left(),
             Move::Right => self.move_right(),
             Move::Up => self.move_up(),
-            Move::Down => self.move_down()
+            Move::Down => self.move_down(),
         }
     }
 
@@ -314,7 +317,7 @@ impl ToString for Grid {
 fn get_human(n: u8) -> u32 {
     match n {
         0 => 0,
-        _ => 1 << n
+        _ => 1 << n,
     }
 }
 
@@ -323,7 +326,7 @@ fn parse_to_logspace(n: u32) -> Option<u8> {
 
     let log = match n {
         0 => 0f64,
-        _ => (n as f64).log2()
+        _ => (n as f64).log2(),
     };
 
     let rounded = log.round();
@@ -339,6 +342,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_create_empty_grid() {
         let expected = Grid {
             grid: [
@@ -355,6 +359,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_create_grid_from_human_input() {
         let expected: [[u8; 4]; 4] = [
             [0, 1, 2, 3],
@@ -375,6 +380,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_return_none_on_invalid_input() {
         let result = Grid::new(&[
             [0, 1, 2, 3],
@@ -390,8 +396,7 @@ mod tests {
     fn can_add_random_tile() {
         let grid = Grid::empty().add_random_tile();
 
-        let count = grid
-            .flatten()
+        let count = grid.flatten()
             .iter()
             .filter(|&&v| v == 1 || v == 2)
             .count();
@@ -400,6 +405,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_to_string() {
         // arrange
         let grid = Grid::new(&[
@@ -423,6 +429,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_make_move_left() {
         // arrange
         let grid = Grid::new(&[
@@ -446,6 +453,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_make_move_right() {
         // arrange
         let grid = Grid::new(&[
@@ -469,6 +477,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_make_move_up() {
         // arrange
         let grid = Grid::new(&[
@@ -492,6 +501,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_make_move_down() {
         // arrange
         let grid = Grid::new(&[
@@ -515,6 +525,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_get_possible_grids_with2() {
         // arrange
         let grid = Grid::new(&[
@@ -558,6 +569,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_get_possible_grids_with4() {
         // arrange
         let grid = Grid::new(&[
