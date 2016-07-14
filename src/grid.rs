@@ -8,7 +8,7 @@
 //! standard game of 2048 is `65,536`, and that is represented by the value `16`, so a byte is
 //! more than enough storage for a single cell. `0` stays a `0`.
 
-#[derive(Eq, PartialEq, Hash, Copy, Clone, Debug)]
+#[derive(Eq, PartialEq, Hash, Copy, Clone, Debug, Default)]
 pub struct Grid {
     grid: [[u8; 4]; 4],
 }
@@ -21,7 +21,24 @@ pub enum Move {
     Down,
 }
 
-pub static MOVES: [Move; 4] = [Move::Left, Move::Right, Move::Up, Move::Down];
+pub const MOVES: [Move; 4] = [Move::Left, Move::Right, Move::Up, Move::Down];
+
+impl ToString for Grid {
+    fn to_string(&self) -> String {
+        let mut s = String::new();
+
+        for x in 0..4 {
+            for y in 0..4 {
+                let human = get_human(self.grid[x][y]);
+                let human = format!("{number:>width$}", number = human, width = 6);
+                s.push_str(&human);
+            }
+            s.push('\n');
+        }
+
+        s
+    }
+}
 
 impl Grid {
     /// Creates a new `Grid` from an array of human-looking numbers.
@@ -44,13 +61,6 @@ impl Grid {
         }
 
         Some(Grid { grid: result })
-    }
-
-    /// Creates a `Grid` with every cell empty (represented by the value `0`).
-    pub fn empty() -> Grid {
-        let result = [[0u8; 4]; 4];
-
-        Grid { grid: result }
     }
 
     /// Gets a reference to the inner representation of the `Grid`, which is a 4x4 array of `u8`.
@@ -297,23 +307,6 @@ impl Grid {
     }
 }
 
-impl ToString for Grid {
-    fn to_string(&self) -> String {
-        let mut s = String::new();
-
-        for x in 0..4 {
-            for y in 0..4 {
-                let human = get_human(self.grid[x][y]);
-                let human = format!("{number:>width$}", number = human, width = 6);
-                s.push_str(&human);
-            }
-            s.push('\n');
-        }
-
-        s
-    }
-}
-
 fn get_human(n: u8) -> u32 {
     match n {
         0 => 0,
@@ -353,7 +346,7 @@ mod tests {
             ]
         };
 
-        let actual = Grid::empty();
+        let actual = Grid::default();
 
         assert_eq!(expected, actual);
     }
@@ -394,7 +387,7 @@ mod tests {
 
     #[test]
     fn can_add_random_tile() {
-        let grid = Grid::empty().add_random_tile();
+        let grid = Grid::default().add_random_tile();
 
         let count = grid.flatten()
             .iter()
