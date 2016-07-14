@@ -7,34 +7,39 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::cell::RefCell;
 
+struct NodeCache {
+    player_node: Cache<Grid, PlayerNode>,
+    computer_node: Cache<Grid, ComputerNode>,
+}
+
 pub struct SearchTree {
     root_node: Rc<PlayerNode>,
-    player_node_cache: Rc<Cache<Grid, PlayerNode>>,
-    commputer_node_cache: Rc<Cache<Grid, ComputerNode>>,
+    cache: Rc<NodeCache>,
 }
 
 impl SearchTree {
     pub fn new(grid: Grid) -> SearchTree {
-        let player_node_cache = Rc::new(Cache::new());
-        let computer_node_cache = Rc::new(Cache::new());
+        let player_node_cache = Cache::new();
+        let computer_node_cache = Cache::new();
 
-        let node = player_node_cache.get_or_insert_with(grid, || {
-            PlayerNode::new(grid, player_node_cache.clone(), computer_node_cache.clone())
+        let cache = Rc::new(NodeCache {
+            player_node: player_node_cache,
+            computer_node: computer_node_cache,
         });
+
+        let node = cache.player_node
+            .get_or_insert_with(grid, || PlayerNode::new(grid, cache.clone()));
 
         SearchTree {
             root_node: node,
-            player_node_cache: player_node_cache,
-            commputer_node_cache: computer_node_cache,
+            cache: cache,
         }
     }
 
     pub fn set_root(&mut self, grid: Grid) {
-        let node = self.player_node_cache.get_or_insert_with(grid, || {
-            PlayerNode::new(grid,
-                            self.player_node_cache.clone(),
-                            self.commputer_node_cache.clone())
-        });
+        let node = self.cache
+            .player_node
+            .get_or_insert_with(grid, || PlayerNode::new(grid, self.cache.clone()));
 
         self.root_node = node;
 
@@ -46,27 +51,30 @@ impl SearchTree {
     }
 
     pub fn get_known_player_node_count(&self) -> usize {
-        self.player_node_cache.strong_count()
+        self.cache.player_node.strong_count()
     }
 
     pub fn get_known_computer_node_count(&self) -> usize {
-        self.commputer_node_cache.strong_count()
+        self.cache.computer_node.strong_count()
     }
 
     fn clean_up_cache(&self) {
-        self.player_node_cache.gc();
-        self.commputer_node_cache.gc();
+        self.cache.player_node.gc();
+        self.cache.computer_node.gc();
     }
 }
 
 pub struct PlayerNode {
     grid: Grid,
+    cache: Rc<NodeCache>,
     children: RefCell<Option<Rc<HashMap<Move, Rc<ComputerNode>>>>>,
-    player_node_cache: Rc<Cache<Grid, PlayerNode>>,
-    commputer_node_cache: Rc<Cache<Grid, ComputerNode>>,
 }
 
 impl PlayerNode {
+    pub fn get_grid(&self) -> &Grid {
+        &self.grid
+    }
+
     pub fn get_children_by_move(&self) -> Rc<HashMap<Move, Rc<ComputerNode>>> {
         {
             let mut cached_children = self.children.borrow_mut();
@@ -81,18 +89,10 @@ impl PlayerNode {
         self.get_children_by_move()
     }
 
-    pub fn get_grid(&self) -> &Grid {
-        &self.grid
-    }
-
-    fn new(grid: Grid,
-           player_node_cache: Rc<Cache<Grid, PlayerNode>>,
-           commputer_node_cache: Rc<Cache<Grid, ComputerNode>>)
-           -> PlayerNode {
+    fn new(grid: Grid, cache: Rc<NodeCache>) -> PlayerNode {
         PlayerNode {
             grid: grid,
-            player_node_cache: player_node_cache,
-            commputer_node_cache: commputer_node_cache,
+            cache: cache,
             children: RefCell::new(None),
         }
     }
@@ -100,16 +100,14 @@ impl PlayerNode {
     fn create_children_by_move(&self) -> HashMap<Move, Rc<ComputerNode>> {
         let mut children: HashMap<Move, Rc<ComputerNode>> = HashMap::new();
 
-        for m in &grid::MOVES {
+        for m in grid::MOVES.iter() {
             let new_grid = self.grid.make_move(*m);
 
             if new_grid != self.grid {
-                let computer_node = self.commputer_node_cache
-                    .get_or_insert_with(new_grid, || {
-                        ComputerNode::new(new_grid,
-                                          self.player_node_cache.clone(),
-                                          self.commputer_node_cache.clone())
-                    });
+                let computer_node = self.cache
+                    .computer_node
+                    .get_or_insert_with(new_grid,
+                                        || ComputerNode::new(new_grid, self.cache.clone()));
 
                 children.insert(*m, computer_node);
             }
@@ -121,21 +119,16 @@ impl PlayerNode {
 
 pub struct ComputerNode {
     grid: Grid,
-    children: RefCell<Option<Rc<Vec<Rc<ComputerNode>>>>>,
-    player_node_cache: Rc<Cache<Grid, PlayerNode>>,
-    commputer_node_cache: Rc<Cache<Grid, ComputerNode>>,
+    cache: Rc<NodeCache>,
+    children: RefCell<Option<Vec<Rc<PlayerNode>>>>,
 }
 
 impl ComputerNode {
-    pub fn new(grid: Grid,
-               player_node_cache: Rc<Cache<Grid, PlayerNode>>,
-               commputer_node_cache: Rc<Cache<Grid, ComputerNode>>)
-               -> ComputerNode {
+    fn new(grid: Grid, cache: Rc<NodeCache>) -> ComputerNode {
         ComputerNode {
             grid: grid,
+            cache: cache,
             children: RefCell::new(None),
-            player_node_cache: player_node_cache,
-            commputer_node_cache: commputer_node_cache,
         }
     }
 
@@ -151,9 +144,6 @@ mod tests {
     use grid::{Grid, Move};
 
     use std::collections::HashMap;
-
-    #[test]
-    fn can_set_root_node() {}
 
     #[test]
     fn can_create_new_searchtree() {
@@ -174,7 +164,7 @@ mod tests {
 
         assert_eq!(grid2, *search_tree.get_root().get_grid());
         assert_eq!(1, search_tree.get_known_player_node_count());
-        let total = search_tree.player_node_cache.len();
+        let total = search_tree.cache.player_node.len();
         assert_eq!(1, total);
     }
 
