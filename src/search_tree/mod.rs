@@ -5,7 +5,7 @@ use search_tree::cache::Cache;
 
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 
 struct NodeCache {
     player_node: Cache<Grid, PlayerNode>,
@@ -68,6 +68,7 @@ pub struct PlayerNode {
     grid: Grid,
     cache: Rc<NodeCache>,
     children: RefCell<Option<Rc<HashMap<Move, Rc<ComputerNode>>>>>,
+    pub heuristic: Cell<Option<f64>>,
 }
 
 impl PlayerNode {
@@ -76,6 +77,7 @@ impl PlayerNode {
             grid: grid,
             cache: cache,
             children: RefCell::new(None),
+            heuristic: Cell::new(None),
         }
     }
 
@@ -123,10 +125,10 @@ pub struct ComputerNodeChildren {
 }
 
 impl ComputerNodeChildren {
-    fn with2(&self) -> &Vec<Rc<PlayerNode>> {
+    pub fn with2(&self) -> &Vec<Rc<PlayerNode>> {
         &self.children_with2
     }
-    fn with4(&self) -> &Vec<Rc<PlayerNode>> {
+    pub fn with4(&self) -> &Vec<Rc<PlayerNode>> {
         &self.children_with4
     }
 }
