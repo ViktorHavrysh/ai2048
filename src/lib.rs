@@ -2,7 +2,8 @@
 
 extern crate rand;
 
-mod grid;
+pub mod grid;
+mod agent;
 mod search_tree;
 mod searcher;
 mod heuristic;

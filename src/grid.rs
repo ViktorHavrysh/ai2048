@@ -562,6 +562,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_get_possible_grids_with4() {
         // arrange
         let grid = Grid::new(&[

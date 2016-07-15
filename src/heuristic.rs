@@ -4,7 +4,7 @@ pub trait Heuristic {
     fn eval(&self, &PlayerNode) -> f64;
 }
 
-mod heat_map {
+pub mod heat_map {
     use super::Heuristic;
     use std::f64;
     use grid::Grid;

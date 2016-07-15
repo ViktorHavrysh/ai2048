@@ -2,6 +2,7 @@ use search_tree::{SearchTree, PlayerNode, ComputerNode};
 use grid::{Grid, Move};
 use std::collections::HashMap;
 use float_ext::FloatIterExt;
+use heuristic::Heuristic;
 
 const PROBABILITY_OF2: f64 = 0.9;
 const PROBABILITY_OF4: f64 = 0.1;
@@ -10,10 +11,10 @@ pub trait Searcher {
     fn search(&self, search_tree: &SearchTree) -> SearchResult;
 }
 
-pub struct ExpectiMaxer<F: Fn(&PlayerNode) -> f64> {
+pub struct ExpectiMaxer<H: Heuristic> {
     min_probability: f64,
     max_search_depth: u8,
-    heuristic: F,
+    heuristic: H,
 }
 
 #[derive(Debug)]
@@ -22,7 +23,7 @@ pub struct SearchResult {
     pub move_evaluations: HashMap<Move, f64>,
 }
 
-impl<F: Fn(&PlayerNode) -> f64> Searcher for ExpectiMaxer<F> {
+impl<H: Heuristic> Searcher for ExpectiMaxer<H> {
     fn search(&self, search_tree: &SearchTree) -> SearchResult {
         let grid = search_tree.get_root().get_grid().clone();
         let hashmap = self.init(search_tree);
@@ -34,8 +35,8 @@ impl<F: Fn(&PlayerNode) -> f64> Searcher for ExpectiMaxer<F> {
     }
 }
 
-impl<F: Fn(&PlayerNode) -> f64> ExpectiMaxer<F> {
-    pub fn new(min_probability: f64, max_search_depth: u8, heuristic: F) -> ExpectiMaxer<F> {
+impl<H: Heuristic> ExpectiMaxer<H> {
+    pub fn new(min_probability: f64, max_search_depth: u8, heuristic: H) -> ExpectiMaxer<H> {
         assert!(max_search_depth != 0);
         ExpectiMaxer {
             min_probability: min_probability,
@@ -60,7 +61,7 @@ impl<F: Fn(&PlayerNode) -> f64> ExpectiMaxer<F> {
                 return heur;
             }
 
-            let heur = (self.heuristic)(node);
+            let heur = self.heuristic.eval(node);
             node.heuristic.set(Some(heur));
 
             return heur;
@@ -102,23 +103,14 @@ mod tests {
     use super::*;
     use grid::Grid;
     use search_tree::SearchTree;
-
-    #[test]
-    fn can_create_searcher() {
-        let grid = Grid::default().add_random_tile();
-        let search_tree = SearchTree::new(grid);
-        let searcher = ExpectiMaxer::new(0.002, 10, |n| n.get_grid().flatten().len() as f64);
-
-        assert_eq!(16.0, (searcher.heuristic)(search_tree.get_root().as_ref()));
-    }
+    use heuristic::heat_map::HeatMapHeuristic;
 
     #[test]
     fn can_get_search_result() {
         let grid = Grid::default().add_random_tile();
         let search_tree = SearchTree::new(grid);
-        let searcher = ExpectiMaxer::new(0.01, 3, |n| {
-            n.get_grid().flatten().iter().map(|&x| x as u32).fold(1u32, |acc, x| acc * x) as f64
-        });
+        let heuristic = HeatMapHeuristic::new();
+        let searcher = ExpectiMaxer::new(0.01, 3, heuristic);
 
         let result = searcher.search(&search_tree);
 
