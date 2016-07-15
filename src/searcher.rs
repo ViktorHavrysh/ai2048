@@ -1,43 +1,51 @@
 use search_tree::{SearchTree, PlayerNode, ComputerNode};
-
 use grid::{Grid, Move};
-
-use std::f64;
-
 use std::collections::HashMap;
+use float_ext::FloatIterExt;
 
 const PROBABILITY_OF2: f64 = 0.9;
 const PROBABILITY_OF4: f64 = 0.1;
 
-pub struct Searcher<'a, F: Fn(&Grid) -> f64> {
-    search_tree: &'a SearchTree,
+pub trait Searcher {
+    fn search(&self, search_tree: &SearchTree) -> SearchResult;
+}
+
+pub struct ExpectiMaxer<F: Fn(&PlayerNode) -> f64> {
     min_probability: f64,
     max_search_depth: u8,
     heuristic: F,
 }
 
+#[derive(Debug)]
 pub struct SearchResult {
     pub root_grid: Grid,
     pub move_evaluations: HashMap<Move, f64>,
 }
 
-impl<'a, F: Fn(&Grid) -> f64> Searcher<'a, F> {
-    pub fn new(search_tree: &'a SearchTree,
-               min_probability: f64,
-               max_search_depth: u8,
-               heuristic: F)
-               -> Searcher<'a, F> {
-        Searcher {
-            search_tree: search_tree,
+impl<F: Fn(&PlayerNode) -> f64> Searcher for ExpectiMaxer<F> {
+    fn search(&self, search_tree: &SearchTree) -> SearchResult {
+        let grid = search_tree.get_root().get_grid().clone();
+        let hashmap = self.init(search_tree);
+
+        SearchResult {
+            root_grid: grid,
+            move_evaluations: hashmap,
+        }
+    }
+}
+
+impl<F: Fn(&PlayerNode) -> f64> ExpectiMaxer<F> {
+    pub fn new(min_probability: f64, max_search_depth: u8, heuristic: F) -> ExpectiMaxer<F> {
+        assert!(max_search_depth != 0);
+        ExpectiMaxer {
             min_probability: min_probability,
             max_search_depth: max_search_depth,
             heuristic: heuristic,
         }
     }
 
-    fn init(&self) -> HashMap<Move, f64> {
-        self.search_tree
-            .get_root()
+    fn init(&self, search_tree: &SearchTree) -> HashMap<Move, f64> {
+        search_tree.get_root()
             .get_children_by_move()
             .iter()
             .map(|(&m, n)| (m, self.get_computer_node_eval(n, self.max_search_depth, 1f64)))
@@ -45,8 +53,6 @@ impl<'a, F: Fn(&Grid) -> f64> Searcher<'a, F> {
     }
 
     fn get_player_node_eval(&self, node: &PlayerNode, depth: u8, probability: f64) -> f64 {
-        assert!(depth != 0);
-
         let children = node.get_children_by_move();
 
         if children.len() == 0 || depth == 0 || probability < self.min_probability {
@@ -54,7 +60,7 @@ impl<'a, F: Fn(&Grid) -> f64> Searcher<'a, F> {
                 return heur;
             }
 
-            let heur = (self.heuristic)(node.get_grid());
+            let heur = (self.heuristic)(node);
             node.heuristic.set(Some(heur));
 
             return heur;
@@ -91,26 +97,9 @@ impl<'a, F: Fn(&Grid) -> f64> Searcher<'a, F> {
     }
 }
 
-trait FloatIterExt {
-    fn float_min(&mut self) -> f64;
-    fn float_max(&mut self) -> f64;
-}
-
-impl<T> FloatIterExt for T
-    where T: Iterator<Item = f64>
-{
-    fn float_max(&mut self) -> f64 {
-        self.fold(f64::NAN, f64::max)
-    }
-
-    fn float_min(&mut self) -> f64 {
-        self.fold(f64::NAN, f64::min)
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::Searcher;
+    use super::*;
     use grid::Grid;
     use search_tree::SearchTree;
 
@@ -118,9 +107,23 @@ mod tests {
     fn can_create_searcher() {
         let grid = Grid::default().add_random_tile();
         let search_tree = SearchTree::new(grid);
+        let searcher = ExpectiMaxer::new(0.002, 10, |n| n.get_grid().flatten().len() as f64);
 
-        let searcher = Searcher::new(&search_tree, 0.002, 10, |g| g.flatten().len() as f64);
+        assert_eq!(16.0, (searcher.heuristic)(search_tree.get_root().as_ref()));
+    }
 
-        assert_eq!(16.0, (searcher.heuristic)(&grid));
+    #[test]
+    fn can_get_search_result() {
+        let grid = Grid::default().add_random_tile();
+        let search_tree = SearchTree::new(grid);
+        let searcher = ExpectiMaxer::new(0.01, 3, |n| {
+            n.get_grid().flatten().iter().map(|&x| x as u32).fold(1u32, |acc, x| acc * x) as f64
+        });
+
+        let result = searcher.search(&search_tree);
+
+        assert_eq!(result.root_grid, grid);
+        assert!(result.move_evaluations.len() >= 2);
+        assert!(result.move_evaluations.len() <= 4);
     }
 }

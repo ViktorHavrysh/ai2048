@@ -1,5 +1,5 @@
 [package]
-name = "ai_2048"
+name = "ai2048"
 version = "0.1.0"
 authors = ["Victor Gavrish <victor.gavrish@gmail.com>"]
 

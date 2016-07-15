@@ -2,7 +2,6 @@ mod cache;
 
 use grid::{self, Grid, Move};
 use search_tree::cache::Cache;
-
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::cell::{Cell, RefCell};
