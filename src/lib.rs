@@ -2,9 +2,11 @@
 
 extern crate rand;
 
+pub use searcher::SearchResult;
+
 pub mod grid;
-mod agent;
+pub mod agent;
+pub mod heuristic;
+
 mod search_tree;
 mod searcher;
-mod heuristic;
-mod float_ext;

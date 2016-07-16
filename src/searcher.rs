@@ -1,7 +1,7 @@
 use search_tree::{SearchTree, PlayerNode, ComputerNode};
 use grid::{Grid, Move};
+use std::f64;
 use std::collections::HashMap;
-use float_ext::FloatIterExt;
 use heuristic::Heuristic;
 
 const PROBABILITY_OF2: f64 = 0.9;
@@ -46,9 +46,13 @@ impl<H: Heuristic> ExpectiMaxer<H> {
     }
 
     fn init(&self, search_tree: &SearchTree) -> HashMap<Move, f64> {
-        search_tree.get_root()
-            .get_children_by_move()
-            .iter()
+        let children = search_tree.get_root().get_children_by_move();
+
+        if children.len() == 0 {
+            return HashMap::new();
+        }
+
+        children.iter()
             .map(|(&m, n)| (m, self.get_computer_node_eval(n, self.max_search_depth, 1f64)))
             .collect::<HashMap<Move, f64>>()
     }
@@ -67,7 +71,7 @@ impl<H: Heuristic> ExpectiMaxer<H> {
             return heur;
         }
 
-        children.values().map(|n| self.get_computer_node_eval(n, depth, probability)).float_max()
+        children.values().map(|n| self.get_computer_node_eval(n, depth, probability)).fold(f64::NAN, f64::max)
     }
 
     fn get_computer_node_eval(&self, node: &ComputerNode, depth: u8, probability: f64) -> f64 {

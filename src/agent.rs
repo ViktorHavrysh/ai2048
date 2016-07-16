@@ -21,8 +21,6 @@ impl<H: Heuristic> Agent<H> {
     }
 
     pub fn make_decision(&self) -> SearchResult {
-        assert!(self.search_tree.get_root().get_children_by_move().len() > 0);
-
         self.searcher.search(&self.search_tree)
     }
 
