@@ -1,8 +1,7 @@
-#![allow(dead_code)]
-
 extern crate rand;
+extern crate time;
 
-pub use searcher::SearchResult;
+pub use searcher::{SearchResult, SearchStatistics};
 
 pub mod grid;
 pub mod agent;

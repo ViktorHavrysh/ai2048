@@ -12,9 +12,9 @@ pub mod heat_map {
 
     type HeatMap = [[i64; 4]; 4];
 
-    const MIN: f64 = -1000_000f64;
+    const MIN: f64 = -1000_000_000f64;
 
-    const EMPTY_CELLS_WITHOUT_PENALTY: i64 = 6;
+    const EMPTY_CELLS_WITHOUT_PENALTY: i64 = 5;
 
     #[cfg_attr(rustfmt, rustfmt_skip)]
     const HEAT_MAP: HeatMap = [

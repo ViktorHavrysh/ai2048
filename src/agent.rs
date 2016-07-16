@@ -1,5 +1,5 @@
 use search_tree::SearchTree;
-use searcher::{Searcher, SearchResult, ExpectiMaxer};
+use searcher::{ExpectiMaxer, SearchResult, Searcher};
 use heuristic::Heuristic;
 use grid::Grid;
 

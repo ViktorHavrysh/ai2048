@@ -24,6 +24,7 @@ impl<K, V> Cache<K, V>
         self.data.borrow().values().filter(|v| v.upgrade().is_some()).count()
     }
 
+    #[allow(dead_code)]
     pub fn len(&self) -> usize {
         self.data.borrow().len()
     }

@@ -9,11 +9,13 @@ fn main() {
     let mut grid = Grid::default().add_random_tile().add_random_tile();
     let heuristic = HeatMapHeuristic::new();
 
-    let mut agent = Agent::new(grid, heuristic, 0.004, 6);
+    let mut agent = Agent::new(grid, heuristic, 0.002, 7);
 
     loop {
-        println!("{}", grid.to_string());
         let result = agent.make_decision();
+        print!("{}[2J", 27 as char);
+        println!("{}", grid.to_string());
+        println!("{}", result.search_statistics.to_string());
 
         if result.move_evaluations.len() == 0 {
             break;

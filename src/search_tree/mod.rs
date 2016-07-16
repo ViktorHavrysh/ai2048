@@ -68,6 +68,7 @@ pub struct PlayerNode {
     cache: Rc<NodeCache>,
     children: RefCell<Option<Rc<HashMap<Move, Rc<ComputerNode>>>>>,
     pub heuristic: Cell<Option<f64>>,
+    pub storage: Cell<Option<(f64, f64)>>,
 }
 
 impl PlayerNode {
@@ -77,6 +78,7 @@ impl PlayerNode {
             cache: cache,
             children: RefCell::new(None),
             heuristic: Cell::new(None),
+            storage: Cell::new(None),
         }
     }
 
@@ -169,13 +171,21 @@ impl ComputerNode {
         let children_with2 = self.grid
             .get_possible_grids_with2()
             .iter()
-            .map(|&g| Rc::new(PlayerNode::new(g, self.cache.clone())))
+            .map(|&g| {
+                self.cache
+                    .player_node
+                    .get_or_insert_with(g, || PlayerNode::new(g, self.cache.clone()))
+            })
             .collect();
 
         let children_with4 = self.grid
             .get_possible_grids_with4()
             .iter()
-            .map(|&g| Rc::new(PlayerNode::new(g, self.cache.clone())))
+            .map(|&g| {
+                self.cache
+                    .player_node
+                    .get_or_insert_with(g, || PlayerNode::new(g, self.cache.clone()))
+            })
             .collect();
 
         ComputerNodeChildren {
