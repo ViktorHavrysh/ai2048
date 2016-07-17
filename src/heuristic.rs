@@ -12,9 +12,9 @@ pub mod heat_map {
 
     type HeatMap = [[i64; 4]; 4];
 
-    const MIN: f64 = -1000_000_000f64;
+    const MIN: f64 = -10_000_000_000f64;
 
-    const EMPTY_CELLS_WITHOUT_PENALTY: i64 = 5;
+    const EMPTY_CELLS_WITHOUT_PENALTY: i64 = 6;
 
     #[cfg_attr(rustfmt, rustfmt_skip)]
     const HEAT_MAP: HeatMap = [
@@ -39,7 +39,7 @@ pub mod heat_map {
             let empty_cell_evaluation = evaluate_empty_cells(node.get_grid());
 
             if empty_cell_evaluation < EMPTY_CELLS_WITHOUT_PENALTY {
-                result -= 1 << EMPTY_CELLS_WITHOUT_PENALTY - empty_cell_evaluation;
+                result -= 1 << (EMPTY_CELLS_WITHOUT_PENALTY - empty_cell_evaluation);
             }
 
             result as f64

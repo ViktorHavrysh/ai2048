@@ -67,6 +67,9 @@ pub struct PlayerNode {
     grid: Grid,
     cache: Rc<NodeCache>,
     children: RefCell<Option<Rc<HashMap<Move, Rc<ComputerNode>>>>>,
+    // This is ugly, because the only reason these are here is that I need them in the searcher.
+    // However, I can't think of a less cumbersome way to keep these around and associated with
+    // a particular node
     pub heuristic: Cell<Option<f64>>,
     pub storage: Cell<Option<(f64, f64)>>,
 }
@@ -121,17 +124,8 @@ impl PlayerNode {
 }
 
 pub struct ComputerNodeChildren {
-    children_with2: Vec<Rc<PlayerNode>>,
-    children_with4: Vec<Rc<PlayerNode>>,
-}
-
-impl ComputerNodeChildren {
-    pub fn with2(&self) -> &Vec<Rc<PlayerNode>> {
-        &self.children_with2
-    }
-    pub fn with4(&self) -> &Vec<Rc<PlayerNode>> {
-        &self.children_with4
-    }
+    pub with2: Vec<Rc<PlayerNode>>,
+    pub with4: Vec<Rc<PlayerNode>>,
 }
 
 pub struct ComputerNode {
@@ -189,8 +183,8 @@ impl ComputerNode {
             .collect();
 
         ComputerNodeChildren {
-            children_with2: children_with2,
-            children_with4: children_with4,
+            with2: children_with2,
+            with4: children_with4,
         }
     }
 }
@@ -202,7 +196,6 @@ mod tests {
     use grid::{Grid, Move};
 
     use std::collections::{HashMap, HashSet};
-    use std::iter::FromIterator;
 
     #[test]
     fn can_create_new_searchtree() {
@@ -357,28 +350,19 @@ mod tests {
         ]).unwrap());
 
         // act
-        let actual_with2 = HashSet::<Grid>::from_iter(
-            search_tree.get_root()
-                .get_children_by_move()
-                .values()
-                .flat_map(|v| -> Vec<Grid> {
-                    v.get_children()
-                        .with2()
-                        .iter()
-                        .map(|pn| pn.get_grid().clone())
-                        .collect()
-                }));
-        let actual_with4 = HashSet::<Grid>::from_iter(
-            search_tree.get_root()
-                .get_children_by_move()
-                .values()
-                .flat_map(|v| -> Vec<Grid> {
-                    v.get_children()
-                        .with4()
-                        .iter()
-                        .map(|pn| pn.get_grid().clone())
-                        .collect()
-                }));
+        let actual_with2 = search_tree.get_root()
+            .get_children_by_move()
+            .values()
+            .flat_map(|v| v.get_children().with2.clone())
+            .map(|n| n.get_grid().clone())
+            .collect::<HashSet<_>>();
+
+        let actual_with4 = search_tree.get_root()
+            .get_children_by_move()
+            .values()
+            .flat_map(|v| v.get_children().with4.clone())
+            .map(|n| n.get_grid().clone())
+            .collect::<HashSet<_>>();
 
         assert_eq!(expected_with2, actual_with2);
         assert_eq!(expected_with4, actual_with4);

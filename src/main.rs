@@ -9,7 +9,7 @@ fn main() {
     let mut grid = Grid::default().add_random_tile().add_random_tile();
     let heuristic = HeatMapHeuristic::new();
 
-    let mut agent = Agent::new(grid, heuristic, 0.002, 7);
+    let mut agent = Agent::new(grid, heuristic, 0.004, 6);
 
     loop {
         let result = agent.make_decision();
@@ -28,6 +28,8 @@ fn main() {
             .nth(0)
             .unwrap()
             .0;
+
+        println!("Best evaluation: {}", best_evaluttion);
 
         grid = grid.make_move(*best_move).add_random_tile();
 
