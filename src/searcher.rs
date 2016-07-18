@@ -1,5 +1,5 @@
 use search_tree::{ComputerNode, PlayerNode, SearchTree};
-use grid::{Grid, Move};
+use board::{Board, Move};
 use std::f64;
 use std::collections::HashMap;
 use time::{self, Duration};
@@ -19,9 +19,10 @@ pub struct ExpectiMaxer<H: Heuristic> {
 }
 
 pub struct SearchResult {
-    pub root_grid: Grid,
+    pub root_board: Board,
     pub move_evaluations: HashMap<Move, f64>,
     pub search_statistics: SearchStatistics,
+    pub best_move: Option<(Move, f64)>,
 }
 
 pub struct SearchStatistics {
@@ -103,10 +104,23 @@ impl<H: Heuristic> Searcher for ExpectiMaxer<H> {
         search_statistics.known_computer_nodes = known_computer_nodes_finish;
         search_statistics.known_player_nodes = known_player_nodes_finish;
 
+        let best_move = if hashmap.len() > 0 {
+            let best_eval = hashmap.values().map(|&v| v).fold(f64::NAN, f64::max);
+            let (&mv, &eval) = hashmap.iter()
+                .filter(|&(_, &e)| e == best_eval)
+                .nth(0)
+                .unwrap();
+
+            Some((mv, eval))
+        } else {
+            None
+        };
+
         SearchResult {
-            root_grid: search_tree.get_root().get_grid().clone(),
+            root_board: search_tree.get_root().get_board().clone(),
             move_evaluations: hashmap,
             search_statistics: search_statistics,
+            best_move: best_move,
         }
     }
 }
@@ -224,20 +238,20 @@ impl<H: Heuristic> ExpectiMaxer<H> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use grid::Grid;
+    use board::Board;
     use search_tree::SearchTree;
     use heuristic::heat_map::HeatMapHeuristic;
 
     #[test]
     fn can_get_search_result() {
-        let grid = Grid::default().add_random_tile();
-        let search_tree = SearchTree::new(grid);
+        let board = Board::default().add_random_tile();
+        let search_tree = SearchTree::new(board);
         let heuristic = HeatMapHeuristic::new();
         let searcher = ExpectiMaxer::new(0.01, 3, heuristic);
 
         let result = searcher.search(&search_tree);
 
-        assert_eq!(result.root_grid, grid);
+        assert_eq!(result.root_board, board);
         assert!(result.move_evaluations.len() >= 2);
         assert!(result.move_evaluations.len() <= 4);
     }

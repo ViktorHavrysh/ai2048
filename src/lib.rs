@@ -3,7 +3,7 @@ extern crate time;
 
 pub use searcher::{SearchResult, SearchStatistics};
 
-pub mod grid;
+pub mod board;
 pub mod agent;
 pub mod heuristic;
 

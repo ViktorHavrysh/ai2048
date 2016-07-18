@@ -1,14 +1,14 @@
 mod cache;
 
-use grid::{self, Grid, Move};
+use board::{self, Board, Move};
 use search_tree::cache::Cache;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::cell::{Cell, RefCell};
 
 struct NodeCache {
-    player_node: Cache<Grid, PlayerNode>,
-    computer_node: Cache<Grid, ComputerNode>,
+    player_node: Cache<Board, PlayerNode>,
+    computer_node: Cache<Board, ComputerNode>,
 }
 
 pub struct SearchTree {
@@ -17,7 +17,7 @@ pub struct SearchTree {
 }
 
 impl SearchTree {
-    pub fn new(grid: Grid) -> SearchTree {
+    pub fn new(board: Board) -> SearchTree {
         let player_node_cache = Cache::new();
         let computer_node_cache = Cache::new();
 
@@ -27,7 +27,7 @@ impl SearchTree {
         });
 
         let node = cache.player_node
-            .get_or_insert_with(grid, || PlayerNode::new(grid, cache.clone()));
+            .get_or_insert_with(board, || PlayerNode::new(board, cache.clone()));
 
         SearchTree {
             root_node: node,
@@ -35,10 +35,10 @@ impl SearchTree {
         }
     }
 
-    pub fn set_root(&mut self, grid: Grid) {
+    pub fn set_root(&mut self, board: Board) {
         let node = self.cache
             .player_node
-            .get_or_insert_with(grid, || PlayerNode::new(grid, self.cache.clone()));
+            .get_or_insert_with(board, || PlayerNode::new(board, self.cache.clone()));
 
         self.root_node = node;
 
@@ -64,7 +64,7 @@ impl SearchTree {
 }
 
 pub struct PlayerNode {
-    grid: Grid,
+    board: Board,
     cache: Rc<NodeCache>,
     children: RefCell<Option<Rc<HashMap<Move, Rc<ComputerNode>>>>>,
     // This is ugly, because the only reason these are here is that I need them in the searcher.
@@ -75,9 +75,9 @@ pub struct PlayerNode {
 }
 
 impl PlayerNode {
-    fn new(grid: Grid, cache: Rc<NodeCache>) -> PlayerNode {
+    fn new(board: Board, cache: Rc<NodeCache>) -> PlayerNode {
         PlayerNode {
-            grid: grid,
+            board: board,
             cache: cache,
             children: RefCell::new(None),
             heuristic: Cell::new(None),
@@ -85,8 +85,8 @@ impl PlayerNode {
         }
     }
 
-    pub fn get_grid(&self) -> &Grid {
-        &self.grid
+    pub fn get_board(&self) -> &Board {
+        &self.board
     }
 
     pub fn get_children_by_move(&self) -> Rc<HashMap<Move, Rc<ComputerNode>>> {
@@ -106,10 +106,10 @@ impl PlayerNode {
     fn create_children_by_move(&self) -> HashMap<Move, Rc<ComputerNode>> {
         let mut children: HashMap<Move, Rc<ComputerNode>> = HashMap::new();
 
-        for m in grid::MOVES.iter() {
-            let new_grid = self.grid.make_move(*m);
+        for m in board::MOVES.iter() {
+            let new_grid = self.board.make_move(*m);
 
-            if new_grid != self.grid {
+            if new_grid != self.board {
                 let computer_node = self.cache
                     .computer_node
                     .get_or_insert_with(new_grid,
@@ -129,22 +129,22 @@ pub struct ComputerNodeChildren {
 }
 
 pub struct ComputerNode {
-    grid: Grid,
+    board: Board,
     cache: Rc<NodeCache>,
     children: RefCell<Option<Rc<ComputerNodeChildren>>>,
 }
 
 impl ComputerNode {
-    fn new(grid: Grid, cache: Rc<NodeCache>) -> ComputerNode {
+    fn new(board: Board, cache: Rc<NodeCache>) -> ComputerNode {
         ComputerNode {
-            grid: grid,
+            board: board,
             cache: cache,
             children: RefCell::new(None),
         }
     }
 
-    pub fn get_grid(&self) -> &Grid {
-        &self.grid
+    pub fn get_grid(&self) -> &Board {
+        &self.board
     }
 
     pub fn get_children(&self) -> Rc<ComputerNodeChildren> {
@@ -162,8 +162,8 @@ impl ComputerNode {
     }
 
     fn create_children(&self) -> ComputerNodeChildren {
-        let children_with2 = self.grid
-            .get_possible_grids_with2()
+        let children_with2 = self.board
+            .get_possible_boards_with2()
             .iter()
             .map(|&g| {
                 self.cache
@@ -172,8 +172,8 @@ impl ComputerNode {
             })
             .collect();
 
-        let children_with4 = self.grid
-            .get_possible_grids_with4()
+        let children_with4 = self.board
+            .get_possible_boards_with4()
             .iter()
             .map(|&g| {
                 self.cache
@@ -193,28 +193,28 @@ impl ComputerNode {
 mod tests {
     use super::*;
 
-    use grid::{Grid, Move};
+    use board::{Board, Move};
 
     use std::collections::{HashMap, HashSet};
 
     #[test]
     fn can_create_new_searchtree() {
-        let expected_grid = Grid::default().add_random_tile();
+        let expected_grid = Board::default().add_random_tile();
         let search_tree = SearchTree::new(expected_grid);
-        let actual_grid = *search_tree.get_root().get_grid();
+        let actual_grid = *search_tree.get_root().get_board();
 
         assert_eq!(expected_grid, actual_grid);
     }
 
     #[test]
     fn can_set_new_root() {
-        let grid1 = Grid::default().add_random_tile();
-        let grid2 = Grid::default().add_random_tile().add_random_tile();
+        let grid1 = Board::default().add_random_tile();
+        let grid2 = Board::default().add_random_tile().add_random_tile();
         let mut search_tree = SearchTree::new(grid1);
 
         search_tree.set_root(grid2);
 
-        assert_eq!(grid2, *search_tree.get_root().get_grid());
+        assert_eq!(grid2, *search_tree.get_root().get_board());
         assert_eq!(1, search_tree.get_known_player_node_count());
         let total = search_tree.cache.player_node.len();
         assert_eq!(1, total);
@@ -224,37 +224,37 @@ mod tests {
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_get_playernode_children_by_move() {
         // arrange
-        let grid = Grid::new(&[
+        let board = Board::new(&[
             [0, 0, 0, 2],
             [0, 2, 0, 2],
             [4, 0, 0, 2],
             [0, 0, 0, 2]
         ]).unwrap();
 
-        let search_tree = SearchTree::new(grid);
+        let search_tree = SearchTree::new(board);
 
         let player_node = search_tree.get_root();
 
         let mut expected = HashMap::new();
-        expected.insert(Move::Left, Grid::new(&[
+        expected.insert(Move::Left, Board::new(&[
             [2, 0, 0, 0],
             [4, 0, 0, 0],
             [4, 2, 0, 0],
             [2, 0, 0, 0]
         ]).unwrap());
-        expected.insert(Move::Right, Grid::new(&[
+        expected.insert(Move::Right, Board::new(&[
             [0, 0, 0, 2],
             [0, 0, 0, 4],
             [0, 0, 4, 2],
             [0, 0, 0, 2]
         ]).unwrap());
-        expected.insert(Move::Up, Grid::new(&[
+        expected.insert(Move::Up, Board::new(&[
             [4, 2, 0, 4],
             [0, 0, 0, 4],
             [0, 0, 0, 0],
             [0, 0, 0, 0]
         ]).unwrap());
-        expected.insert(Move::Down, Grid::new(&[
+        expected.insert(Move::Down, Board::new(&[
             [0, 0, 0, 0],
             [0, 0, 0, 0],
             [0, 0, 0, 4],
@@ -277,13 +277,13 @@ mod tests {
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_get_computernode_children() {
         // arrange
-        let grid = Grid::new(&[
+        let board = Board::new(&[
             [0, 2, 4, 2],
             [0, 4, 2, 4],
             [4, 2, 4, 2],
             [2, 4, 2, 4]
         ]).unwrap();
-        let search_tree = SearchTree::new(grid);
+        let search_tree = SearchTree::new(board);
 
         // two possible moves: up and left
         // up:   [4, 2, 4, 2],
@@ -298,25 +298,25 @@ mod tests {
 
         // this leads to 8 possible child nodes:
         let mut expected_with2 = HashSet::new();
-        expected_with2.insert(Grid::new(&[
+        expected_with2.insert(Board::new(&[
             [4, 2, 4, 2],
             [2, 4, 2, 4],
             [2, 2, 4, 2],
             [0, 4, 2, 4]
         ]).unwrap());
-        expected_with2.insert(Grid::new(&[
+        expected_with2.insert(Board::new(&[
             [4, 2, 4, 2],
             [2, 4, 2, 4],
             [0, 2, 4, 2],
             [2, 4, 2, 4]
         ]).unwrap());
-        expected_with2.insert(Grid::new(&[
+        expected_with2.insert(Board::new(&[
             [2, 4, 2, 2],
             [4, 2, 4, 0],
             [4, 2, 4, 2],
             [2, 4, 2, 4]
         ]).unwrap());
-        expected_with2.insert(Grid::new(&[
+        expected_with2.insert(Board::new(&[
             [2, 4, 2, 0],
             [4, 2, 4, 2],
             [4, 2, 4, 2],
@@ -324,25 +324,25 @@ mod tests {
         ]).unwrap());
 
         let mut expected_with4 = HashSet::new();
-        expected_with4.insert(Grid::new(&[
+        expected_with4.insert(Board::new(&[
             [2, 4, 2, 4],
             [4, 2, 4, 0],
             [4, 2, 4, 2],
             [2, 4, 2, 4]
         ]).unwrap());
-        expected_with4.insert(Grid::new(&[
+        expected_with4.insert(Board::new(&[
             [2, 4, 2, 0],
             [4, 2, 4, 4],
             [4, 2, 4, 2],
             [2, 4, 2, 4]
         ]).unwrap());
-        expected_with4.insert(Grid::new(&[
+        expected_with4.insert(Board::new(&[
             [4, 2, 4, 2],
             [2, 4, 2, 4],
             [4, 2, 4, 2],
             [0, 4, 2, 4]
         ]).unwrap());
-        expected_with4.insert(Grid::new(&[
+        expected_with4.insert(Board::new(&[
             [4, 2, 4, 2],
             [2, 4, 2, 4],
             [0, 2, 4, 2],
@@ -354,14 +354,14 @@ mod tests {
             .get_children_by_move()
             .values()
             .flat_map(|v| v.get_children().with2.clone())
-            .map(|n| n.get_grid().clone())
+            .map(|n| n.get_board().clone())
             .collect::<HashSet<_>>();
 
         let actual_with4 = search_tree.get_root()
             .get_children_by_move()
             .values()
             .flat_map(|v| v.get_children().with4.clone())
-            .map(|n| n.get_grid().clone())
+            .map(|n| n.get_board().clone())
             .collect::<HashSet<_>>();
 
         assert_eq!(expected_with2, actual_with2);

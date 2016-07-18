@@ -7,7 +7,7 @@ pub trait Heuristic {
 pub mod heat_map {
     use super::Heuristic;
     use std::f64;
-    use grid::Grid;
+    use board::Board;
     use search_tree::PlayerNode;
 
     type HeatMap = [[i64; 4]; 4];
@@ -34,9 +34,9 @@ pub mod heat_map {
             }
 
             let mut result =
-                self.heat_maps.iter().map(|&h| evaluate_grid(node.get_grid(), h)).max().unwrap();
+                self.heat_maps.iter().map(|&h| evaluate_board(node.get_board(), h)).max().unwrap();
 
-            let empty_cell_evaluation = evaluate_empty_cells(node.get_grid());
+            let empty_cell_evaluation = evaluate_empty_cells(node.get_board());
 
             if empty_cell_evaluation < EMPTY_CELLS_WITHOUT_PENALTY {
                 result -= 1 << (EMPTY_CELLS_WITHOUT_PENALTY - empty_cell_evaluation);
@@ -46,8 +46,8 @@ pub mod heat_map {
         }
     }
 
-    fn evaluate_grid(grid: &Grid, heat_map: HeatMap) -> i64 {
-        let grid = grid.get_grid();
+    fn evaluate_board(board: &Board, heat_map: HeatMap) -> i64 {
+        let grid = board.get_grid();
         let mut result = 0;
 
         for x in 0..4 {
@@ -59,10 +59,10 @@ pub mod heat_map {
         result
     }
 
-    fn evaluate_empty_cells(grid: &Grid) -> i64 {
+    fn evaluate_empty_cells(board: &Board) -> i64 {
         let mut adjacent_count = 0;
         {
-            let grid = grid.get_grid();
+            let grid = board.get_grid();
 
             for y in 0..4 {
                 let mut x = 0;
@@ -89,7 +89,7 @@ pub mod heat_map {
             }
         }
 
-        let empty_count = grid.flatten().iter().filter(|&&x| x == 0).count() as i64;
+        let empty_count = board.flatten().iter().filter(|&&x| x == 0).count() as i64;
 
         adjacent_count + empty_count
     }
@@ -139,7 +139,7 @@ pub mod heat_map {
         use super::*;
         use std::f64;
         use std::collections::HashSet;
-        use grid::Grid;
+        use board::Board;
         use search_tree::SearchTree;
 
         #[test]
@@ -158,8 +158,8 @@ pub mod heat_map {
         fn can_eval() {
             let heur = HeatMapHeuristic::new();
 
-            let grid = Grid::default().add_random_tile().add_random_tile();
-            let search_tree = SearchTree::new(grid);
+            let board = Board::default().add_random_tile().add_random_tile();
+            let search_tree = SearchTree::new(board);
 
             let eval = heur.eval(search_tree.get_root().as_ref());
 
