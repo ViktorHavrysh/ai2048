@@ -13,7 +13,7 @@ impl<H: Heuristic> Agent<H> {
                heuristic: H,
                min_probability: f64,
                max_search_depth: u8)
-               -> Agent<H> {
+               -> Self {
         Agent {
             search_tree: SearchTree::new(starting_state),
             searcher: ExpectiMaxer::new(min_probability, max_search_depth, heuristic),

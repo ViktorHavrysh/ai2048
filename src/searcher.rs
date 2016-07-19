@@ -36,7 +36,7 @@ pub struct SearchStatistics {
 }
 
 impl Default for SearchStatistics {
-    fn default() -> SearchStatistics {
+    fn default() -> Self {
         SearchStatistics {
             search_duration: Duration::zero(),
             nodes_traversed: 0,
@@ -126,7 +126,7 @@ impl<H: Heuristic> Searcher for ExpectiMaxer<H> {
 }
 
 impl<H: Heuristic> ExpectiMaxer<H> {
-    pub fn new(min_probability: f64, max_search_depth: u8, heuristic: H) -> ExpectiMaxer<H> {
+    pub fn new(min_probability: f64, max_search_depth: u8, heuristic: H) -> Self {
         assert!(max_search_depth != 0);
         ExpectiMaxer {
             min_probability: min_probability,

@@ -154,7 +154,7 @@ mod tests {
         let board = Board::default().add_random_tile().add_random_tile();
         let search_tree = SearchTree::new(board);
 
-        let eval = heur.eval(search_tree.get_root().as_ref());
+        let eval = heur.eval(search_tree.get_root());
 
         assert!(eval != f64::NAN);
     }

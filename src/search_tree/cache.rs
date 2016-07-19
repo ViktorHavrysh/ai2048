@@ -12,7 +12,7 @@ pub struct Cache<K, V> {
 impl<K, V> Cache<K, V>
     where K: Eq + Hash + Clone
 {
-    pub fn new() -> Cache<K, V> {
+    pub fn new() -> Self {
         Cache { data: RefCell::new(HashMap::new()) }
     }
 

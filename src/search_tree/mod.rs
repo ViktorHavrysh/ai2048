@@ -17,7 +17,7 @@ pub struct SearchTree {
 }
 
 impl SearchTree {
-    pub fn new(board: Board) -> SearchTree {
+    pub fn new(board: Board) -> Self {
         let player_node_cache = Cache::new();
         let computer_node_cache = Cache::new();
 
@@ -45,8 +45,8 @@ impl SearchTree {
         self.clean_up_cache();
     }
 
-    pub fn get_root(&self) -> Rc<PlayerNode> {
-        self.root_node.clone()
+    pub fn get_root(&self) -> &PlayerNode {
+        self.root_node.as_ref()
     }
 
     pub fn get_known_player_node_count(&self) -> usize {
@@ -75,7 +75,7 @@ pub struct PlayerNode {
 }
 
 impl PlayerNode {
-    fn new(board: Board, cache: Rc<NodeCache>) -> PlayerNode {
+    fn new(board: Board, cache: Rc<NodeCache>) -> Self {
         PlayerNode {
             board: board,
             cache: cache,
@@ -135,7 +135,7 @@ pub struct ComputerNode {
 }
 
 impl ComputerNode {
-    fn new(board: Board, cache: Rc<NodeCache>) -> ComputerNode {
+    fn new(board: Board, cache: Rc<NodeCache>) -> Self {
         ComputerNode {
             board: board,
             cache: cache,
