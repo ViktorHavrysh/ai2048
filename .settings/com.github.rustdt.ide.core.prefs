@@ -1,9 +1,0 @@
-build_targets=<?xml version\="1.0" encoding\="UTF-8" standalone\="no"?>\r\n<build_targets xmlns\="com.github.rustdt.ide.core">\r\n<target auto_enabled\="false" config\="build" n_enabled\="true" version2\="true"/>\r\n<target auto_enabled\="true" config\="check" n_enabled\="false" version2\="true"/>\r\n</build_targets>\r\n
-eclipse.preferences.version=1
-format_onSave=false
-racer_path=C\:\\Users\\loony\\.cargo\\bin\\racer.exe
-rainicorn_path=C\:\\Users\\loony\\.cargo\\RustDT\\bin\\parse_describe.exe
-rustfmt_path=C\:\\Users\\loony\\.cargo\\bin\\rustfmt.exe
-sdk_path=C\:\\Program Files\\Rust stable GNU 1.10
-sdk_src_path=C\:\\rust\\rustc-1.10.0\\src
-toolchain_prefs.use_project_settings=false

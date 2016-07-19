@@ -2,10 +2,10 @@ extern crate ai2048;
 
 use ai2048::board::Board;
 use ai2048::agent::Agent;
-use ai2048::heuristic::heat_map::HeatMapHeuristic;
+use ai2048::heuristic::composite::CompositeHeuristic;
 
 fn main() {
-    let heuristic = HeatMapHeuristic::new();
+    let heuristic = CompositeHeuristic::new();
     let mut board = Board::default().add_random_tile().add_random_tile();
     let mut agent = Agent::new(board, heuristic, 0.004, 6);
 
@@ -14,6 +14,13 @@ fn main() {
         print!("{}[2J", 27 as char);
         println!("{}", board.to_string());
         println!("{}", result.search_statistics.to_string());
+
+        for mv in ai2048::board::MOVES.iter() {
+            println!("{:?}: {}", mv, match result.move_evaluations.get(mv) {
+                Some(eval) => format!("{}", eval),
+                None       => "invalid".to_string()
+            });
+        }
 
         match result.best_move {
             Some((mv, eval)) => {
