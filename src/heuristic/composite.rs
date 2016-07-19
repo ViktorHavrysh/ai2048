@@ -17,8 +17,7 @@ impl Heuristic for CompositeHeuristic {
             return MIN;
         }
 
-        super::get_monotonicity(node.get_board()) * 15.0 +
-        super::get_empty_cell_count(node.get_board()) * 2.0 +
-        super::get_adjacent_evaluation(node.get_board())
+        super::get_monotonicity(node.get_board()) * 10.0 +
+        super::get_empty_cell_count(node.get_board())
     }
 }

@@ -6,3 +6,6 @@ authors = ["Victor Gavrish <victor.gavrish@gmail.com>"]
 [dependencies]
 rand = "0.3"
 time = "0.1"
+
+[[bin]]
+name = "ai2048_bin"

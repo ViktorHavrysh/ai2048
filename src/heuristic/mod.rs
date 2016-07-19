@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 pub mod heat_map;
 pub mod composite;
 

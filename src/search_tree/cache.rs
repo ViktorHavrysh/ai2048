@@ -1,9 +1,20 @@
+//! This cache is intended as an alternative to something like `ConditionalWeakTable` from C#.
+//!
+//! It is a wrapper around `HashMap`.
+//!
+//! It uses interior mutability so it can be used in a field of an immutable type. It has a single
+//! way of retrieving data from it that requires you to provide a way to put it there if it
+//! doesn't already exist and returns an `Rc<T>`, while it stores a `Weak<T>` reference
+//! inside. When all the copies of the Rc<T> go out of scope, the key is considered not to exist
+//! in the cache. However, internally, the Weak<T> reference still exists, so if you want to
+//! reclaim the memory taken by that, you need to call the `gc()` method.
+//!
+//! The type is not thread safe.
+
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::rc::{Rc, Weak};
 use std::cell::RefCell;
-
-type CachingHashMap<K, V> = HashMap<K, Weak<V>>;
 
 pub struct Cache<K, V> {
     data: RefCell<CachingHashMap<K, V>>,
@@ -12,27 +23,36 @@ pub struct Cache<K, V> {
 impl<K, V> Cache<K, V>
     where K: Eq + Hash + Clone
 {
+    /// Returns an emtpy `Cache`.
     pub fn new() -> Self {
         Cache { data: RefCell::new(HashMap::new()) }
     }
 
+    /// Retrieves the cached value by key. If the value doesn't exist, uses the provided
+    /// closure to create it, stores in the cache, and then returns the value anyway.
     pub fn get_or_insert_with<F: FnOnce() -> V>(&self, key: K, default: F) -> Rc<V> {
         self.data.borrow_mut().get_or_insert_with(key, default)
     }
 
+    /// Returns the number of non-invalidated values that are stored in the cache.
     pub fn strong_count(&self) -> usize {
         self.data.borrow().values().filter(|v| v.upgrade().is_some()).count()
     }
 
+    /// Returns the length of the inner `HashMap` together with invalidated, but not cleaned,
+    /// references.
     #[allow(dead_code)]
     pub fn len(&self) -> usize {
         self.data.borrow().len()
     }
 
+    /// Deletes all the invalidated references.
     pub fn gc(&self) {
         self.data.borrow_mut().gc();
     }
 }
+
+type CachingHashMap<K, V> = HashMap<K, Weak<V>>;
 
 trait Gc {
     fn gc(&mut self);

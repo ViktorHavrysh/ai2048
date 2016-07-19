@@ -7,12 +7,18 @@
 //! `4` becomes `2`, `8` becomes `3`, etc. The maximum cell value theoretically achievable in a
 //! standard game of 2048 is `65,536`, and that is represented by the value `16`, so a byte is
 //! more than enough storage for a single cell. `0` stays a `0`.
+//!
+//! `Board`, in general, encodes all the rules of the game: it can generate new states
+//! given a move a player makes, or all possible states following the computer spwaning a random
+//! tile. Unsurprisingly, in order to write an AI for a game, the AI needs an emulation of the
+//! game itself.
 
 #[derive(Eq, PartialEq, Hash, Copy, Clone, Debug, Default)]
 pub struct Board {
     grid: [[u8; 4]; 4],
 }
 
+/// Represents a move.
 #[derive(Eq, PartialEq, Hash, Copy, Clone, Debug)]
 pub enum Move {
     Left,
@@ -21,6 +27,7 @@ pub enum Move {
     Down,
 }
 
+/// All possible moves.
 pub const MOVES: [Move; 4] = [Move::Left, Move::Right, Move::Up, Move::Down];
 
 impl ToString for Board {
@@ -40,6 +47,8 @@ impl ToString for Board {
     }
 }
 
+// I marked methods that might be performance-critical with #[inline]. I'm not sure it makes a
+// difference, though.
 impl Board {
     /// Creates a new `Board` from an array of human-looking numbers.
     pub fn new(grid: &[[u32; 4]; 4]) -> Option<Board> {
@@ -64,13 +73,16 @@ impl Board {
     }
 
     /// Gets a reference to the inner representation of the `Board`, which is a 4x4 array of `u8`.
+    #[inline]
     pub fn get_grid(&self) -> &[[u8; 4]; 4] {
         &self.grid
     }
 
     /// Gets a reference to the inner representation of the `Board` as a flat array of `u8`.
+    #[inline]
     pub fn flatten(&self) -> &[u8; 16] {
         use std::mem;
+        // Not sure this is worth it to avoid copying 4 extra bytes of memory...
         unsafe { mem::transmute(&self.grid) }
     }
 
@@ -107,10 +119,14 @@ impl Board {
             position = position - 1;
         }
 
+        // This unsafe block is certainly unnecessary, since this method is not
+        // performance-critical, since it only happens once per whole search...
+        // but I'm already using unsafe for doing it the other way.
         Board { grid: unsafe { mem::transmute(flat) } }
     }
 
     /// Returns a `Board` that would result from making a certain `Move` in the current state.
+    #[inline]
     pub fn make_move(&self, mv: Move) -> Board {
         match mv {
             Move::Left => self.move_left(),
@@ -122,16 +138,19 @@ impl Board {
 
     /// Returns all possible `Board`s that can result from the computer spawning a `2` in a random
     /// empty cell.
+    #[inline]
     pub fn get_possible_boards_with2(&self) -> Vec<Board> {
         self.get_possible_boards(1)
     }
 
     /// Returns all possible `Board`s that can result from the computer spawning a `2` in a random
     /// empty cell.
+    #[inline]
     pub fn get_possible_boards_with4(&self) -> Vec<Board> {
         self.get_possible_boards(2)
     }
 
+    #[inline]
     fn get_possible_boards(&self, new_value: u8) -> Vec<Board> {
         let mut result = Vec::<Board>::new();
 
@@ -150,6 +169,7 @@ impl Board {
         result
     }
 
+    #[inline]
     fn move_left(&self) -> Board {
         let mut result = [[0; 4]; 4];
 
@@ -189,6 +209,7 @@ impl Board {
         Board { grid: result }
     }
 
+    #[inline]
     fn move_right(&self) -> Board {
         let mut result = [[0; 4]; 4];
 
@@ -228,6 +249,7 @@ impl Board {
         Board { grid: result }
     }
 
+    #[inline]
     fn move_up(&self) -> Board {
         let mut result = [[0; 4]; 4];
 
@@ -267,6 +289,7 @@ impl Board {
         Board { grid: result }
     }
 
+    #[inline]
     fn move_down(&self) -> Board {
         let mut result = [[0; 4]; 4];
 

@@ -1,3 +1,17 @@
+//! This module intends to provide a lazily-evaluated, cached tree of all possible board states
+//! in a 2048 game.
+//!
+//! The types in this module generate its children only once.
+//!
+//! They use two different kinds of cache to reduce the amount of computation as much as possible:
+//!
+//! 1. Each node stores references to its children.
+//! 2. When generating the children, the nodes query a `Cache` of known nodes (a transposition
+//! table) in case this same node has already been generated through a different set of moves.
+//!
+//! It achieves this by a combination of interior mutability, reference counted objects and
+//! a hashmap.
+
 mod cache;
 
 use board::{self, Board, Move};
@@ -11,19 +25,27 @@ struct NodeCache {
     computer_node: Cache<Board, ComputerNode>,
 }
 
+/// The `SearchTree` type is the root of the tree of nodes that form all possible board states in
+/// a 2048 game. It is the only potentially mutable type in this module. You can generate a new
+/// `SearchTree` by providing an initial board state, or use a mutable reference to an existing
+/// `SearchTree` to update its root board state in order to reuse nodes already calculated from
+/// the previous state.
 pub struct SearchTree {
     root_node: Rc<PlayerNode>,
+    // I think that, in theory, this cache could be owned by this type, while all its
+    // descendats would get a reference to this object, since a `SearchTree` root is expected
+    // to outlive all its descendats. However, some of the descendants produce Rc<T> references
+    // to nodes, so until I solve that in theory a node can outlive the `SearchTree`, so reference
+    // counting it is, for the moment.
     cache: Rc<NodeCache>,
 }
 
 impl SearchTree {
+    /// Creates a new `SearchTree` from an initial `Board` state.
     pub fn new(board: Board) -> Self {
-        let player_node_cache = Cache::new();
-        let computer_node_cache = Cache::new();
-
         let cache = Rc::new(NodeCache {
-            player_node: player_node_cache,
-            computer_node: computer_node_cache,
+            player_node: Cache::new(),
+            computer_node: Cache::new(),
         });
 
         let node = cache.player_node
@@ -35,6 +57,11 @@ impl SearchTree {
         }
     }
 
+    /// Updates the search tree to have a different root `Board` state. It has an advantage over
+    /// creating a new one because it reuses the inner cache of known nodes. This implicitly
+    /// invalidates now unreachable board states in the cache (or at least board states that
+    /// have no known way to be reached). This also explicitly cleans up the invalidated keys
+    /// from the cache.
     pub fn set_root(&mut self, board: Board) {
         let node = self.cache
             .player_node
@@ -45,14 +72,17 @@ impl SearchTree {
         self.clean_up_cache();
     }
 
+    /// Gets a reference to the current root node.
     pub fn get_root(&self) -> &PlayerNode {
         self.root_node.as_ref()
     }
 
+    /// Gets the number of known board states that the Player can face on their turn.
     pub fn get_known_player_node_count(&self) -> usize {
         self.cache.player_node.strong_count()
     }
 
+    /// Gets the number of known board states that the Computer can face on its turn.
     pub fn get_known_computer_node_count(&self) -> usize {
         self.cache.computer_node.strong_count()
     }
@@ -63,15 +93,21 @@ impl SearchTree {
     }
 }
 
+/// This type rerpresents a `Board` state that can be reached on the Player's turn. This type
+/// is logically immutable, and there should be no way to create this type from outside the module
+/// through any means other than querying the `SearchTree` root and its descendants.
+///
+/// However, this type makes use of interior mutability to defer generating its children unitl
+/// such time as it is asked to do so, and only do it once even then.
 pub struct PlayerNode {
     board: Board,
     cache: Rc<NodeCache>,
     children: RefCell<Option<Rc<HashMap<Move, Rc<ComputerNode>>>>>,
     // This is ugly, because the only reason these are here is that I need them in the searcher.
     // However, I can't think of a less cumbersome way to keep these around and associated with
-    // a particular node
+    // a particular node without the searcher having to keep its own `HashMap` of `Board` states.
     pub heuristic: Cell<Option<f64>>,
-    pub storage: Cell<Option<(f64, f64)>>,
+    //pub storage: Cell<Option<(f64, f64)>>,
 }
 
 impl PlayerNode {
@@ -81,14 +117,21 @@ impl PlayerNode {
             cache: cache,
             children: RefCell::new(None),
             heuristic: Cell::new(None),
-            storage: Cell::new(None),
+            //storage: Cell::new(None),
         }
     }
 
+    /// Get a reference to the `Board` state associated with this node.
     pub fn get_board(&self) -> &Board {
         &self.board
     }
 
+    /// Returns a `HashMap` of all possible `Move`:`ComputerNode` pairs possible in the current
+    /// position. If the `HashMap` it returns is empty, it means Game Over: no possible further
+    /// moves by the player!
+
+    // It feels like this method should be able to return a `&HashMap<Move, &ComputerNode>`,
+    // but I can't think of a way to do it. Oh well.
     pub fn get_children_by_move(&self) -> Rc<HashMap<Move, Rc<ComputerNode>>> {
         {
             let mut cached_children = self.children.borrow_mut();
@@ -109,6 +152,7 @@ impl PlayerNode {
         for m in board::MOVES.iter() {
             let new_grid = self.board.make_move(*m);
 
+            // It is illegal to make a move that doesn't change anything.
             if new_grid != self.board {
                 let computer_node = self.cache
                     .computer_node
@@ -123,11 +167,21 @@ impl PlayerNode {
     }
 }
 
+/// This type holds all the children of a computer node. It is useful to separate the children
+/// that were generated by spawning a 2 from ones that were spawned with a 4, because in a game
+/// of 2048 a 4 only spawns 10% of the time, and it's important to take into account how likely
+/// an outcome is.
 pub struct ComputerNodeChildren {
     pub with2: Vec<Rc<PlayerNode>>,
     pub with4: Vec<Rc<PlayerNode>>,
 }
 
+/// This type rerpresents a `Board` state that can be reached on the Computer's turn. This type
+/// is logically immutable, and there should be no way to create this type from outside the moduel
+/// through any means other than querying a `PlayerNode`.
+///
+/// However, this type makes use of interior mutability to defer generating its children unitl
+/// such time as it is asked to do so, and only do it once even then.
 pub struct ComputerNode {
     board: Board,
     cache: Rc<NodeCache>,
@@ -143,10 +197,17 @@ impl ComputerNode {
         }
     }
 
-    pub fn get_grid(&self) -> &Board {
+    /// Get a reference to the `Board` state associated with this node.
+    pub fn get_board(&self) -> &Board {
         &self.board
     }
 
+    /// Returns an `ComputerNodeChildren` that represents all possible states that the Player
+    /// can face following a computer spawning a random 2 or 4 tile. Can't be empty, by the game'search_tree
+    /// logic.
+
+    // It feels like this method should be able to return a `&ComputerNodeChildren`, but I can't
+    // think of a way to do it. Oh well.
     pub fn get_children(&self) -> Rc<ComputerNodeChildren> {
         {
             let mut cached_children = self.children.borrow_mut();
@@ -170,7 +231,7 @@ impl ComputerNode {
                     .player_node
                     .get_or_insert_with(g, || PlayerNode::new(g, self.cache.clone()))
             })
-            .collect();
+            .collect::<Vec<_>>();
 
         let children_with4 = self.board
             .get_possible_boards_with4()
@@ -180,7 +241,10 @@ impl ComputerNode {
                     .player_node
                     .get_or_insert_with(g, || PlayerNode::new(g, self.cache.clone()))
             })
-            .collect();
+            .collect::<Vec<_>>();
+
+        debug_assert!(children_with2.len() != 0);
+        debug_assert!(children_with4.len() != 0);
 
         ComputerNodeChildren {
             with2: children_with2,
@@ -223,7 +287,6 @@ mod tests {
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_get_playernode_children_by_move() {
-        // arrange
         let board = Board::new(&[
             [0, 0, 0, 2],
             [0, 2, 0, 2],
@@ -261,12 +324,10 @@ mod tests {
             [4, 2, 0, 4]
         ]).unwrap());
 
-        // act
         let actual = player_node.get_children_by_move();
 
-        // assert
         for (key, value) in expected {
-            assert_eq!(value, *actual.get(&key).unwrap().get_grid());
+            assert_eq!(value, *actual.get(&key).unwrap().get_board());
         }
 
         assert_eq!(1, search_tree.get_known_player_node_count());
@@ -276,7 +337,6 @@ mod tests {
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_get_computernode_children() {
-        // arrange
         let board = Board::new(&[
             [0, 2, 4, 2],
             [0, 4, 2, 4],
@@ -349,7 +409,6 @@ mod tests {
             [4, 4, 2, 4]
         ]).unwrap());
 
-        // act
         let actual_with2 = search_tree.get_root()
             .get_children_by_move()
             .values()
