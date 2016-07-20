@@ -1,3 +1,5 @@
+#![warn(missing_docs)]
+
 //! This crate provides an implementation of an 2048 AI.
 //!
 //! The `board` module contains 2048 game logic.

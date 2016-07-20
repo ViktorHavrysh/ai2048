@@ -143,7 +143,7 @@ impl Board {
         self.get_possible_boards(1)
     }
 
-    /// Returns all possible `Board`s that can result from the computer spawning a `2` in a random
+    /// Returns all possible `Board`s that can result from the computer spawning a `4` in a random
     /// empty cell.
     #[inline]
     pub fn get_possible_boards_with4(&self) -> Vec<Board> {
