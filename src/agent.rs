@@ -42,12 +42,12 @@ impl<H: Heuristic> Agent<H> {
 mod tests {
     use super::*;
     use board::Board;
-    use heuristic::heat_map::HeatMapHeuristic;
+    use heuristic::composite::CompositeHeuristic;
 
     #[test]
     fn can_make_decision() {
         let board = Board::default().add_random_tile().add_random_tile();
-        let heuristic = HeatMapHeuristic::new();
+        let heuristic = CompositeHeuristic::default();
         let agent = Agent::new(board, heuristic, 0.01, 3);
 
         let result = agent.make_decision();
@@ -60,7 +60,7 @@ mod tests {
     #[test]
     fn can_update_state() {
         let board = Board::default().add_random_tile().add_random_tile();
-        let heuristic = HeatMapHeuristic::new();
+        let heuristic = CompositeHeuristic::default();
         let mut agent = Agent::new(board, heuristic, 0.01, 3);
 
         let result = agent.make_decision();

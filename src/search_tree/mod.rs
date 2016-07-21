@@ -107,7 +107,6 @@ pub struct PlayerNode {
     // However, I can't think of a less cumbersome way to keep these around and associated with
     // a particular node without the searcher having to keep its own `HashMap` of `Board` states.
     pub heuristic: Cell<Option<f64>>,
-    //pub storage: Cell<Option<(f64, f64)>>,
 }
 
 impl PlayerNode {
@@ -117,7 +116,6 @@ impl PlayerNode {
             cache: cache,
             children: RefCell::new(None),
             heuristic: Cell::new(None),
-            //storage: Cell::new(None),
         }
     }
 

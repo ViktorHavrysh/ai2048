@@ -1,15 +1,10 @@
 use super::*;
 use search_tree::PlayerNode;
 
-const MIN: f64 = -1_000_000f64;
+const MIN: f64 = -10_000_000f64;
 
+#[derive(Default)]
 pub struct CompositeHeuristic;
-
-impl CompositeHeuristic {
-    pub fn new() -> Self {
-        CompositeHeuristic {}
-    }
-}
 
 impl Heuristic for CompositeHeuristic {
     fn eval(&self, node: &PlayerNode) -> f64 {

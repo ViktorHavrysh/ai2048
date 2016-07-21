@@ -1,5 +1,5 @@
-//! This is the meat of the library. This module implements an ExpectiMax search
-//! (https://en.wikipedia.org/wiki/Expectiminimax_tree - we don't need a MIN node, since
+//! This is the meat of the library. This module implements an `ExpectiMax` search
+//! (`https://en.wikipedia.org/wiki/Expectiminimax_tree` - we don't need a MIN node, since
 //! the Computer player is not trying to win). So we're just trying to find the best moves
 //! after which, with perfect play, we expect the heuristic value to be the highest, on average.
 //!
@@ -26,7 +26,7 @@ const PROBABILITY_OF2: f64 = 0.9;
 const PROBABILITY_OF4: f64 = 0.1;
 
 /// Not sure why I created a trait. I used to experiment a lot with different search methods,
-/// but I don't think I'll find a better algorithm than ExpectiMax now.
+/// but I don't think I'll find a better algorithm than `ExpectiMax` now.
 pub trait Searcher {
     fn search(&self, search_tree: &SearchTree) -> SearchResult;
 }
@@ -199,13 +199,6 @@ impl<H: Heuristic> ExpectiMaxer<H> {
                             -> f64 {
         search_statistics.nodes_traversed += 1;
 
-        // Not sure if this is benefitial.
-        //if let Some((prob, avg)) = node.storage.get() {
-        //    if prob >= probability {
-        //        return avg;
-        //    }
-        //}
-
         let children = node.get_children_by_move();
 
         if children.is_empty() || depth == 0 || probability < self.min_probability {
@@ -220,18 +213,12 @@ impl<H: Heuristic> ExpectiMaxer<H> {
                 }
             };
 
-            //node.storage.set(Some((probability, heur)));
-
             return heur;
         }
 
-        let max = children.values()
+        children.values()
             .map(|n| self.get_computer_node_eval(n, depth, probability, &mut search_statistics))
-            .fold(f64::NAN, f64::max);
-
-        //node.storage.set(Some((probability, avg)));
-
-        max
+            .fold(f64::NAN, f64::max)
     }
 
     fn get_computer_node_eval(&self,
@@ -249,7 +236,7 @@ impl<H: Heuristic> ExpectiMaxer<H> {
             .map(|n| {
                 self.get_player_node_eval(n,
                                           depth - 1,
-                                          probability * PROBABILITY_OF2 / count as f64,
+                                          probability * PROBABILITY_OF2 / (count as f64),
                                           &mut search_statistics)
             })
             .fold(0f64, |acc, x| acc + x);
@@ -260,7 +247,7 @@ impl<H: Heuristic> ExpectiMaxer<H> {
             .map(|n| {
                 self.get_player_node_eval(n,
                                           depth - 1,
-                                          probability * PROBABILITY_OF4 / count as f64,
+                                          probability * PROBABILITY_OF4 / (count as f64),
                                           &mut search_statistics)
             })
             .fold(0f64, |acc, x| acc + x);
@@ -275,13 +262,13 @@ mod tests {
     use super::*;
     use board::Board;
     use search_tree::SearchTree;
-    use heuristic::heat_map::HeatMapHeuristic;
+    use heuristic::composite::CompositeHeuristic;
 
     #[test]
     fn can_get_search_result() {
         let board = Board::default().add_random_tile();
         let search_tree = SearchTree::new(board);
-        let heuristic = HeatMapHeuristic::new();
+        let heuristic = CompositeHeuristic::default();
         let searcher = ExpectiMaxer::new(0.01, 3, heuristic);
 
         let result = searcher.search(&search_tree);

@@ -12,6 +12,7 @@
 //! given a move a player makes, or all possible states following the computer spwaning a random
 //! tile. Unsurprisingly, in order to write an AI for a game, the AI needs an emulation of the
 //! game itself.
+use std::fmt;
 
 #[derive(Eq, PartialEq, Hash, Copy, Clone, Debug, Default)]
 pub struct Board {
@@ -30,20 +31,20 @@ pub enum Move {
 /// All possible moves.
 pub const MOVES: [Move; 4] = [Move::Left, Move::Right, Move::Up, Move::Down];
 
-impl ToString for Board {
-    fn to_string(&self) -> String {
+impl fmt::Display for Board {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut s = String::new();
 
-        for x in 0..4 {
-            for y in 0..4 {
-                let human = get_human(self.grid[x][y]);
+        for row in &self.grid {
+            for val in row {
+                let human = get_human(*val);
                 let human = format!("{number:>width$}", number = human, width = 6);
                 s.push_str(&human);
             }
             s.push('\n');
         }
 
-        s
+        write!(f, "{}", s)
     }
 }
 
@@ -78,11 +79,30 @@ impl Board {
         &self.grid
     }
 
+    /// Gets a transposed copy of the inner representation of the `Board`.
+    #[inline]
+    pub fn transpose(&self) -> [[u8; 4]; 4] {
+        let mut t = [[0; 4]; 4];
+
+        let mut x = 0;
+        let mut y = 0;
+        for row in &self.grid {
+            for val in row {
+                t[y][x] = *val;
+                x += 1;
+            }
+
+            y += 1;
+        }
+
+        t
+    }
+
     /// Gets a reference to the inner representation of the `Board` as a flat array of `u8`.
     #[inline]
     pub fn flatten(&self) -> &[u8; 16] {
         use std::mem;
-        // Not sure this is worth it to avoid copying 4 extra bytes of memory...
+        // Not sure this is worth it to avoid copying 8 to 12 extra bytes of memory...
         unsafe { mem::transmute(&self.grid) }
     }
 
@@ -94,7 +114,7 @@ impl Board {
 
         let mut rng = rand::thread_rng();
 
-        let mut flat = self.flatten().clone();
+        let mut flat = *self.flatten();
 
         let empty_cell_count = flat.iter().filter(|&&v| v == 0).count();
 
@@ -106,17 +126,17 @@ impl Board {
         };
         let mut position = rng.gen_range(0, empty_cell_count);
 
-        for x in 0..16 {
-            if flat[x] != 0 {
+        for val in &mut flat {
+            if *val != 0 {
                 continue;
             }
 
             if position == 0 {
-                flat[x] = value;
+                *val = value;
                 break;
             }
 
-            position = position - 1;
+            position -= 1;
         }
 
         // This unsafe block is certainly unnecessary, since this method is not
@@ -160,7 +180,7 @@ impl Board {
                     continue;
                 }
 
-                let mut possible_grid = self.grid.clone();
+                let mut possible_grid = self.grid;
                 possible_grid[x][y] = new_value;
                 result.push(Board { grid: possible_grid });
             }
@@ -192,13 +212,13 @@ impl Board {
                 if current == last {
                     result[x][last_index] = last + 1;
                     last = 0;
-                    last_index = last_index + 1;
+                    last_index += 1;
                     continue;
                 }
 
                 result[x][last_index] = last;
                 last = current;
-                last_index = last_index + 1;
+                last_index += 1;
             }
 
             if last != 0 {
@@ -232,13 +252,13 @@ impl Board {
                 if current == last {
                     result[x][last_index] = last + 1;
                     last = 0;
-                    last_index = last_index - 1;
+                    last_index -= 1;
                     continue;
                 }
 
                 result[x][last_index] = last;
                 last = current;
-                last_index = last_index - 1;
+                last_index -= 1;
             }
 
             if last != 0 {
@@ -272,13 +292,13 @@ impl Board {
                 if current == last {
                     result[last_index][y] = last + 1;
                     last = 0;
-                    last_index = last_index + 1;
+                    last_index += 1;
                     continue;
                 }
 
                 result[last_index][y] = last;
                 last = current;
-                last_index = last_index + 1;
+                last_index += 1;
             }
 
             if last != 0 {
@@ -312,13 +332,13 @@ impl Board {
                 if current == last {
                     result[last_index][y] = last + 1;
                     last = 0;
-                    last_index = last_index - 1;
+                    last_index -= 1;
                     continue;
                 }
 
                 result[last_index][y] = last;
                 last = current;
-                last_index = last_index - 1;
+                last_index -= 1;
             }
 
             if last != 0 {
