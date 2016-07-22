@@ -12,7 +12,7 @@ fn main() {
     loop {
         let result = agent.make_decision();
         print!("{}[2J", 27 as char);
-        println!("{}", board.to_string());
+        println!("{}", board);
         println!("{}", result.search_statistics.to_string());
 
         for mv in ai2048::board::MOVES.iter() {

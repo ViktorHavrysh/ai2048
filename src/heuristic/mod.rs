@@ -2,7 +2,7 @@
 
 pub mod composite;
 
-use std::{cmp, i32};
+use std::i32;
 use search_tree::PlayerNode;
 use board::Board;
 
@@ -15,101 +15,53 @@ fn get_empty_cell_count(board: &Board) -> f64 {
 }
 
 fn get_adjacent_evaluation(board: &Board) -> f64 {
+    board.get_grid()
+        .iter()
+        .chain(board.transpose().get_grid().iter())
+        .map(|&row| get_adjacent_row(row))
+        .sum::<u8>() as f64
+}
+
+#[inline]
+fn get_adjacent_row(row: [u8; 4]) -> u8 {
     let mut adjacent_count = 0;
+    let mut y = 0;
 
-    let grid = board.get_grid();
+    while y < 3 {
+        if row[y] != 0 && row[y] == row[y + 1] {
+            adjacent_count += 1;
+            y += 2;
+        } else {
+            y += 1;
+        }
+    }
 
-    for y in 0..4 {
-        let mut x = 0;
-        while x < 3 {
-            if grid[x][y] != 0 && grid[x][y] == grid[x + 1][y] {
-                adjacent_count += 1;
-                x += 2;
-            } else {
-                x += 1;
+    adjacent_count
+}
+
+fn get_sum(board: &Board) -> f64 {
+    board.flatten().iter().map(|&v| (v as f64).powf(3.5)).sum()
+}
+
+fn get_monotonicity_rows(board: &Board) -> f64 {
+    let mut left = 0f64;
+    let mut right = 0f64;
+
+    for row in board.get_grid() {
+        for (&current, &next) in row.iter().zip(row.iter().skip(1)) {
+            if current > next {
+                left += (current as f64).powi(4) - (next as f64).powi(4);
+            } else if next > current {
+                right += (next as f64).powi(4) - (current as f64).powi(4);
             }
         }
     }
 
-    for x in 0..4 {
-        let mut y = 0;
-        while y < 3 {
-            if grid[x][y] != 0 && grid[x][y] == grid[x][y + 1] {
-                adjacent_count += 1;
-                y += 2;
-            } else {
-                y += 1;
-            }
-        }
-    }
-
-    adjacent_count as f64
+    -f64::min(left, right)
 }
 
 fn get_monotonicity(board: &Board) -> f64 {
-    let grid = board.get_grid();
-
-    let mut up: isize = 0;
-    let mut down: isize = 0;
-
-    for x in 0..4 {
-        let mut current = 0;
-        let mut next = 1;
-
-        while next < 4 {
-            while next < 4 && grid[x][next] == 0 {
-                next += 1;
-            }
-            if next >= 4 {
-                next -= 1;
-            }
-
-            let current_value = grid[x][current] as isize;
-            let next_value = grid[x][next] as isize;
-
-            if current_value > next_value {
-                down += next_value - current_value;
-            } else if next_value > current_value {
-                up += current_value - next_value;
-            }
-
-            current = next;
-            next += 1;
-        }
-    }
-
-    let mut right: isize = 0;
-    let mut left: isize = 0;
-
-    for y in 0..4 {
-        let mut current = 0;
-        let mut next = 1;
-
-        while next < 4 {
-            while next < 4 && grid[next][y] == 0 {
-                next += 1;
-            }
-            if next >= 4 {
-                next -= 1;
-            }
-
-            let current_value = grid[current][y] as isize;
-            let next_value = grid[next][y] as isize;
-
-            if current_value > next_value {
-                right += next_value - current_value;
-            } else if next_value > current_value {
-                left += current_value - next_value;
-            }
-
-            current = next;
-            next += 1;
-        }
-    }
-
-    let result = cmp::max(up, down) + cmp::max(left, right);
-
-    result as f64
+    get_monotonicity_rows(board) + get_monotonicity_rows(&board.transpose())
 }
 
 fn get_smoothness(board: &Board) -> f64 {

@@ -17,6 +17,7 @@
 
 extern crate rand;
 extern crate time;
+extern crate itertools;
 
 pub use searcher::{SearchResult, SearchStatistics};
 

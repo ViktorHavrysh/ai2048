@@ -12,7 +12,8 @@
 //! given a move a player makes, or all possible states following the computer spwaning a random
 //! tile. Unsurprisingly, in order to write an AI for a game, the AI needs an emulation of the
 //! game itself.
-use std::fmt;
+use std::{fmt, iter, mem};
+use rand::{self, Rng};
 
 #[derive(Eq, PartialEq, Hash, Copy, Clone, Debug, Default)]
 pub struct Board {
@@ -33,16 +34,17 @@ pub const MOVES: [Move; 4] = [Move::Left, Move::Right, Move::Up, Move::Down];
 
 impl fmt::Display for Board {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut s = String::new();
-
-        for row in &self.grid {
-            for val in row {
-                let human = get_human(*val);
-                let human = format!("{number:>width$}", number = human, width = 6);
-                s.push_str(&human);
-            }
-            s.push('\n');
-        }
+        let s: String = self.grid
+            .iter()
+            .flat_map(|row| {
+                row.iter()
+                    .map(|&val| {
+                        let human = get_human(val);
+                        format!("{number:>width$}", number = human, width = 6)
+                    })
+                    .chain(iter::once("\n".to_string()))
+            })
+            .collect();
 
         write!(f, "{}", s)
     }
@@ -55,9 +57,9 @@ impl Board {
     pub fn new(grid: &[[u32; 4]; 4]) -> Option<Board> {
         let mut result = [[0; 4]; 4];
 
-        for x in 0..4 {
-            for y in 0..4 {
-                let log = parse_to_logspace(grid[x][y]);
+        for (x, row) in grid.iter().enumerate() {
+            for (y, &val) in row.iter().enumerate() {
+                let log = parse_to_logspace(val);
 
                 match log {
                     Some(l) => {
@@ -79,39 +81,30 @@ impl Board {
         &self.grid
     }
 
-    /// Gets a transposed copy of the inner representation of the `Board`.
-    #[inline]
-    pub fn transpose(&self) -> [[u8; 4]; 4] {
-        let mut t = [[0; 4]; 4];
-
-        let mut x = 0;
-        let mut y = 0;
-        for row in &self.grid {
-            for val in row {
-                t[y][x] = *val;
-                x += 1;
-            }
-
-            y += 1;
-        }
-
-        t
-    }
-
     /// Gets a reference to the inner representation of the `Board` as a flat array of `u8`.
     #[inline]
     pub fn flatten(&self) -> &[u8; 16] {
-        use std::mem;
         // Not sure this is worth it to avoid copying 8 to 12 extra bytes of memory...
         unsafe { mem::transmute(&self.grid) }
+    }
+
+    /// Gets a transposed copy of the inner representation of the `Board`.
+    #[inline]
+    pub fn transpose(&self) -> Board {
+        let mut t = [[0; 4]; 4];
+
+        for (x, row) in self.grid.iter().enumerate() {
+            for (y, &val) in row.iter().enumerate() {
+                t[y][x] = val;
+            }
+        }
+
+        Board { grid: t }
     }
 
     /// Adds a random tile (10% of times a `2`, 90% of times a `4`) to a random empty cell on the
     /// board.
     pub fn add_random_tile(&self) -> Board {
-        use std::mem;
-        use rand::{self, Rng};
-
         let mut rng = rand::thread_rng();
 
         let mut flat = *self.flatten();
@@ -124,7 +117,7 @@ impl Board {
         } else {
             1
         };
-        
+
         let mut position = rng.gen_range(0, empty_cell_count);
 
         for val in &mut flat {
@@ -152,8 +145,8 @@ impl Board {
         match mv {
             Move::Left => self.move_left(),
             Move::Right => self.move_right(),
-            Move::Up => self.move_up(),
-            Move::Down => self.move_down(),
+            Move::Up => self.transpose().move_left().transpose(),
+            Move::Down => self.transpose().move_right().transpose(),
         }
     }
 
@@ -173,58 +166,26 @@ impl Board {
 
     #[inline]
     fn get_possible_boards(&self, new_value: u8) -> Vec<Board> {
-        let mut result = Vec::<Board>::new();
-
-        for x in 0..4 {
-            for y in 0..4 {
-                if self.grid[x][y] != 0 {
-                    continue;
-                }
-
+        self.grid
+            .iter()
+            .enumerate()
+            .flat_map(|(x, row)| {
+                row.iter().enumerate().filter(|&(_, &val)| val == 0).map(move |(y, _)| (x, y))
+            })
+            .map(|(x, y)| {
                 let mut possible_grid = self.grid;
                 possible_grid[x][y] = new_value;
-                result.push(Board { grid: possible_grid });
-            }
-        }
-
-        result
+                Board { grid: possible_grid }
+            })
+            .collect()
     }
 
     #[inline]
     fn move_left(&self) -> Board {
         let mut result = [[0; 4]; 4];
 
-        for x in 0..4 {
-            let mut last = 0;
-            let mut last_index = 0;
-
-            for y in 0..4 {
-                let current = self.grid[x][y];
-
-                if current == 0 {
-                    continue;
-                }
-
-                if last == 0 {
-                    last = current;
-                    continue;
-                }
-
-                if current == last {
-                    result[x][last_index] = last + 1;
-                    last = 0;
-                    last_index += 1;
-                    continue;
-                }
-
-                result[x][last_index] = last;
-                last = current;
-                last_index += 1;
-            }
-
-            if last != 0 {
-                result[x][last_index] = last;
-            }
+        for (from_row, to_row) in self.grid.iter().zip(result.iter_mut()) {
+            Board::move_row(from_row, to_row, 0..4, 1, 0);
         }
 
         Board { grid: result }
@@ -234,120 +195,50 @@ impl Board {
     fn move_right(&self) -> Board {
         let mut result = [[0; 4]; 4];
 
-        for x in 0..4 {
-            let mut last = 0;
-            let mut last_index = 3;
-
-            for y in (0..4).rev() {
-                let current = self.grid[x][y];
-
-                if current == 0 {
-                    continue;
-                }
-
-                if last == 0 {
-                    last = current;
-                    continue;
-                }
-
-                if current == last {
-                    result[x][last_index] = last + 1;
-                    last = 0;
-                    last_index -= 1;
-                    continue;
-                }
-
-                result[x][last_index] = last;
-                last = current;
-                last_index -= 1;
-            }
-
-            if last != 0 {
-                result[x][last_index] = last;
-            }
+        for (from_row, to_row) in self.grid.iter().zip(result.iter_mut()) {
+            Board::move_row(from_row, to_row, (0..4).rev(), -1, 3);
         }
 
         Board { grid: result }
     }
 
     #[inline]
-    fn move_up(&self) -> Board {
-        let mut result = [[0; 4]; 4];
+    fn move_row<I>(from_row: &[u8; 4],
+                   to_row: &mut [u8; 4],
+                   iter: I,
+                   step: isize,
+                   start_index: isize)
+        where I: Iterator<Item = usize>
+    {
+        let mut last = 0;
+        let mut last_index = start_index;
 
-        for y in 0..4 {
-            let mut last = 0;
-            let mut last_index = 0;
+        for y in iter {
+            let current = from_row[y];
 
-            for x in 0..4 {
-                let current = self.grid[x][y];
+            if current == 0 {
+                continue;
+            }
 
-                if current == 0 {
-                    continue;
-                }
-
-                if last == 0 {
-                    last = current;
-                    continue;
-                }
-
-                if current == last {
-                    result[last_index][y] = last + 1;
-                    last = 0;
-                    last_index += 1;
-                    continue;
-                }
-
-                result[last_index][y] = last;
+            if last == 0 {
                 last = current;
-                last_index += 1;
+                continue;
             }
 
-            if last != 0 {
-                result[last_index][y] = last;
+            if current == last {
+                to_row[last_index as usize] = last + 1;
+                last = 0;
+            } else {
+                to_row[last_index as usize] = last;
+                last = current;
             }
+
+            last_index += step;
         }
 
-        Board { grid: result }
-    }
-
-    #[inline]
-    fn move_down(&self) -> Board {
-        let mut result = [[0; 4]; 4];
-
-        for y in 0..4 {
-            let mut last = 0;
-            let mut last_index = 3;
-
-            for x in (0..4).rev() {
-                let current = self.grid[x][y];
-
-                if current == 0 {
-                    continue;
-                }
-
-                if last == 0 {
-                    last = current;
-                    continue;
-                }
-
-                if current == last {
-                    result[last_index][y] = last + 1;
-                    last = 0;
-                    last_index -= 1;
-                    continue;
-                }
-
-                result[last_index][y] = last;
-                last = current;
-                last_index -= 1;
-            }
-
-            if last != 0 {
-                result[last_index][y] = last;
-            }
+        if last != 0 {
+            to_row[last_index as usize] = last;
         }
-
-        Board { grid: result }
     }
 }
 
@@ -444,7 +335,6 @@ mod tests {
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_to_string() {
-        // arrange
         let board = Board::new(&[
             [0, 2, 4, 8],
             [16, 32, 64, 128],
@@ -458,17 +348,14 @@ mod tests {
         expected.push_str("   256   512  1024  2048\n");
         expected.push_str("  4096  8192 16384 32768\n");
 
-        // act
         let actual = board.to_string();
 
-        // assert
         assert_eq!(expected, actual);
     }
 
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_make_move_left() {
-        // arrange
         let board = Board::new(&[
             [2, 2, 4, 4],
             [0, 2, 2, 0],
@@ -482,17 +369,14 @@ mod tests {
             [4, 0, 0, 0]
         ]).unwrap();
 
-        // act
         let actual = board.make_move(Move::Left);
 
-        // assert
         assert_eq!(expected, actual);
     }
 
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_make_move_right() {
-        // arrange
         let board = Board::new(&[
             [2, 2, 4, 4],
             [0, 2, 2, 0],
@@ -506,17 +390,14 @@ mod tests {
             [0, 0, 0, 4]
         ]).unwrap();
 
-        // act
         let actual = board.make_move(Move::Right);
 
-        // assert
         assert_eq!(expected, actual);
     }
 
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_make_move_up() {
-        // arrange
         let board = Board::new(&[
             [2, 2, 4, 4],
             [0, 2, 2, 0],
@@ -530,17 +411,14 @@ mod tests {
             [0, 0, 0, 0]
         ]).unwrap();
 
-        // act
         let actual = board.make_move(Move::Up);
 
-        // assert
         assert_eq!(expected, actual);
     }
 
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_make_move_down() {
-        // arrange
         let board = Board::new(&[
             [2, 2, 4, 4],
             [0, 2, 2, 0],
@@ -554,17 +432,14 @@ mod tests {
             [4, 4, 4, 4]
         ]).unwrap();
 
-        // act
         let actual = board.make_move(Move::Down);
 
-        // assert
         assert_eq!(expected, actual);
     }
 
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_get_possible_boards_with2() {
-        // arrange
         let board = Board::new(&[
             [0, 8, 8, 8],
             [8, 8, 0, 8],
@@ -598,17 +473,14 @@ mod tests {
             [8, 2, 8, 8]
         ]).unwrap()];
 
-        // act
         let actual = board.get_possible_boards_with2();
 
-        // assert
         assert_eq!(expected, actual);
     }
 
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_get_possible_boards_with4() {
-        // arrange
         let board = Board::new(&[
             [0, 8, 8, 8],
             [8, 8, 0, 8],
@@ -642,10 +514,8 @@ mod tests {
             [8, 4, 8, 8]
         ]).unwrap()];
 
-        // act
         let actual = board.get_possible_boards_with4();
 
-        // assert
         assert_eq!(expected, actual);
     }
 }
