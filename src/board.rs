@@ -120,10 +120,11 @@ impl Board {
 
         let create_four = rng.gen_weighted_bool(10);
         let value = if create_four {
-            1
-        } else {
             2
+        } else {
+            1
         };
+        
         let mut position = rng.gen_range(0, empty_cell_count);
 
         for val in &mut flat {
