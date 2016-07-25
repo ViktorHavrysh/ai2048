@@ -12,8 +12,9 @@
 //! given a move a player makes, or all possible states following the computer spwaning a random
 //! tile. Unsurprisingly, in order to write an AI for a game, the AI needs an emulation of the
 //! game itself.
-use std::{fmt, iter, mem};
+use std::{fmt, iter};
 use rand::{self, Rng};
+use itertools::Itertools;
 
 #[derive(Eq, PartialEq, Hash, Copy, Clone, Debug, Default)]
 pub struct Board {
@@ -81,13 +82,6 @@ impl Board {
         &self.grid
     }
 
-    /// Gets a reference to the inner representation of the `Board` as a flat array of `u8`.
-    #[inline]
-    pub fn flatten(&self) -> &[u8; 16] {
-        // Not sure this is worth it to avoid copying 8 to 12 extra bytes of memory...
-        unsafe { mem::transmute(&self.grid) }
-    }
-
     /// Gets a transposed copy of the inner representation of the `Board`.
     #[inline]
     pub fn transpose(&self) -> Board {
@@ -106,11 +100,7 @@ impl Board {
     /// board.
     pub fn add_random_tile(&self) -> Board {
         let mut rng = rand::thread_rng();
-
-        let mut flat = *self.flatten();
-
-        let empty_cell_count = flat.iter().filter(|&&v| v == 0).count();
-
+        let empty_cell_count = self.grid.iter().flatten().filter(|&&v| v == 0).count();
         let create_four = rng.gen_weighted_bool(10);
         let value = if create_four {
             2
@@ -118,25 +108,16 @@ impl Board {
             1
         };
 
-        let mut position = rng.gen_range(0, empty_cell_count);
+        let position = rng.gen_range(0, empty_cell_count);
 
-        for val in &mut flat {
-            if *val != 0 {
-                continue;
-            }
+        let mut new_grid = self.grid;
 
-            if position == 0 {
-                *val = value;
-                break;
-            }
-
-            position -= 1;
+        {
+            let mut val = new_grid.iter_mut().flatten().skip(position).nth(0).unwrap();
+            *val = value;
         }
 
-        // This unsafe block is certainly unnecessary, since this method is not
-        // performance-critical, since it only happens once per whole search...
-        // but I'm already using unsafe for doing it the other way.
-        Board { grid: unsafe { mem::transmute(flat) } }
+        Board { grid: new_grid }
     }
 
     /// Returns a `Board` that would result from making a certain `Move` in the current state.
@@ -268,6 +249,7 @@ fn parse_to_logspace(n: u32) -> Option<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use itertools::Itertools;
 
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
@@ -324,8 +306,9 @@ mod tests {
     fn can_add_random_tile() {
         let board = Board::default().add_random_tile();
 
-        let count = board.flatten()
+        let count = board.get_grid()
             .iter()
+            .flatten()
             .filter(|&&v| v == 1 || v == 2)
             .count();
 

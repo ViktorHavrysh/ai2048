@@ -3,15 +3,18 @@
 pub mod composite;
 
 use std::i32;
+
 use search_tree::PlayerNode;
 use board::Board;
+
+use itertools::Itertools;
 
 pub trait Heuristic {
     fn eval(&self, &PlayerNode) -> f64;
 }
 
 fn get_empty_cell_count(board: &Board) -> f64 {
-    board.flatten().iter().filter(|&&v| v == 0).count() as f64
+    board.get_grid().iter().flatten().filter(|&&v| v == 0).count() as f64
 }
 
 fn get_adjacent_evaluation(board: &Board) -> f64 {
@@ -40,7 +43,7 @@ fn get_adjacent_row(row: [u8; 4]) -> u8 {
 }
 
 fn get_sum(board: &Board) -> f64 {
-    board.flatten().iter().map(|&v| (v as f64).powf(3.5)).sum()
+    board.get_grid().iter().flatten().map(|&v| (v as f64).powf(3.5)).sum()
 }
 
 fn get_monotonicity_rows(board: &Board) -> f64 {
