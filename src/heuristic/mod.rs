@@ -3,6 +3,7 @@
 pub mod composite;
 
 use std::i32;
+use std::cmp;
 
 use search_tree::PlayerNode;
 use board::Board;
@@ -17,12 +18,16 @@ fn get_empty_cell_count(board: &Board) -> f64 {
     board.get_grid().iter().flatten().filter(|&&v| v == 0).count() as f64
 }
 
+fn get_empty_cell_count_row(row: [u8; 4]) -> usize {
+    row.iter().filter(|&&v| v == 0).count()
+}
+
 fn get_adjacent_evaluation(board: &Board) -> f64 {
     board.get_grid()
         .iter()
         .chain(board.transpose().get_grid().iter())
         .map(|&row| get_adjacent_row(row))
-        .sum::<u8>() as f64
+        .fold(0u8, |a, b| a + b) as f64
 }
 
 #[inline]
@@ -42,28 +47,41 @@ fn get_adjacent_row(row: [u8; 4]) -> u8 {
     adjacent_count
 }
 
+#[inline]
 fn get_sum(board: &Board) -> f64 {
-    board.get_grid().iter().flatten().map(|&v| (v as f64).powf(3.5)).sum()
+    -board.get_grid().iter().flatten().map(|&v| (v as f64).powf(3.5)).fold(0f64, |a, b| a + b)
 }
 
-fn get_monotonicity_rows(board: &Board) -> f64 {
-    let mut left = 0f64;
-    let mut right = 0f64;
+fn get_sum_row(row: [u8; 4]) -> f64 {
+    -row.iter().map(|&v| (v as f64).powf(3.5)).fold(0f64, |a, b| a + b)
+}
 
-    for row in board.get_grid() {
-        for (&current, &next) in row.iter().zip(row.iter().skip(1)) {
-            if current > next {
-                left += (current as f64).powi(4) - (next as f64).powi(4);
-            } else if next > current {
-                right += (next as f64).powi(4) - (current as f64).powi(4);
-            }
+fn get_monotonicity_rows(board: &Board) -> i32 {
+    let mut total = 0;
+
+    for &row in board.get_grid() {
+        total += get_monotonicity_row(row);
+    }
+
+    total
+}
+
+fn get_monotonicity_row(row: [u8; 4]) -> i32 {
+    let mut left = 0;
+    let mut right = 0;
+
+    for (&current, &next) in row.iter().zip(row.iter().skip(1)) {
+        if current > next {
+            left += (current as i32).pow(4) - (next as i32).pow(4);
+        } else if next > current {
+            right += (next as i32).pow(4) - (current as i32).pow(4);
         }
     }
 
-    -f64::min(left, right)
+    -cmp::min(left, right)
 }
 
-fn get_monotonicity(board: &Board) -> f64 {
+fn get_monotonicity(board: &Board) -> i32 {
     get_monotonicity_rows(board) + get_monotonicity_rows(&board.transpose())
 }
 

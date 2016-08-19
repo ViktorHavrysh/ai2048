@@ -18,12 +18,8 @@ use board::{self, Board, Move};
 use search_tree::cache::Cache;
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::cell::{Cell, RefCell};
-
-struct NodeCache {
-    player_node: Cache<Board, PlayerNode>,
-    computer_node: Cache<Board, ComputerNode>,
-}
+use lazycell::LazyCell;
+use std::cell::Cell;
 
 /// The `SearchTree` type is the root of the tree of nodes that form all possible board states in
 /// a 2048 game. It is the only potentially mutable type in this module. You can generate a new
@@ -38,6 +34,11 @@ pub struct SearchTree {
     // to nodes, so until I solve that in theory a node can outlive the `SearchTree`, so reference
     // counting it is, for the moment.
     cache: Rc<NodeCache>,
+}
+
+struct NodeCache {
+    player_node: Cache<Board, PlayerNode>,
+    computer_node: Cache<Board, ComputerNode>,
 }
 
 impl SearchTree {
@@ -102,7 +103,7 @@ impl SearchTree {
 pub struct PlayerNode {
     board: Board,
     cache: Rc<NodeCache>,
-    children: RefCell<Option<Rc<HashMap<Move, Rc<ComputerNode>>>>>,
+    children: LazyCell<HashMap<Move, Rc<ComputerNode>>>,
     // This is ugly, because the only reason these are here is that I need them in the searcher.
     // However, I can't think of a less cumbersome way to keep these around and associated with
     // a particular node without the searcher having to keep its own `HashMap` of `Board` states.
@@ -114,7 +115,7 @@ impl PlayerNode {
         PlayerNode {
             board: board,
             cache: cache,
-            children: RefCell::new(None),
+            children: LazyCell::new(),
             heuristic: Cell::new(None),
         }
     }
@@ -130,15 +131,14 @@ impl PlayerNode {
 
     // It feels like this method should be able to return a `&HashMap<Move, &ComputerNode>`,
     // but I can't think of a way to do it. Oh well.
-    pub fn get_children_by_move(&self) -> Rc<HashMap<Move, Rc<ComputerNode>>> {
+    pub fn get_children_by_move(&self) -> &HashMap<Move, Rc<ComputerNode>> {
         {
-            let mut cached_children = self.children.borrow_mut();
-            if cached_children.is_some() {
-                return cached_children.as_ref().unwrap().clone();
+            if let Some(children) = self.children.borrow() {
+                return children;
+            } else {
+                let children = self.create_children_by_move();
+                self.children.fill(children);
             }
-
-            let children = self.create_children_by_move();
-            *cached_children = Some(Rc::new(children));
         }
 
         self.get_children_by_move()
@@ -183,7 +183,7 @@ pub struct ComputerNodeChildren {
 pub struct ComputerNode {
     board: Board,
     cache: Rc<NodeCache>,
-    children: RefCell<Option<Rc<ComputerNodeChildren>>>,
+    children: LazyCell<ComputerNodeChildren>,
 }
 
 impl ComputerNode {
@@ -191,7 +191,7 @@ impl ComputerNode {
         ComputerNode {
             board: board,
             cache: cache,
-            children: RefCell::new(None),
+            children: LazyCell::new(),
         }
     }
 
@@ -206,15 +206,14 @@ impl ComputerNode {
 
     // It feels like this method should be able to return a `&ComputerNodeChildren`, but I can't
     // think of a way to do it. Oh well.
-    pub fn get_children(&self) -> Rc<ComputerNodeChildren> {
+    pub fn get_children(&self) -> &ComputerNodeChildren {
         {
-            let mut cached_children = self.children.borrow_mut();
-            if cached_children.is_some() {
-                return cached_children.as_ref().unwrap().clone();
+            if let Some(children) = self.children.borrow() {
+                return children;
+            } else {
+                let children = self.create_children();
+                self.children.fill(children);
             }
-
-            let children = self.create_children();
-            *cached_children = Some(Rc::new(children));
         }
 
         self.get_children()

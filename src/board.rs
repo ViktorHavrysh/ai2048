@@ -54,7 +54,8 @@ impl fmt::Display for Board {
 // I marked methods that might be performance-critical with #[inline]. I'm not sure it makes a
 // difference, though.
 impl Board {
-    /// Creates a new `Board` from an array of human-looking numbers.
+    /// Creates a new `Board` from an array of human-looking numbers. If a tile fails to be
+    /// a power of 2, returns `None`.
     pub fn new(grid: &[[u32; 4]; 4]) -> Option<Board> {
         let mut result = [[0; 4]; 4];
 
@@ -82,25 +83,35 @@ impl Board {
         &self.grid
     }
 
-    /// Gets a transposed copy of the inner representation of the `Board`.
+    /// Gets a transposed copy of the `Board`.
     #[inline]
     pub fn transpose(&self) -> Board {
-        let mut t = [[0; 4]; 4];
+        // let mut t = [[0; 4]; 4];
 
-        for (x, row) in self.grid.iter().enumerate() {
-            for (y, &val) in row.iter().enumerate() {
-                t[y][x] = val;
-            }
-        }
+        let row0 = [self.grid[0][0], self.grid[1][0], self.grid[2][0], self.grid[3][0]];
+        let row1 = [self.grid[0][1], self.grid[1][1], self.grid[2][1], self.grid[3][1]];
+        let row2 = [self.grid[0][2], self.grid[1][2], self.grid[2][2], self.grid[3][2]];
+        let row3 = [self.grid[0][3], self.grid[1][3], self.grid[2][3], self.grid[3][3]];
 
-        Board { grid: t }
+        let grid = [row0, row1, row2, row3];
+
+        Board { grid: grid }
+
+        // for (x, row) in self.grid.iter().enumerate() {
+        //     for (y, &val) in row.iter().enumerate() {
+        //         t[y][x] = val;
+        //     }
+        // }
+
+        // Board { grid: t }
     }
 
-    /// Adds a random tile (10% of times a `2`, 90% of times a `4`) to a random empty cell on the
-    /// board.
+    /// Creates a new `Board` with a random tile (10% of times a `2`, 90% of times a `4`) added to a
+    /// random empty cell on the board.
     pub fn add_random_tile(&self) -> Board {
         let mut rng = rand::thread_rng();
         let empty_cell_count = self.grid.iter().flatten().filter(|&&v| v == 0).count();
+        let position = rng.gen_range(0, empty_cell_count);
         let create_four = rng.gen_weighted_bool(10);
         let value = if create_four {
             2
@@ -108,28 +119,17 @@ impl Board {
             1
         };
 
-        let position = rng.gen_range(0, empty_cell_count);
-
         let mut new_grid = self.grid;
 
         {
-            let mut val = new_grid.iter_mut().flatten().skip(position).nth(0).unwrap();
+            let mut val = new_grid.iter_mut().flatten().filter(move |&&mut v| v == 0).nth(position).unwrap();
             *val = value;
         }
 
         Board { grid: new_grid }
     }
 
-    /// Returns a `Board` that would result from making a certain `Move` in the current state.
-    #[inline]
-    pub fn make_move(&self, mv: Move) -> Board {
-        match mv {
-            Move::Left => self.move_left(),
-            Move::Right => self.move_right(),
-            Move::Up => self.transpose().move_left().transpose(),
-            Move::Down => self.transpose().move_right().transpose(),
-        }
-    }
+    
 
     /// Returns all possible `Board`s that can result from the computer spawning a `2` in a random
     /// empty cell.
@@ -159,6 +159,17 @@ impl Board {
                 Board { grid: possible_grid }
             })
             .collect()
+    }
+
+    /// Returns a `Board` that would result from making a certain `Move` in the current state.
+    #[inline]
+    pub fn make_move(&self, mv: Move) -> Board {
+        match mv {
+            Move::Left => self.move_left(),
+            Move::Right => self.move_right(),
+            Move::Up => self.transpose().move_left().transpose(),
+            Move::Down => self.transpose().move_right().transpose(),
+        }
     }
 
     #[inline]
@@ -304,15 +315,20 @@ mod tests {
 
     #[test]
     fn can_add_random_tile() {
-        let board = Board::default().add_random_tile();
+        for _ in 0..1000 {
+            let mut board = Board::default();
+            for _ in 0..8 {
+                board = board.add_random_tile();
+            }
 
-        let count = board.get_grid()
-            .iter()
-            .flatten()
-            .filter(|&&v| v == 1 || v == 2)
-            .count();
+            let count = board.get_grid()
+                .iter()
+                .flatten()
+                .filter(|&&v| v == 1 || v == 2)
+                .count();
 
-        assert_eq!(1, count);
+            assert_eq!(8, count);
+        }
     }
 
     #[test]

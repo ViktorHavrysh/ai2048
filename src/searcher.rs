@@ -239,7 +239,7 @@ impl<H: Heuristic> ExpectiMaxer<H> {
                                           probability * PROBABILITY_OF2 / (count as f64),
                                           &mut search_statistics)
             })
-            .sum::<f64>() / (count as f64);
+            .fold(0f64, |a, b| a + b) / (count as f64);
 
         let avg_with4 = children.with4
             .iter()
@@ -249,7 +249,7 @@ impl<H: Heuristic> ExpectiMaxer<H> {
                                           probability * PROBABILITY_OF4 / (count as f64),
                                           &mut search_statistics)
             })
-            .sum::<f64>() / (count as f64);
+            .fold(0f64, |a, b| a + b) / (count as f64);
 
         avg_with2 * PROBABILITY_OF2 + avg_with4 * PROBABILITY_OF4
     }

@@ -1,4 +1,4 @@
-#![warn(missing_docs)]
+// #![warn(missing_docs)]
 
 //! This crate provides an implementation of an 2048 AI.
 //!
@@ -18,6 +18,7 @@
 extern crate rand;
 extern crate time;
 extern crate itertools;
+extern crate lazycell;
 
 pub use searcher::{SearchResult, SearchStatistics};
 
