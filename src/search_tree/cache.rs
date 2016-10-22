@@ -11,10 +11,11 @@
 //!
 //! The type is not thread safe.
 
-use std::collections::HashMap;
+
+use fnv::FnvHashMap;
+use std::cell::RefCell;
 use std::hash::Hash;
 use std::rc::{Rc, Weak};
-use std::cell::RefCell;
 
 pub struct Cache<K, V> {
     data: RefCell<CachingHashMap<K, V>>,
@@ -25,7 +26,7 @@ impl<K, V> Cache<K, V>
 {
     /// Returns an emtpy `Cache`.
     pub fn new() -> Self {
-        Cache { data: RefCell::new(HashMap::new()) }
+        Cache { data: RefCell::new(FnvHashMap::default()) }
     }
 
     /// Retrieves the cached value by key. If the value doesn't exist, uses the provided
@@ -52,7 +53,7 @@ impl<K, V> Cache<K, V>
     }
 }
 
-type CachingHashMap<K, V> = HashMap<K, Weak<V>>;
+type CachingHashMap<K, V> = FnvHashMap<K, Weak<V>>;
 
 trait Gc {
     fn gc(&mut self);
@@ -99,9 +100,9 @@ impl<K, V> GetOrSet<K, V> for CachingHashMap<K, V>
 
 #[cfg(test)]
 mod tests {
-    use super::{Cache, CachingHashMap, Gc};
 
     use std::rc::Rc;
+    use super::{Cache, CachingHashMap, Gc};
 
     #[test]
     fn cachinghashmap_can_gc() {

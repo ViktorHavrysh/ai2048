@@ -2,13 +2,13 @@
 
 pub mod composite;
 
-use std::i32;
-use std::cmp;
-
-use search_tree::PlayerNode;
 use board::Board;
 
 use itertools::Itertools;
+
+use search_tree::PlayerNode;
+use std::cmp;
+use std::i32;
 
 pub trait Heuristic {
     fn eval(&self, &PlayerNode) -> f64;

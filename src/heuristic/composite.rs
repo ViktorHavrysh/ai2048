@@ -1,7 +1,8 @@
-use super::*;
+
+use fnv::FnvHashMap;
 use search_tree::PlayerNode;
-use std::collections::HashMap;
 use std::cell::RefCell;
+use super::*;
 
 const MIN: f64 = -1_600_000f64;
 
@@ -9,7 +10,7 @@ const USE_CACHE: bool = false;
 
 #[derive(Default)]
 pub struct CompositeHeuristic {
-    cache: RefCell<HashMap<[u8; 4], f64>>,
+    cache: RefCell<FnvHashMap<[u8; 4], f64>>,
 }
 
 impl Heuristic for CompositeHeuristic {
@@ -54,7 +55,7 @@ impl CompositeHeuristic {
 }
 
 #[inline]
-fn eval_row(row: [u8; 4], cache: &mut HashMap<[u8; 4], f64>) -> f64 {
+fn eval_row(row: [u8; 4], cache: &mut FnvHashMap<[u8; 4], f64>) -> f64 {
     *cache.entry(row).or_insert_with(|| eval_row_nocache(row))
 }
 

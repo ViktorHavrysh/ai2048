@@ -1,14 +1,14 @@
 extern crate ai2048;
 
-use ai2048::board::Board;
 use ai2048::agent::Agent;
+use ai2048::board::Board;
 use ai2048::heuristic::composite::CompositeHeuristic;
 
 fn main() {
     let heuristic = CompositeHeuristic::default();
 
     let mut board = Board::default().add_random_tile().add_random_tile();
-    let mut agent = Agent::new(board, heuristic, 0.001, 6);
+    let mut agent = Agent::new(board, heuristic, 0.002, 6);
 
     loop {
         let result = agent.make_decision();

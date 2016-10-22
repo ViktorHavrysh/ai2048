@@ -1,10 +1,10 @@
 //! This module represents the AI player. You feed it news from the outside, query it, and it will
 //! give you its decision for what you should be doing next.
 
+use board::Board;
+use heuristic::Heuristic;
 use search_tree::SearchTree;
 use searcher::{ExpectiMaxer, SearchResult, Searcher};
-use heuristic::Heuristic;
-use board::Board;
 
 /// `Agent` aggregates all the other parts of the library in order to achieve its whole point.
 pub struct Agent<H: Heuristic> {
@@ -40,9 +40,9 @@ impl<H: Heuristic> Agent<H> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use board::Board;
     use heuristic::composite::CompositeHeuristic;
+    use super::*;
 
     #[test]
     fn can_make_decision() {

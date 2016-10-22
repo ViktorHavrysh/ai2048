@@ -15,10 +15,14 @@
 //! The `SearchResult` and `SearchStatistics` types are containers for the results of the AI
 //! player's evaluation of a position and some interesting statistics.
 
+#![feature(conservative_impl_trait)]
+#![allow(unknown_lints)]
+
 extern crate rand;
 extern crate time;
 extern crate itertools;
 extern crate lazycell;
+extern crate fnv;
 
 pub use searcher::{SearchResult, SearchStatistics};
 

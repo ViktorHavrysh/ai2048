@@ -12,9 +12,10 @@
 //! given a move a player makes, or all possible states following the computer spwaning a random
 //! tile. Unsurprisingly, in order to write an AI for a game, the AI needs an emulation of the
 //! game itself.
-use std::{fmt, iter};
-use rand::{self, Rng};
+
 use itertools::Itertools;
+use rand::{self, Rng};
+use std::{fmt, iter};
 
 #[derive(Eq, PartialEq, Hash, Copy, Clone, Debug, Default)]
 pub struct Board {
@@ -113,52 +114,51 @@ impl Board {
         let empty_cell_count = self.grid.iter().flatten().filter(|&&v| v == 0).count();
         let position = rng.gen_range(0, empty_cell_count);
         let create_four = rng.gen_weighted_bool(10);
-        let value = if create_four {
-            2
-        } else {
-            1
-        };
+        let value = if create_four { 2 } else { 1 };
 
         let mut new_grid = self.grid;
 
         {
-            let mut val = new_grid.iter_mut().flatten().filter(move |&&mut v| v == 0).nth(position).unwrap();
+            let mut val =
+                new_grid.iter_mut().flatten().filter(move |&&mut v| v == 0).nth(position).unwrap();
             *val = value;
         }
 
         Board { grid: new_grid }
     }
 
-    
+
 
     /// Returns all possible `Board`s that can result from the computer spawning a `2` in a random
     /// empty cell.
     #[inline]
-    pub fn get_possible_boards_with2(&self) -> Vec<Board> {
+    #[allow(needless_lifetimes)]
+    pub fn get_possible_boards_with2<'a>(&'a self) -> impl Iterator<Item=Board> + 'a {
         self.get_possible_boards(1)
     }
 
     /// Returns all possible `Board`s that can result from the computer spawning a `4` in a random
     /// empty cell.
     #[inline]
-    pub fn get_possible_boards_with4(&self) -> Vec<Board> {
+    #[allow(needless_lifetimes)]
+    pub fn get_possible_boards_with4<'a>(&'a self) -> impl Iterator<Item=Board> + 'a {
         self.get_possible_boards(2)
     }
 
     #[inline]
-    fn get_possible_boards(&self, new_value: u8) -> Vec<Board> {
+    #[allow(needless_lifetimes)]
+    fn get_possible_boards<'a>(&'a self, new_value: u8) -> impl Iterator<Item=Board> + 'a {
         self.grid
-            .iter()
+            .into_iter()
             .enumerate()
             .flat_map(|(x, row)| {
-                row.iter().enumerate().filter(|&(_, &val)| val == 0).map(move |(y, _)| (x, y))
+                row.into_iter().enumerate().filter(|&(_, val)| *val == 0).map(move |(y, _)| (x, y))
             })
-            .map(|(x, y)| {
+            .map(move |(x, y)| {
                 let mut possible_grid = self.grid;
                 possible_grid[x][y] = new_value;
                 Board { grid: possible_grid }
             })
-            .collect()
     }
 
     /// Returns a `Board` that would result from making a certain `Move` in the current state.
@@ -259,8 +259,8 @@ fn parse_to_logspace(n: u32) -> Option<u8> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use itertools::Itertools;
+    use super::*;
 
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]

@@ -15,12 +15,12 @@
 //!
 //! Computer nodes are AVG nodes that return the weighted average of its child states.
 
-use search_tree::{ComputerNode, PlayerNode, SearchTree};
 use board::{Board, Move};
-use std::f64;
-use std::collections::HashMap;
-use time::{self, Duration};
 use heuristic::Heuristic;
+use search_tree::{ComputerNode, PlayerNode, SearchTree};
+use std::collections::HashMap;
+use std::f64;
+use time::{self, Duration};
 
 const PROBABILITY_OF2: f64 = 0.9;
 const PROBABILITY_OF4: f64 = 0.1;
@@ -257,10 +257,10 @@ impl<H: Heuristic> ExpectiMaxer<H> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use board::Board;
-    use search_tree::SearchTree;
     use heuristic::composite::CompositeHeuristic;
+    use search_tree::SearchTree;
+    use super::*;
 
     #[test]
     fn can_get_search_result() {

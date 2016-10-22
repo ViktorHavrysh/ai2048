@@ -15,11 +15,11 @@
 mod cache;
 
 use board::{self, Board, Move};
-use search_tree::cache::Cache;
-use std::collections::HashMap;
-use std::rc::Rc;
+use fnv::FnvHashMap;
 use lazycell::LazyCell;
+use search_tree::cache::Cache;
 use std::cell::Cell;
+use std::rc::Rc;
 
 /// The `SearchTree` type is the root of the tree of nodes that form all possible board states in
 /// a 2048 game. It is the only potentially mutable type in this module. You can generate a new
@@ -103,7 +103,7 @@ impl SearchTree {
 pub struct PlayerNode {
     board: Board,
     cache: Rc<NodeCache>,
-    children: LazyCell<HashMap<Move, Rc<ComputerNode>>>,
+    children: LazyCell<FnvHashMap<Move, Rc<ComputerNode>>>,
     // This is ugly, because the only reason these are here is that I need them in the searcher.
     // However, I can't think of a less cumbersome way to keep these around and associated with
     // a particular node without the searcher having to keep its own `HashMap` of `Board` states.
@@ -128,27 +128,21 @@ impl PlayerNode {
     /// Returns a `HashMap` of all possible `Move`:`ComputerNode` pairs possible in the current
     /// position. If the `HashMap` it returns is empty, it means Game Over: no possible further
     /// moves by the player!
-
-    // It feels like this method should be able to return a `&HashMap<Move, &ComputerNode>`,
-    // but I can't think of a way to do it. Oh well.
-    pub fn get_children_by_move(&self) -> &HashMap<Move, Rc<ComputerNode>> {
-        {
-            if let Some(children) = self.children.borrow() {
-                return children;
-            } else {
-                let children = self.create_children_by_move();
-                self.children.fill(children);
-            }
+    pub fn get_children_by_move(&self) -> &FnvHashMap<Move, Rc<ComputerNode>> {
+        if let Some(children) = self.children.borrow() {
+            children
+        } else {
+            let children = self.create_children_by_move();
+            self.children.fill(children);
+            self.children.borrow().unwrap()
         }
-
-        self.get_children_by_move()
     }
 
-    fn create_children_by_move(&self) -> HashMap<Move, Rc<ComputerNode>> {
-        let mut children: HashMap<Move, Rc<ComputerNode>> = HashMap::new();
+    fn create_children_by_move(&self) -> FnvHashMap<Move, Rc<ComputerNode>> {
+        let mut children: FnvHashMap<Move, Rc<ComputerNode>> = FnvHashMap::default();
 
-        for m in board::MOVES.iter() {
-            let new_grid = self.board.make_move(*m);
+        for &m in &board::MOVES {
+            let new_grid = self.board.make_move(m);
 
             // It is illegal to make a move that doesn't change anything.
             if new_grid != self.board {
@@ -157,7 +151,7 @@ impl PlayerNode {
                     .get_or_insert_with(new_grid,
                                         || ComputerNode::new(new_grid, self.cache.clone()));
 
-                children.insert(*m, computer_node);
+                children.insert(m, computer_node);
             }
         }
 
@@ -222,21 +216,19 @@ impl ComputerNode {
     fn create_children(&self) -> ComputerNodeChildren {
         let children_with2 = self.board
             .get_possible_boards_with2()
-            .iter()
-            .map(|&g| {
+            .map(|board| {
                 self.cache
                     .player_node
-                    .get_or_insert_with(g, || PlayerNode::new(g, self.cache.clone()))
+                    .get_or_insert_with(board, || PlayerNode::new(board, self.cache.clone()))
             })
             .collect::<Vec<_>>();
 
         let children_with4 = self.board
             .get_possible_boards_with4()
-            .iter()
-            .map(|&g| {
+            .map(|board| {
                 self.cache
                     .player_node
-                    .get_or_insert_with(g, || PlayerNode::new(g, self.cache.clone()))
+                    .get_or_insert_with(board, || PlayerNode::new(board, self.cache.clone()))
             })
             .collect::<Vec<_>>();
 
@@ -252,11 +244,11 @@ impl ComputerNode {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     use board::{Board, Move};
 
     use std::collections::{HashMap, HashSet};
+    use super::*;
 
     #[test]
     fn can_create_new_searchtree() {
