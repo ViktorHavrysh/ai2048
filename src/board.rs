@@ -24,11 +24,12 @@ pub struct Board {
 
 /// Represents a move.
 #[derive(Eq, PartialEq, Hash, Copy, Clone, Debug)]
+#[repr(u8)]
 pub enum Move {
-    Left,
-    Right,
-    Up,
-    Down,
+    Left = 0,
+    Right = 1,
+    Up = 2,
+    Down = 3,
 }
 
 /// All possible moves.
@@ -76,6 +77,11 @@ impl Board {
         }
 
         Some(Board { grid: result })
+    }
+
+    /// Gets the maximum number of moves needed to get to this game position
+    pub fn moves(&self) -> u32 {
+        self.grid.iter().flatten().map(|&cell| cell as u32).sum()
     }
 
     /// Gets a reference to the inner representation of the `Board`, which is a 4x4 array of `u8`.

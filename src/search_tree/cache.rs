@@ -11,7 +11,6 @@
 //!
 //! The type is not thread safe.
 
-
 use fnv::FnvHashMap;
 use std::cell::RefCell;
 use std::hash::Hash;
@@ -134,7 +133,7 @@ mod tests {
             assert_eq!(1, cache.strong_count());
             assert_eq!(1, cache.len());
         }
-        assert_eq!(0, cache.strong_count())        ;
+        assert_eq!(0, cache.strong_count());
         assert_eq!(1, cache.len());
 
         cache.gc();

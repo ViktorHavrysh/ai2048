@@ -175,7 +175,7 @@ impl<H: Heuristic> ExpectiMaxer<H> {
         }
 
         children.iter()
-            .map(|(&m, n)| {
+            .map(|(m, n)| {
                 let eval =
                     self.get_computer_node_eval(n,
                                                 self.max_search_depth,

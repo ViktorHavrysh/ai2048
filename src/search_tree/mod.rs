@@ -15,7 +15,6 @@
 mod cache;
 
 use board::{self, Board, Move};
-use fnv::FnvHashMap;
 use lazycell::LazyCell;
 use search_tree::cache::Cache;
 use std::cell::Cell;
@@ -36,10 +35,20 @@ pub struct SearchTree {
     cache: Rc<NodeCache>,
 }
 
+/// This type represents the children of a `PlayerNode`.
+pub struct PlayerNodeChildren {
+    nodes: [Option<Rc<ComputerNode>>; 4]
+}
+
 struct NodeCache {
     player_node: Cache<Board, PlayerNode>,
     computer_node: Cache<Board, ComputerNode>,
 }
+
+// trait Node {
+//     /// Gets the maximum number of moves needed to get to this game position
+//     fn moves(&self) -> u32;
+// }
 
 /// This type rerpresents a `Board` state that can be reached on the Player's turn. This type
 /// is logically immutable, and there should be no way to create this type from outside the module
@@ -50,7 +59,7 @@ struct NodeCache {
 pub struct PlayerNode {
     board: Board,
     cache: Rc<NodeCache>,
-    children: LazyCell<FnvHashMap<Move, Rc<ComputerNode>>>,
+    children: LazyCell<PlayerNodeChildren>,
     // This is ugly, because the only reason these are here is that I need them in the searcher.
     // However, I can't think of a less cumbersome way to keep these around and associated with
     // a particular node without the searcher having to keep its own `HashMap` of `Board` states.
@@ -146,10 +155,9 @@ impl PlayerNode {
         &self.board
     }
 
-    /// Returns a `HashMap` of all possible `Move`:`ComputerNode` pairs possible in the current
-    /// position. If the `HashMap` it returns is empty, it means Game Over: no possible further
-    /// moves by the player!
-    pub fn get_children_by_move(&self) -> &FnvHashMap<Move, Rc<ComputerNode>> {
+    /// Returns a `PlayerNodeChildren` which represents all possible `Move`:`ComputerNode` pairs
+    /// possible in the current position.
+    pub fn get_children_by_move(&self) -> &PlayerNodeChildren {
         if let Some(children) = self.children.borrow() {
             children
         } else {
@@ -159,8 +167,8 @@ impl PlayerNode {
         }
     }
 
-    fn create_children_by_move(&self) -> FnvHashMap<Move, Rc<ComputerNode>> {
-        let mut children: FnvHashMap<Move, Rc<ComputerNode>> = FnvHashMap::default();
+    fn create_children_by_move(&self) -> PlayerNodeChildren {
+        let mut children = [None, None, None, None];
 
         for &m in &board::MOVES {
             let new_grid = self.board.make_move(m);
@@ -172,11 +180,13 @@ impl PlayerNode {
                     .get_or_insert_with(new_grid,
                                         || ComputerNode::new(new_grid, self.cache.clone()));
 
-                children.insert(m, computer_node);
+                children[m as u8 as usize] = Some(computer_node);
             }
         }
 
-        children
+        PlayerNodeChildren {
+            nodes: children
+        }
     }
 }
 
@@ -233,6 +243,40 @@ impl ComputerNode {
             with2: children_with2,
             with4: children_with4,
         }
+    }
+}
+
+impl PlayerNodeChildren {
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.nodes.iter().all(|n| n.is_none())
+    }
+
+    #[inline]
+    #[allow(needless_lifetimes)]
+    pub fn iter<'a>(&'a self) -> impl Iterator<Item=(Move, &'a ComputerNode)> + 'a {
+        self.nodes.iter()
+            .enumerate()
+            .filter_map(|(index, opt)| {
+                opt.as_ref().map(|node| {
+                    let mv = match index {
+                        0 => Move::Left,
+                        1 => Move::Right,
+                        2 => Move::Up,
+                        3 => Move::Down,
+                        _ => unreachable!(),
+                    };
+
+                    (mv, node.as_ref())
+                })
+            })
+    }
+
+    #[inline]
+    #[allow(needless_lifetimes)]
+    pub fn values<'a>(&'a self) -> impl Iterator<Item=&'a ComputerNode> + 'a {
+        self.nodes.iter()
+            .filter_map(|opt| opt.as_ref().map(|node| node.as_ref()))
     }
 }
 
@@ -307,7 +351,7 @@ mod tests {
             [4, 2, 0, 4]
         ]).unwrap());
 
-        let actual = player_node.get_children_by_move();
+        let actual = player_node.get_children_by_move().iter().collect::<HashMap<_, _>>();
 
         for (key, value) in expected {
             assert_eq!(value, *actual.get(&key).unwrap().get_board());
