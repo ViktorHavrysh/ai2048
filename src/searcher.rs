@@ -17,13 +17,14 @@
 
 use board::{Board, Move};
 use heuristic::Heuristic;
+use itertools::Itertools;
 use search_tree::{ComputerNode, PlayerNode, SearchTree};
 use std::collections::HashMap;
-use std::f64;
+use std::f32;
 use time::{self, Duration};
 
-const PROBABILITY_OF2: f64 = 0.9;
-const PROBABILITY_OF4: f64 = 0.1;
+const PROBABILITY_OF2: f32 = 0.9;
+const PROBABILITY_OF4: f32 = 0.1;
 
 /// Not sure why I created a trait. I used to experiment a lot with different search methods,
 /// but I don't think I'll find a better algorithm than `ExpectiMax` now.
@@ -33,7 +34,7 @@ pub trait Searcher {
 
 /// The main consumer of computational resources of the program.
 pub struct ExpectiMaxer<H: Heuristic> {
-    min_probability: f64,
+    min_probability: f32,
     max_search_depth: u8,
     heuristic: H,
 }
@@ -42,8 +43,8 @@ pub struct ExpectiMaxer<H: Heuristic> {
 pub struct SearchResult {
     pub search_statistics: SearchStatistics,
     pub root_board: Board,
-    pub move_evaluations: HashMap<Move, f64>,
-    pub best_move: Option<(Move, f64)>,
+    pub move_evaluations: HashMap<Move, f32>,
+    pub best_move: Option<(Move, f32)>,
 }
 
 /// These are the interesting statistics. May add some more later.
@@ -82,12 +83,12 @@ impl SearchStatistics {
         self.new_player_nodes + self.new_computer_nodes
     }
     fn nodes_per_second(&self) -> u64 {
-        (self.nodes_traversed as f64 *
-         (1_000_000_000f64 / self.search_duration.num_nanoseconds().unwrap() as f64)) as u64
+        (self.nodes_traversed as f32 *
+         (1_000_000_000f32 / self.search_duration.num_nanoseconds().unwrap() as f32)) as u64
     }
     fn new_nodes_per_second(&self) -> u64 {
-        (self.new_nodes() as f64 *
-         (1_000_000_000f64 / self.search_duration.num_nanoseconds().unwrap() as f64)) as u64
+        (self.new_nodes() as f32 *
+         (1_000_000_000f32 / self.search_duration.num_nanoseconds().unwrap() as f32)) as u64
     }
 }
 
@@ -136,20 +137,14 @@ impl<H: Heuristic> Searcher for ExpectiMaxer<H> {
         search_statistics.known_player_nodes = known_player_nodes_finish;
 
         // find the best evaluation and move
-        let best_move = if hashmap.len() > 0 {
-            let best_eval = hashmap.values().map(|&v| v).fold(f64::NAN, f64::max);
-            let (&mv, &eval) = hashmap.iter()
-                .filter(|&(_, &e)| e == best_eval)
-                .nth(0)
-                .unwrap();
-
-            Some((mv, eval))
-        } else {
-            None
-        };
+        let best_move = hashmap.iter()
+            .sorted_by(|&a, &b| b.1.partial_cmp(a.1).unwrap())
+            .into_iter()
+            .map(|(&mv, &eval)| (mv, eval))
+            .nth(0);
 
         SearchResult {
-            root_board: search_tree.get_root().get_board().clone(),
+            root_board: *search_tree.get_root().get_board(),
             move_evaluations: hashmap,
             search_statistics: search_statistics,
             best_move: best_move,
@@ -160,7 +155,7 @@ impl<H: Heuristic> Searcher for ExpectiMaxer<H> {
 impl<H: Heuristic> ExpectiMaxer<H> {
     /// Creates a new `ExpectiMaxer`. Require the heuristic to use, the limit probability
     /// lower than which we'll won't search, and the maximum search depth.
-    pub fn new(min_probability: f64, max_search_depth: u8, heuristic: H) -> Self {
+    pub fn new(min_probability: f32, max_search_depth: u8, heuristic: H) -> Self {
         assert!(max_search_depth != 0);
         ExpectiMaxer {
             min_probability: min_probability,
@@ -172,10 +167,10 @@ impl<H: Heuristic> ExpectiMaxer<H> {
     fn init(&self,
             search_tree: &SearchTree,
             mut search_statistics: &mut SearchStatistics)
-            -> HashMap<Move, f64> {
+            -> HashMap<Move, f32> {
         let children = search_tree.get_root().get_children_by_move();
 
-        if children.len() == 0 {
+        if children.is_empty() {
             return HashMap::new();
         }
 
@@ -184,7 +179,7 @@ impl<H: Heuristic> ExpectiMaxer<H> {
                 let eval =
                     self.get_computer_node_eval(n,
                                                 self.max_search_depth,
-                                                1f64,
+                                                1f32,
                                                 &mut search_statistics);
                 (m, eval)
             })
@@ -194,9 +189,9 @@ impl<H: Heuristic> ExpectiMaxer<H> {
     fn get_player_node_eval(&self,
                             node: &PlayerNode,
                             depth: u8,
-                            probability: f64,
+                            probability: f32,
                             mut search_statistics: &mut SearchStatistics)
-                            -> f64 {
+                            -> f32 {
         search_statistics.nodes_traversed += 1;
 
         let children = node.get_children_by_move();
@@ -218,15 +213,15 @@ impl<H: Heuristic> ExpectiMaxer<H> {
 
         children.values()
             .map(|n| self.get_computer_node_eval(n, depth, probability, &mut search_statistics))
-            .fold(f64::NAN, f64::max)
+            .fold(f32::NAN, f32::max)
     }
 
     fn get_computer_node_eval(&self,
                               node: &ComputerNode,
                               depth: u8,
-                              probability: f64,
+                              probability: f32,
                               mut search_statistics: &mut SearchStatistics)
-                              -> f64 {
+                              -> f32 {
         search_statistics.nodes_traversed += 1;
         let children = node.get_children();
         let count = children.with2.len();
@@ -236,20 +231,20 @@ impl<H: Heuristic> ExpectiMaxer<H> {
             .map(|n| {
                 self.get_player_node_eval(n,
                                           depth - 1,
-                                          probability * PROBABILITY_OF2 / (count as f64),
+                                          probability * PROBABILITY_OF2 / (count as f32),
                                           &mut search_statistics)
             })
-            .fold(0f64, |a, b| a + b) / (count as f64);
+            .sum::<f32>() / (count as f32);
 
         let avg_with4 = children.with4
             .iter()
             .map(|n| {
                 self.get_player_node_eval(n,
                                           depth - 1,
-                                          probability * PROBABILITY_OF4 / (count as f64),
+                                          probability * PROBABILITY_OF4 / (count as f32),
                                           &mut search_statistics)
             })
-            .fold(0f64, |a, b| a + b) / (count as f64);
+            .sum::<f32>() / (count as f32);
 
         avg_with2 * PROBABILITY_OF2 + avg_with4 * PROBABILITY_OF4
     }

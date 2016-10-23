@@ -18,7 +18,7 @@ impl<H: Heuristic> Agent<H> {
     /// maximum depth ot the search.
     pub fn new(starting_state: Board,
                heuristic: H,
-               min_probability: f64,
+               min_probability: f32,
                max_search_depth: u8)
                -> Self {
         Agent {

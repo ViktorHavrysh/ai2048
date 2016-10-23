@@ -107,7 +107,7 @@ pub struct PlayerNode {
     // This is ugly, because the only reason these are here is that I need them in the searcher.
     // However, I can't think of a less cumbersome way to keep these around and associated with
     // a particular node without the searcher having to keep its own `HashMap` of `Board` states.
-    pub heuristic: Cell<Option<f64>>,
+    pub heuristic: Cell<Option<f32>>,
 }
 
 impl PlayerNode {

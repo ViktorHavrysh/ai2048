@@ -16,7 +16,7 @@ fn main() {
         println!("{}", board);
         println!("{}", result.search_statistics.to_string());
 
-        for mv in ai2048::board::MOVES.iter() {
+        for mv in &ai2048::board::MOVES {
             println!("{:?}: {}",
                      mv,
                      match result.move_evaluations.get(mv) {

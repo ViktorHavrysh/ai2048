@@ -1,11 +1,11 @@
 use super::Heuristic;
-use std::f64;
+use std::f32;
 use board::Board;
 use search_tree::PlayerNode;
 
 type HeatMap = [[i64; 4]; 4];
 
-const MIN: f64 = -10_000_000_000f64;
+const MIN: f32 = -10_000_000_000f32;
 
 const EMPTY_CELLS_WITHOUT_PENALTY: i64 = 6;
 
@@ -21,7 +21,7 @@ pub struct HeatMapHeuristic {
 }
 
 impl Heuristic for HeatMapHeuristic {
-    fn eval(&self, node: &PlayerNode) -> f64 {
+    fn eval(&self, node: &PlayerNode) -> f32 {
         if node.get_children_by_move().len() == 0 {
             return MIN;
         }
@@ -35,7 +35,7 @@ impl Heuristic for HeatMapHeuristic {
             result -= 1 << (EMPTY_CELLS_WITHOUT_PENALTY - empty_cell_evaluation);
         }
 
-        result as f64
+        result as f32
     }
 }
 
@@ -130,7 +130,7 @@ impl HeatMapHeuristic {
 mod tests {
     use super::super::*;
     use super::*;
-    use std::f64;
+    use std::f32;
     use std::collections::HashSet;
     use board::Board;
     use search_tree::SearchTree;
@@ -156,6 +156,6 @@ mod tests {
 
         let eval = heur.eval(search_tree.get_root());
 
-        assert!(eval != f64::NAN);
+        assert!(eval != f32::NAN);
     }
 }

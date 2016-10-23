@@ -11,23 +11,26 @@ use std::cmp;
 use std::i32;
 
 pub trait Heuristic {
-    fn eval(&self, &PlayerNode) -> f64;
+    fn eval(&self, &PlayerNode) -> f32;
 }
 
-fn get_empty_cell_count(board: &Board) -> f64 {
-    board.get_grid().iter().flatten().filter(|&&v| v == 0).count() as f64
+#[inline]
+fn get_empty_cell_count(board: &Board) -> usize {
+    board.get_grid().iter().flatten().filter(|&&v| v == 0).count()
 }
 
+#[inline]
 fn get_empty_cell_count_row(row: [u8; 4]) -> usize {
     row.iter().filter(|&&v| v == 0).count()
 }
 
-fn get_adjacent_evaluation(board: &Board) -> f64 {
+#[inline]
+fn get_adjacent(board: &Board) -> u16 {
     board.get_grid()
         .iter()
         .chain(board.transpose().get_grid().iter())
         .map(|&row| get_adjacent_row(row))
-        .fold(0u8, |a, b| a + b) as f64
+        .fold(0u16, |a, b| a as u16 + b as u16)
 }
 
 #[inline]
@@ -48,24 +51,26 @@ fn get_adjacent_row(row: [u8; 4]) -> u8 {
 }
 
 #[inline]
-fn get_sum(board: &Board) -> f64 {
-    -board.get_grid().iter().flatten().map(|&v| (v as f64).powf(3.5)).fold(0f64, |a, b| a + b)
+fn get_sum(board: &Board) -> f32 {
+    -board.get_grid().iter().flatten().map(|&v| (v as f32).powf(3.5)).sum::<f32>()
 }
 
-fn get_sum_row(row: [u8; 4]) -> f64 {
-    -row.iter().map(|&v| (v as f64).powf(3.5)).fold(0f64, |a, b| a + b)
+#[inline]
+fn get_sum_row(row: [u8; 4]) -> f32 {
+    -row.iter().map(|&v| (v as f32).powf(3.5)).sum::<f32>()
 }
 
+#[inline]
+fn get_monotonicity(board: &Board) -> i32 {
+    get_monotonicity_rows(board) + get_monotonicity_rows(&board.transpose())
+}
+
+#[inline]
 fn get_monotonicity_rows(board: &Board) -> i32 {
-    let mut total = 0;
-
-    for &row in board.get_grid() {
-        total += get_monotonicity_row(row);
-    }
-
-    total
+    board.get_grid().iter().map(|&row| get_monotonicity_row(row)).sum()
 }
 
+#[inline]
 fn get_monotonicity_row(row: [u8; 4]) -> i32 {
     let mut left = 0;
     let mut right = 0;
@@ -81,11 +86,9 @@ fn get_monotonicity_row(row: [u8; 4]) -> i32 {
     -cmp::min(left, right)
 }
 
-fn get_monotonicity(board: &Board) -> i32 {
-    get_monotonicity_rows(board) + get_monotonicity_rows(&board.transpose())
-}
-
-fn get_smoothness(board: &Board) -> f64 {
+#[inline]
+#[allow(needless_range_loop)]
+fn get_smoothness(board: &Board) -> i32 {
     let grid = board.get_grid();
 
     let mut smoothness = 0;
@@ -105,5 +108,5 @@ fn get_smoothness(board: &Board) -> f64 {
         }
     }
 
-    smoothness as f64
+    smoothness
 }

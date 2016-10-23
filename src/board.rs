@@ -152,7 +152,10 @@ impl Board {
             .into_iter()
             .enumerate()
             .flat_map(|(x, row)| {
-                row.into_iter().enumerate().filter(|&(_, val)| *val == 0).map(move |(y, _)| (x, y))
+                row.into_iter()
+                    .enumerate()
+                    .filter(|&(_, val)| *val == 0)
+                    .map(move |(y, _)| (x, y))
             })
             .map(move |(x, y)| {
                 let mut possible_grid = self.grid;
@@ -242,11 +245,11 @@ fn get_human(n: u8) -> u32 {
 }
 
 fn parse_to_logspace(n: u32) -> Option<u8> {
-    use std::f64;
+    use std::f32;
 
     let log = match n {
-        0 => 0f64,
-        _ => (n as f64).log2(),
+        0 => 0f32,
+        _ => (n as f32).log2(),
     };
 
     let rounded = log.round();
@@ -472,7 +475,7 @@ mod tests {
             [8, 2, 8, 8]
         ]).unwrap()];
 
-        let actual = board.get_possible_boards_with2();
+        let actual = board.get_possible_boards_with2().collect::<Vec<_>>();
 
         assert_eq!(expected, actual);
     }
@@ -513,7 +516,7 @@ mod tests {
             [8, 4, 8, 8]
         ]).unwrap()];
 
-        let actual = board.get_possible_boards_with4();
+        let actual = board.get_possible_boards_with4().collect::<Vec<_>>();
 
         assert_eq!(expected, actual);
     }

@@ -106,7 +106,7 @@ mod tests {
 
     #[test]
     fn cachinghashmap_can_gc() {
-        let mut hashmap = CachingHashMap::new();
+        let mut hashmap = CachingHashMap::default();
         let rc_kept = Rc::new(1);
         hashmap.insert(1, Rc::downgrade(&rc_kept));
 
