@@ -24,6 +24,9 @@ extern crate itertools;
 extern crate lazycell;
 extern crate fnv;
 
+#[macro_use]
+extern crate lazy_static;
+
 pub use searcher::{SearchResult, SearchStatistics};
 
 pub mod board;
@@ -32,3 +35,4 @@ pub mod heuristic;
 pub mod search_tree;
 
 mod searcher;
+mod integer_magic;

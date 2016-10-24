@@ -1,6 +1,6 @@
-use fnv::FnvHashMap;
 use search_tree::PlayerNode;
-use std::cell::RefCell;
+use std::u16;
+use integer_magic::{u8x4_to_u16,u16_to_u8x4};
 use super::*;
 
 const MIN: f32 = -1_600_000f32;
@@ -8,9 +8,7 @@ const MIN: f32 = -1_600_000f32;
 const USE_CACHE: bool = true;
 
 #[derive(Default)]
-pub struct CompositeHeuristic {
-    cache: RefCell<FnvHashMap<[u8; 4], f32>>,
-}
+pub struct CompositeHeuristic;
 
 impl Heuristic for CompositeHeuristic {
     #[inline]
@@ -42,27 +40,35 @@ impl CompositeHeuristic {
             return MIN;
         }
 
-        let mut cache = self.cache.borrow_mut();
-
         node.get_board()
             .get_grid()
             .iter()
             .chain(node.get_board().transpose().get_grid().iter())
-            .map(|&row| eval_row(row, &mut cache))
+            .map(|&row| eval_row(row))
             .sum()
     }
 }
 
+lazy_static! {
+    static ref CACHE: [f32; u16::MAX as usize] = {
+        let mut cache = [0f32; u16::MAX as usize];
+        for (index, mut row) in cache.iter_mut().enumerate() {
+            *row = eval_row_nocache(u16_to_u8x4(index as u16));
+        }
+        cache
+    };
+}
+
 #[inline]
-fn eval_row(row: [u8; 4], cache: &mut FnvHashMap<[u8; 4], f32>) -> f32 {
-    *cache.entry(row).or_insert_with(|| eval_row_nocache(row))
+fn eval_row(row: [u8; 4]) -> f32 {
+    CACHE[u8x4_to_u16(row) as usize]
 }
 
 #[inline]
 fn eval_row_nocache(row: [u8; 4]) -> f32 {
-    let monotonicity = (super::get_monotonicity_row(row) * 47) as f32;
-    let empty = (super::get_empty_cell_count_row(row) as i32 * 270) as f32;
-    let adjacent = (super::get_adjacent_row(row) as i32 * 700) as f32;
+    let monotonicity = super::get_monotonicity_row(row) as f32 * 47.0;
+    let empty = super::get_empty_cell_count_row(row) as f32 * 270.0;
+    let adjacent = super::get_adjacent_row(row) as f32 * 700.0;
     let sum = super::get_sum_row(row) * 11.0;
 
     monotonicity + empty + adjacent + sum

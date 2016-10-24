@@ -15,7 +15,8 @@
 
 use itertools::Itertools;
 use rand::{self, Rng};
-use std::{fmt, iter};
+use std::{fmt, iter, u16};
+use integer_magic::{u8x4_to_u16,u16_to_u8x4};
 
 #[derive(Eq, PartialEq, Hash, Copy, Clone, Debug, Default)]
 pub struct Board {
@@ -93,8 +94,6 @@ impl Board {
     /// Gets a transposed copy of the `Board`.
     #[inline]
     pub fn transpose(&self) -> Board {
-        // let mut t = [[0; 4]; 4];
-
         let row0 = [self.grid[0][0], self.grid[1][0], self.grid[2][0], self.grid[3][0]];
         let row1 = [self.grid[0][1], self.grid[1][1], self.grid[2][1], self.grid[3][1]];
         let row2 = [self.grid[0][2], self.grid[1][2], self.grid[2][2], self.grid[3][2]];
@@ -103,6 +102,8 @@ impl Board {
         let grid = [row0, row1, row2, row3];
 
         Board { grid: grid }
+
+        // let mut t = [[0; 4]; 4];
 
         // for (x, row) in self.grid.iter().enumerate() {
         //     for (y, &val) in row.iter().enumerate() {
@@ -132,8 +133,6 @@ impl Board {
 
         Board { grid: new_grid }
     }
-
-
 
     /// Returns all possible `Board`s that can result from the computer spawning a `2` in a random
     /// empty cell.
@@ -186,7 +185,7 @@ impl Board {
         let mut result = [[0; 4]; 4];
 
         for (from_row, to_row) in self.grid.iter().zip(result.iter_mut()) {
-            Board::move_row(from_row, to_row, 0..4, 1, 0);
+            *to_row = Self::move_row_left_cached(*from_row);
         }
 
         Board { grid: result }
@@ -197,22 +196,38 @@ impl Board {
         let mut result = [[0; 4]; 4];
 
         for (from_row, to_row) in self.grid.iter().zip(result.iter_mut()) {
-            Board::move_row(from_row, to_row, (0..4).rev(), -1, 3);
+            *to_row = Self::move_row_right_cached(*from_row)
         }
 
         Board { grid: result }
     }
 
+    fn move_row_left_cached(row: [u8; 4]) -> [u8; 4] {
+        CACHE_LEFT[u8x4_to_u16(row) as usize]
+    }
+
+    fn move_row_right_cached(row: [u8; 4]) -> [u8; 4] {
+        CACHE_RIGHT[u8x4_to_u16(row) as usize]
+    }
+
+    fn move_row_left(row: [u8; 4]) -> [u8; 4] {
+        Self::move_row(&row, 0..4, 1, 0)
+    }
+
+    fn move_row_right(row: [u8; 4]) -> [u8; 4] {
+        Self::move_row(&row, (0..4).rev(), -1, 3)
+    }
+
     #[inline]
     fn move_row<I>(from_row: &[u8; 4],
-                   to_row: &mut [u8; 4],
                    iter: I,
                    step: isize,
-                   start_index: isize)
+                   mut last_index: isize)
+                   -> [u8; 4]
         where I: Iterator<Item = usize>
     {
+        let mut to_row = [0; 4];
         let mut last = 0;
-        let mut last_index = start_index;
 
         for y in iter {
             let current = from_row[y];
@@ -240,7 +255,29 @@ impl Board {
         if last != 0 {
             to_row[last_index as usize] = last;
         }
+
+        to_row
     }
+}
+
+lazy_static! {
+    static ref CACHE_LEFT: [[u8; 4]; u16::MAX as usize] = {
+        let mut cache = [[0; 4]; u16::MAX as usize];
+        for (index, mut row) in cache.iter_mut().enumerate() {
+            *row = Board::move_row_left(u16_to_u8x4(index as u16));
+        }
+
+        cache
+    };
+
+    static ref CACHE_RIGHT: [[u8; 4]; u16::MAX as usize] = {
+        let mut cache = [[0; 4]; u16::MAX as usize];
+        for (index, mut row) in cache.iter_mut().enumerate() {
+            *row = Board::move_row_right(u16_to_u8x4(index as u16));
+        }
+
+        cache
+    };
 }
 
 fn get_human(n: u8) -> u32 {
