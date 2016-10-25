@@ -1,23 +1,22 @@
 //! `Board` represents the board state in a 2048 game.
-//!
-//! `Board` saves its state as a 4x4 array of `u8` values.
-//!
-//! To cram the value of a cell into into one byte of memory, `Board` uses a logarithmic
-//! representation of the value displayed to the player. That is, `2` becomes `1`,
-//! `4` becomes `2`, `8` becomes `3`, etc. The maximum cell value theoretically achievable in a
-//! standard game of 2048 is `65,536`, and that is represented by the value `16`, so a byte is
-//! more than enough storage for a single cell. `0` stays a `0`.
-//!
-//! `Board`, in general, encodes all the rules of the game: it can generate new states
-//! given a move a player makes, or all possible states following the computer spwaning a random
-//! tile. Unsurprisingly, in order to write an AI for a game, the AI needs an emulation of the
-//! game itself.
 
+use integer_magic::{u8x4_to_u16, u16_to_u8x4};
 use itertools::Itertools;
 use rand::{self, Rng};
 use std::{fmt, iter, u16};
-use integer_magic::{u8x4_to_u16,u16_to_u8x4};
 
+/// `Board` saves its state as a 4x4 array of `u8` values.
+///
+/// To cram the value of a cell into into one byte of memory, `Board` uses a logarithmic
+/// representation of the value displayed to the player. That is, `2` becomes `1`,
+/// `4` becomes `2`, `8` becomes `3`, etc. The maximum cell value theoretically achievable in a
+/// standard game of 2048 is `65,536`, and that is represented by the value `16`, so a byte is
+/// more than enough storage for a single cell. `0` stays a `0`.
+///
+/// `Board`, in general, encodes all the rules of the game: it can generate new states
+/// given a move a player makes, or all possible states following the computer spwaning a random
+/// tile. Unsurprisingly, in order to write an AI for a game, the AI needs an emulation of the
+/// game itself.
 #[derive(Eq, PartialEq, Hash, Copy, Clone, Debug, Default)]
 pub struct Board {
     grid: [[u8; 4]; 4],
@@ -27,9 +26,13 @@ pub struct Board {
 #[derive(Eq, PartialEq, Hash, Copy, Clone, Debug)]
 #[repr(u8)]
 pub enum Move {
+    /// Move left.
     Left = 0,
+    /// Move right.
     Right = 1,
+    /// Move up.
     Up = 2,
+    /// Move down.
     Down = 3,
 }
 
@@ -43,7 +46,7 @@ impl fmt::Display for Board {
             .flat_map(|row| {
                 row.iter()
                     .map(|&val| {
-                        let human = get_human(val);
+                        let human = human(val);
                         format!("{number:>width$}", number = human, width = 6)
                     })
                     .chain(iter::once("\n".to_string()))
@@ -87,7 +90,7 @@ impl Board {
 
     /// Gets a reference to the inner representation of the `Board`, which is a 4x4 array of `u8`.
     #[inline]
-    pub fn get_grid(&self) -> &[[u8; 4]; 4] {
+    pub fn grid(&self) -> &[[u8; 4]; 4] {
         &self.grid
     }
 
@@ -138,21 +141,21 @@ impl Board {
     /// empty cell.
     #[inline]
     #[allow(needless_lifetimes)]
-    pub fn get_possible_boards_with2<'a>(&'a self) -> impl Iterator<Item=Board> + 'a {
-        self.get_possible_boards(1)
+    pub fn possible_boards_with2<'a>(&'a self) -> impl Iterator<Item=Board> + 'a {
+        self.possible_boards(1)
     }
 
     /// Returns all possible `Board`s that can result from the computer spawning a `4` in a random
     /// empty cell.
     #[inline]
     #[allow(needless_lifetimes)]
-    pub fn get_possible_boards_with4<'a>(&'a self) -> impl Iterator<Item=Board> + 'a {
-        self.get_possible_boards(2)
+    pub fn possible_boards_with4<'a>(&'a self) -> impl Iterator<Item=Board> + 'a {
+        self.possible_boards(2)
     }
 
     #[inline]
     #[allow(needless_lifetimes)]
-    fn get_possible_boards<'a>(&'a self, new_value: u8) -> impl Iterator<Item=Board> + 'a {
+    fn possible_boards<'a>(&'a self, new_value: u8) -> impl Iterator<Item=Board> + 'a {
         self.grid
             .into_iter()
             .enumerate()
@@ -219,11 +222,7 @@ impl Board {
     }
 
     #[inline]
-    fn move_row<I>(from_row: &[u8; 4],
-                   iter: I,
-                   step: isize,
-                   mut last_index: isize)
-                   -> [u8; 4]
+    fn move_row<I>(from_row: &[u8; 4], iter: I, step: isize, mut last_index: isize) -> [u8; 4]
         where I: Iterator<Item = usize>
     {
         let mut to_row = [0; 4];
@@ -280,7 +279,7 @@ lazy_static! {
     };
 }
 
-fn get_human(n: u8) -> u32 {
+fn human(n: u8) -> u32 {
     match n {
         0 => 0,
         _ => 1 << n,
@@ -343,7 +342,7 @@ mod tests {
         ]);
 
         assert!(actual.is_some());
-        assert_eq!(&expected, actual.unwrap().get_grid());
+        assert_eq!(&expected, actual.unwrap().grid());
     }
 
     #[test]
@@ -367,7 +366,7 @@ mod tests {
                 board = board.add_random_tile();
             }
 
-            let count = board.get_grid()
+            let count = board.grid()
                 .iter()
                 .flatten()
                 .filter(|&&v| v == 1 || v == 2)
@@ -484,7 +483,7 @@ mod tests {
 
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
-    fn can_get_possible_boards_with2() {
+    fn can_possible_boards_with2() {
         let board = Board::new(&[
             [0, 8, 8, 8],
             [8, 8, 0, 8],
@@ -518,14 +517,14 @@ mod tests {
             [8, 2, 8, 8]
         ]).unwrap()];
 
-        let actual = board.get_possible_boards_with2().collect::<Vec<_>>();
+        let actual = board.possible_boards_with2().collect::<Vec<_>>();
 
         assert_eq!(expected, actual);
     }
 
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
-    fn can_get_possible_boards_with4() {
+    fn can_possible_boards_with4() {
         let board = Board::new(&[
             [0, 8, 8, 8],
             [8, 8, 0, 8],
@@ -559,7 +558,7 @@ mod tests {
             [8, 4, 8, 8]
         ]).unwrap()];
 
-        let actual = board.get_possible_boards_with4().collect::<Vec<_>>();
+        let actual = board.possible_boards_with4().collect::<Vec<_>>();
 
         assert_eq!(expected, actual);
     }

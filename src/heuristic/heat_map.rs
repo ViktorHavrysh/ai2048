@@ -22,14 +22,14 @@ pub struct HeatMapHeuristic {
 
 impl Heuristic for HeatMapHeuristic {
     fn eval(&self, node: &PlayerNode) -> f32 {
-        if node.get_children_by_move().len() == 0 {
+        if node.children_by_move().len() == 0 {
             return MIN;
         }
 
         let mut result =
-            self.heat_maps.iter().map(|&h| evaluate_board(node.get_board(), h)).max().unwrap();
+            self.heat_maps.iter().map(|&h| evaluate_board(node.board(), h)).max().unwrap();
 
-        let empty_cell_evaluation = evaluate_empty_cells(node.get_board());
+        let empty_cell_evaluation = evaluate_empty_cells(node.board());
 
         if empty_cell_evaluation < EMPTY_CELLS_WITHOUT_PENALTY {
             result -= 1 << (EMPTY_CELLS_WITHOUT_PENALTY - empty_cell_evaluation);
@@ -40,7 +40,7 @@ impl Heuristic for HeatMapHeuristic {
 }
 
 fn evaluate_board(board: &Board, heat_map: HeatMap) -> i64 {
-    let grid = board.get_grid();
+    let grid = board.grid();
     let mut result = 0;
 
     for x in 0..4 {
@@ -55,7 +55,7 @@ fn evaluate_board(board: &Board, heat_map: HeatMap) -> i64 {
 fn evaluate_empty_cells(board: &Board) -> i64 {
     let mut adjacent_count = 0;
     {
-        let grid = board.get_grid();
+        let grid = board.grid();
 
         for y in 0..4 {
             let mut x = 0;
@@ -154,7 +154,7 @@ mod tests {
         let board = Board::default().add_random_tile().add_random_tile();
         let search_tree = SearchTree::new(board);
 
-        let eval = heur.eval(search_tree.get_root());
+        let eval = heur.eval(search_tree.root());
 
         assert!(eval != f32::NAN);
     }

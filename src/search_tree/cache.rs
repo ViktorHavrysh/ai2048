@@ -78,11 +78,11 @@ impl<K, V> Gc for CachingHashMap<K, V>
     }
 }
 
-trait GetOrSet<K, V> {
+trait GetOrInsert<K, V> {
     fn get_or_insert_with<F: FnOnce() -> V>(&mut self, key: K, default: F) -> Rc<V>;
 }
 
-impl<K, V> GetOrSet<K, V> for CachingHashMap<K, V>
+impl<K, V> GetOrInsert<K, V> for CachingHashMap<K, V>
     where K: Eq + Hash
 {
     fn get_or_insert_with<F: FnOnce() -> V>(&mut self, key: K, default: F) -> Rc<V> {

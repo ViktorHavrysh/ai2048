@@ -1,3 +1,6 @@
+//! A module for Heuristics. The root module provides a trait for implementing
+//! the heuristics, while submodules provide some example implementations.
+
 #![allow(dead_code)]
 
 pub mod composite;
@@ -10,31 +13,35 @@ use search_tree::PlayerNode;
 use std::cmp;
 use std::i32;
 
+/// A type that can evaluate a board position and return an `f32`, with
+/// higher values meaning better outcome
 pub trait Heuristic {
+    /// Analyzes the game state represented by `PlayerNode` and returns
+    /// an evaluation
     fn eval(&self, &PlayerNode) -> f32;
 }
 
 #[inline]
-fn get_empty_cell_count(board: &Board) -> usize {
-    board.get_grid().iter().flatten().filter(|&&v| v == 0).count()
+fn empty_cell_count(board: &Board) -> usize {
+    board.grid().iter().flatten().filter(|&&v| v == 0).count()
 }
 
 #[inline]
-fn get_empty_cell_count_row(row: [u8; 4]) -> usize {
+fn empty_cell_count_row(row: [u8; 4]) -> usize {
     row.iter().filter(|&&v| v == 0).count()
 }
 
 #[inline]
-fn get_adjacent(board: &Board) -> u16 {
-    board.get_grid()
+fn adjacent(board: &Board) -> u16 {
+    board.grid()
         .iter()
-        .chain(board.transpose().get_grid().iter())
-        .map(|&row| get_adjacent_row(row))
+        .chain(board.transpose().grid().iter())
+        .map(|&row| adjacent_row(row))
         .fold(0u16, |a, b| a as u16 + b as u16)
 }
 
 #[inline]
-fn get_adjacent_row(row: [u8; 4]) -> u8 {
+fn adjacent_row(row: [u8; 4]) -> u8 {
     let mut adjacent_count = 0;
     let mut y = 0;
 
@@ -51,27 +58,27 @@ fn get_adjacent_row(row: [u8; 4]) -> u8 {
 }
 
 #[inline]
-fn get_sum(board: &Board) -> f32 {
-    -board.get_grid().iter().flatten().map(|&v| (v as f32).powf(3.5)).sum::<f32>()
+fn sum(board: &Board) -> f32 {
+    -board.grid().iter().flatten().map(|&v| (v as f32).powf(3.5)).sum::<f32>()
 }
 
 #[inline]
-fn get_sum_row(row: [u8; 4]) -> f32 {
+fn sum_row(row: [u8; 4]) -> f32 {
     -row.iter().map(|&v| (v as f32).powf(3.5)).sum::<f32>()
 }
 
 #[inline]
-fn get_monotonicity(board: &Board) -> i32 {
-    get_monotonicity_rows(board) + get_monotonicity_rows(&board.transpose())
+fn monotonicity(board: &Board) -> i32 {
+    monotonicity_rows(board) + monotonicity_rows(&board.transpose())
 }
 
 #[inline]
-fn get_monotonicity_rows(board: &Board) -> i32 {
-    board.get_grid().iter().map(|&row| get_monotonicity_row(row)).sum()
+fn monotonicity_rows(board: &Board) -> i32 {
+    board.grid().iter().map(|&row| monotonicity_row(row)).sum()
 }
 
 #[inline]
-fn get_monotonicity_row(row: [u8; 4]) -> i32 {
+fn monotonicity_row(row: [u8; 4]) -> i32 {
     let mut left = 0;
     let mut right = 0;
 
@@ -88,8 +95,8 @@ fn get_monotonicity_row(row: [u8; 4]) -> i32 {
 
 #[inline]
 #[allow(needless_range_loop)]
-fn get_smoothness(board: &Board) -> i32 {
-    let grid = board.get_grid();
+fn smoothness(board: &Board) -> i32 {
+    let grid = board.grid();
 
     let mut smoothness = 0;
 

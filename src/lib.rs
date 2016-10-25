@@ -1,5 +1,3 @@
-// #![warn(missing_docs)]
-
 //! This crate provides an implementation of an 2048 AI.
 //!
 //! The `board` module contains 2048 game logic.
@@ -17,6 +15,7 @@
 
 #![feature(conservative_impl_trait)]
 #![allow(unknown_lints)]
+#![deny(missing_docs)]
 
 extern crate rand;
 extern crate time;

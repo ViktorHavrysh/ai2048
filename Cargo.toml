@@ -2,6 +2,7 @@
 name = "ai2048"
 version = "0.1.0"
 authors = ["Victor Gavrish <victor.gavrish@gmail.com>"]
+license = "LGPL"
 
 [dependencies]
 rand = "0.3"
@@ -14,5 +15,10 @@ lazy_static = "0.2.1"
 [[bin]]
 name = "ai2048_bin"
 
+[profile.dev]
+codegen-units = 4
+
 [profile.release]
 debug = true
+lto = true
+opt-level = 3

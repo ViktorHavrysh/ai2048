@@ -41,20 +41,35 @@ pub struct ExpectiMaxer<H: Heuristic> {
 
 /// Return a numnber of interesting statistics together with a recommendation for the best move.
 pub struct SearchResult {
+    /// Some useful statistics
     pub search_statistics: SearchStatistics,
+    /// The game state for which analysis was conducted.
     pub root_board: Board,
+    /// A map of evaluations. Can be empty if the player has no more moves, that is,
+    /// in a game over state.
     pub move_evaluations: HashMap<Move, f32>,
+    /// The best move, if one exists. Can be `None` if the player has no available
+    /// moves, that is, in a game over state.
     pub best_move: Option<(Move, f32)>,
 }
 
 /// These are the interesting statistics. May add some more later.
 pub struct SearchStatistics {
+    /// The time it took for the search to complete.
     pub search_duration: Duration,
+    /// The number of search tree nodes visited.
     pub nodes_traversed: usize,
+    /// The number of nodes for which the game state was evaluated with a heuristic.
     pub terminal_traversed: usize,
+    /// Known unique search tree nodes that represent the Player's turn.
     pub known_player_nodes: usize,
+    /// Known unique search tree nodes that represent the Computer's turn.
     pub known_computer_nodes: usize,
+    /// New unique game states that the Player can encounter that were found
+    /// during this search.
     pub new_player_nodes: usize,
+    /// New unique game states that the Computer can encounter that were found
+    /// during this search.
     pub new_computer_nodes: usize,
 }
 
@@ -116,8 +131,8 @@ impl<H: Heuristic> Searcher for ExpectiMaxer<H> {
 
         // gather some data before starting the search
         let start = time::now_utc();
-        let known_player_nodes_start = search_tree.get_known_player_node_count();
-        let known_computer_nodes_start = search_tree.get_known_computer_node_count();
+        let known_player_nodes_start = search_tree.known_player_node_count();
+        let known_computer_nodes_start = search_tree.known_computer_node_count();
 
         // actual search
         let hashmap = self.init(search_tree, &mut search_statistics);
@@ -125,8 +140,8 @@ impl<H: Heuristic> Searcher for ExpectiMaxer<H> {
         // gather some data after finishing the search
         let finish = time::now_utc();
         let elapsed = finish - start;
-        let known_player_nodes_finish = search_tree.get_known_player_node_count();
-        let known_computer_nodes_finish = search_tree.get_known_computer_node_count();
+        let known_player_nodes_finish = search_tree.known_player_node_count();
+        let known_computer_nodes_finish = search_tree.known_computer_node_count();
 
         // compute some deltas
         search_statistics.search_duration = elapsed;
@@ -144,7 +159,7 @@ impl<H: Heuristic> Searcher for ExpectiMaxer<H> {
             .nth(0);
 
         SearchResult {
-            root_board: *search_tree.get_root().get_board(),
+            root_board: *search_tree.root().board(),
             move_evaluations: hashmap,
             search_statistics: search_statistics,
             best_move: best_move,
@@ -168,7 +183,7 @@ impl<H: Heuristic> ExpectiMaxer<H> {
             search_tree: &SearchTree,
             mut search_statistics: &mut SearchStatistics)
             -> HashMap<Move, f32> {
-        let children = search_tree.get_root().get_children_by_move();
+        let children = search_tree.root().children_by_move();
 
         if children.is_empty() {
             return HashMap::new();
@@ -177,24 +192,21 @@ impl<H: Heuristic> ExpectiMaxer<H> {
         children.iter()
             .map(|(m, n)| {
                 let eval =
-                    self.get_computer_node_eval(n,
-                                                self.max_search_depth,
-                                                1f32,
-                                                &mut search_statistics);
+                    self.computer_node_eval(n, self.max_search_depth, 1f32, &mut search_statistics);
                 (m, eval)
             })
             .collect()
     }
 
-    fn get_player_node_eval(&self,
-                            node: &PlayerNode,
-                            depth: u8,
-                            probability: f32,
-                            mut search_statistics: &mut SearchStatistics)
-                            -> f32 {
+    fn player_node_eval(&self,
+                        node: &PlayerNode,
+                        depth: u8,
+                        probability: f32,
+                        mut search_statistics: &mut SearchStatistics)
+                        -> f32 {
         search_statistics.nodes_traversed += 1;
 
-        let children = node.get_children_by_move();
+        let children = node.children_by_move();
 
         if children.is_empty() || depth == 0 || probability < self.min_probability {
             search_statistics.terminal_traversed += 1;
@@ -212,37 +224,37 @@ impl<H: Heuristic> ExpectiMaxer<H> {
         }
 
         children.values()
-            .map(|n| self.get_computer_node_eval(n, depth, probability, &mut search_statistics))
+            .map(|n| self.computer_node_eval(n, depth, probability, &mut search_statistics))
             .fold(f32::NAN, f32::max)
     }
 
-    fn get_computer_node_eval(&self,
-                              node: &ComputerNode,
-                              depth: u8,
-                              probability: f32,
-                              mut search_statistics: &mut SearchStatistics)
-                              -> f32 {
+    fn computer_node_eval(&self,
+                          node: &ComputerNode,
+                          depth: u8,
+                          probability: f32,
+                          mut search_statistics: &mut SearchStatistics)
+                          -> f32 {
         search_statistics.nodes_traversed += 1;
-        let children = node.get_children();
+        let children = node.children();
         let count = children.with2.len();
 
         let avg_with2 = children.with2
             .iter()
             .map(|n| {
-                self.get_player_node_eval(n,
-                                          depth - 1,
-                                          probability * PROBABILITY_OF2 / (count as f32),
-                                          &mut search_statistics)
+                self.player_node_eval(n,
+                                      depth - 1,
+                                      probability * PROBABILITY_OF2 / (count as f32),
+                                      &mut search_statistics)
             })
             .sum::<f32>() / (count as f32);
 
         let avg_with4 = children.with4
             .iter()
             .map(|n| {
-                self.get_player_node_eval(n,
-                                          depth - 1,
-                                          probability * PROBABILITY_OF4 / (count as f32),
-                                          &mut search_statistics)
+                self.player_node_eval(n,
+                                      depth - 1,
+                                      probability * PROBABILITY_OF4 / (count as f32),
+                                      &mut search_statistics)
             })
             .sum::<f32>() / (count as f32);
 
@@ -258,7 +270,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn can_get_search_result() {
+    fn can_search_result() {
         let board = Board::default().add_random_tile();
         let search_tree = SearchTree::new(board);
         let heuristic = CompositeHeuristic::default();

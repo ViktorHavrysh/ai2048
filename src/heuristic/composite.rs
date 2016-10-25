@@ -1,12 +1,22 @@
+//! This heuristic works pretty much like the heuristic in
+//! [nneonneo's ai written in C++](https://github.com/nneonneo/2048-ai)
+//! with some tweaks. I've tried to come up with something more efficient
+//! (there is some code in a disabled sibling module that works pretty well),
+//! but haven't managed so far. I've decided to try to improve in other ways.
+//! I haven't made any benchmarks yet, but I think my usage of transposition
+//! tables should considerably speed up the search.
+
+use integer_magic::{u8x4_to_u16, u16_to_u8x4};
 use search_tree::PlayerNode;
 use std::u16;
-use integer_magic::{u8x4_to_u16,u16_to_u8x4};
 use super::*;
 
 const MIN: f32 = -1_600_000f32;
 
 const USE_CACHE: bool = true;
 
+/// A heuristic that uses some other heuristics in tandem. Might be better
+/// to rewrite as an aggregate of smaller heuristics.
 #[derive(Default)]
 pub struct CompositeHeuristic;
 
@@ -24,26 +34,26 @@ impl Heuristic for CompositeHeuristic {
 impl CompositeHeuristic {
     #[inline]
     fn eval_without_cache(&self, node: &PlayerNode) -> f32 {
-        if node.get_children_by_move().is_empty() {
+        if node.children_by_move().is_empty() {
             return MIN;
         }
 
-        (super::get_monotonicity(node.get_board()) * 47) as f32 +
-        (super::get_empty_cell_count(node.get_board()) * 270) as f32 +
-        (super::get_adjacent(node.get_board()) * 700) as f32 +
-        super::get_sum(node.get_board()) * 11.0
+        (super::monotonicity(node.board()) * 47) as f32 +
+        (super::empty_cell_count(node.board()) * 270) as f32 +
+        (super::adjacent(node.board()) * 700) as f32 +
+        super::sum(node.board()) * 11.0
     }
 
     #[inline]
     fn eval_with_cache(&self, node: &PlayerNode) -> f32 {
-        if node.get_children_by_move().is_empty() {
+        if node.children_by_move().is_empty() {
             return MIN;
         }
 
-        node.get_board()
-            .get_grid()
+        node.board()
+            .grid()
             .iter()
-            .chain(node.get_board().transpose().get_grid().iter())
+            .chain(node.board().transpose().grid().iter())
             .map(|&row| eval_row(row))
             .sum()
     }
@@ -66,10 +76,10 @@ fn eval_row(row: [u8; 4]) -> f32 {
 
 #[inline]
 fn eval_row_nocache(row: [u8; 4]) -> f32 {
-    let monotonicity = super::get_monotonicity_row(row) as f32 * 47.0;
-    let empty = super::get_empty_cell_count_row(row) as f32 * 270.0;
-    let adjacent = super::get_adjacent_row(row) as f32 * 700.0;
-    let sum = super::get_sum_row(row) * 11.0;
+    let monotonicity = super::monotonicity_row(row) as f32 * 47.0;
+    let empty = super::empty_cell_count_row(row) as f32 * 270.0;
+    let adjacent = super::adjacent_row(row) as f32 * 700.0;
+    let sum = super::sum_row(row) * 11.0;
 
     monotonicity + empty + adjacent + sum
 }
