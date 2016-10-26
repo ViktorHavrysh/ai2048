@@ -236,10 +236,10 @@ impl<H: Heuristic> ExpectiMaxer<H> {
                           -> f32 {
         search_statistics.nodes_traversed += 1;
         let children = node.children();
-        let count = children.with2.len();
+        let count = children.variants();
 
-        let avg_with2 = children.with2
-            .iter()
+        let avg_with2 = children
+            .with2()
             .map(|n| {
                 self.player_node_eval(n,
                                       depth - 1,
@@ -248,8 +248,8 @@ impl<H: Heuristic> ExpectiMaxer<H> {
             })
             .sum::<f32>() / (count as f32);
 
-        let avg_with4 = children.with4
-            .iter()
+        let avg_with4 = children
+            .with4()
             .map(|n| {
                 self.player_node_eval(n,
                                       depth - 1,
