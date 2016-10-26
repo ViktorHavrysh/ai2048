@@ -105,16 +105,6 @@ impl Board {
         let grid = [row0, row1, row2, row3];
 
         Board { grid: grid }
-
-        // let mut t = [[0; 4]; 4];
-
-        // for (x, row) in self.grid.iter().enumerate() {
-        //     for (y, &val) in row.iter().enumerate() {
-        //         t[y][x] = val;
-        //     }
-        // }
-
-        // Board { grid: t }
     }
 
     /// Creates a new `Board` with a random tile (10% of times a `2`, 90% of times a `4`) added to a

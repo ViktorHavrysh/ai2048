@@ -184,6 +184,7 @@ impl<H: Heuristic> ExpectiMaxer<H> {
             mut search_statistics: &mut SearchStatistics)
             -> HashMap<Move, f32> {
         if search_tree.root().children().is_empty() {
+            // Game over
             return HashMap::new();
         }
 

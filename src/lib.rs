@@ -8,12 +8,11 @@
 //! board positions and try to maximize. It also contains the `Heuristic` trait that can be used
 //! to implemnt your own heuristic.
 //!
-//! The `search_tree` module exposes a dynamically generated tree of possible board states.
-//!
 //! The `SearchResult` and `SearchStatistics` types are containers for the results of the AI
 //! player's evaluation of a position and some interesting statistics.
 
 #![feature(conservative_impl_trait)]
+
 #![allow(unknown_lints)]
 #![deny(missing_docs)]
 
@@ -31,7 +30,8 @@ pub use searcher::{SearchResult, SearchStatistics};
 pub mod board;
 pub mod agent;
 pub mod heuristic;
-pub mod search_tree;
+
+mod search_tree;
 
 mod searcher;
 mod integer_magic;

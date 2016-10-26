@@ -369,7 +369,7 @@ mod tests {
             [4, 2, 0, 4]
         ]).unwrap());
 
-        let actual = player_node.children_by_move().iter().collect::<HashMap<_, _>>();
+        let actual = player_node.children().iter().collect::<HashMap<_, _>>();
 
         for (key, value) in expected {
             assert_eq!(value, *actual.get(&key).unwrap().board());
@@ -455,14 +455,14 @@ mod tests {
         ]).unwrap());
 
         let actual_with2 = search_tree.root()
-            .children_by_move()
+            .children()
             .values()
             .flat_map(|v| v.children().with2())
             .map(|n| *n.board())
             .collect::<HashSet<_>>();
 
         let actual_with4 = search_tree.root()
-            .children_by_move()
+            .children()
             .values()
             .flat_map(|v| v.children().with4())
             .map(|n| *n.board())
