@@ -71,7 +71,10 @@ lazy_static! {
 
 #[inline]
 fn eval_row(row: [u8; 4]) -> f32 {
-    CACHE[u8x4_to_u16(row) as usize]
+    match u8x4_to_u16(row) {
+        Some(u) => CACHE[u as usize],
+        None => eval_row_nocache(row),
+    }
 }
 
 #[inline]

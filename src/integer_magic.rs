@@ -1,9 +1,16 @@
 #[inline]
-pub fn u8x4_to_u16(row: [u8; 4]) -> u16 {
-    (((row[0] & 0b1111) as u16) << 12) +
-    (((row[1] & 0b1111) as u16) << 8) +
-    (((row[2] & 0b1111) as u16) << 4) +
-    (((row[3] & 0b1111) as u16))
+pub fn u8x4_to_u16(row: [u8; 4]) -> Option<u16> {
+    let mut result = 0;
+    for &cell in &row {
+        if cell > 0b1111 {
+            return None;
+        }
+
+        result <<= 4;
+        result += cell as u16;
+    }
+
+    Some(result)
 }
 
 #[inline]

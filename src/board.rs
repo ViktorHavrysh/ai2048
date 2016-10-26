@@ -205,18 +205,28 @@ impl Board {
         Board { grid: result }
     }
 
+    #[inline]
     fn move_row_left_cached(row: [u8; 4]) -> [u8; 4] {
-        CACHE_LEFT[u8x4_to_u16(row) as usize]
+        match u8x4_to_u16(row) {
+            Some(u) => CACHE_LEFT[u as usize],
+            None => Self::move_row_left(row),
+        }
     }
 
+    #[inline]
     fn move_row_right_cached(row: [u8; 4]) -> [u8; 4] {
-        CACHE_RIGHT[u8x4_to_u16(row) as usize]
+        match u8x4_to_u16(row) {
+            Some(u) => CACHE_RIGHT[u as usize],
+            None => Self::move_row_right(row),
+        }
     }
 
+    #[inline]
     fn move_row_left(row: [u8; 4]) -> [u8; 4] {
         Self::move_row(&row, 0..4, 1, 0)
     }
 
+    #[inline]
     fn move_row_right(row: [u8; 4]) -> [u8; 4] {
         Self::move_row(&row, (0..4).rev(), -1, 3)
     }
