@@ -183,13 +183,11 @@ impl<H: Heuristic> ExpectiMaxer<H> {
             search_tree: &SearchTree,
             mut search_statistics: &mut SearchStatistics)
             -> HashMap<Move, f32> {
-        let children = search_tree.root().children_by_move();
-
-        if children.is_empty() {
+        if search_tree.root().children().is_empty() {
             return HashMap::new();
         }
 
-        children.iter()
+        search_tree.root().children().iter()
             .map(|(m, n)| {
                 let eval =
                     self.computer_node_eval(n, self.max_search_depth, 1f32, &mut search_statistics);
@@ -206,9 +204,7 @@ impl<H: Heuristic> ExpectiMaxer<H> {
                         -> f32 {
         search_statistics.nodes_traversed += 1;
 
-        let children = node.children_by_move();
-
-        if children.is_empty() || depth == 0 || probability < self.min_probability {
+        if node.children().is_empty() || depth == 0 || probability < self.min_probability {
             search_statistics.terminal_traversed += 1;
 
             let heur = match node.heuristic.get() {
@@ -223,7 +219,7 @@ impl<H: Heuristic> ExpectiMaxer<H> {
             return heur;
         }
 
-        children.values()
+        node.children().values()
             .map(|n| self.computer_node_eval(n, depth, probability, &mut search_statistics))
             .fold(f32::NAN, f32::max)
     }

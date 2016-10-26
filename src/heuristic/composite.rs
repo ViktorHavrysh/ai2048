@@ -34,7 +34,7 @@ impl Heuristic for CompositeHeuristic {
 impl CompositeHeuristic {
     #[inline]
     fn eval_without_cache(&self, node: &PlayerNode) -> f32 {
-        if node.children_by_move().is_empty() {
+        if node.children().is_empty() {
             return MIN;
         }
 
@@ -46,7 +46,7 @@ impl CompositeHeuristic {
 
     #[inline]
     fn eval_with_cache(&self, node: &PlayerNode) -> f32 {
-        if node.children_by_move().is_empty() {
+        if node.children().is_empty() {
             return MIN;
         }
 

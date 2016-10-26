@@ -170,17 +170,17 @@ impl PlayerNode {
 
     /// Returns a `PlayerNodeChildren` which represents all possible `Move`:`ComputerNode` pairs
     /// possible in the current position.
-    pub fn children_by_move(&self) -> &PlayerNodeChildren {
+    pub fn children(&self) -> &PlayerNodeChildren {
         if let Some(children) = self.children.borrow() {
             children
         } else {
-            let children = self.create_children_by_move();
+            let children = self.create_children();
             self.children.fill(children);
             self.children.borrow().unwrap()
         }
     }
 
-    fn create_children_by_move(&self) -> PlayerNodeChildren {
+    fn create_children(&self) -> PlayerNodeChildren {
         let mut children = [None, None, None, None];
 
         for &m in &board::MOVES {
