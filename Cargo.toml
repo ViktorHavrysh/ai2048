@@ -10,7 +10,7 @@ time = "0.1"
 itertools = "0.5"
 lazycell = "0.2"
 fnv = "1.0"
-lazy_static = "0.2.1"
+lazy_static = "0.2"
 
 [[bin]]
 name = "ai2048_bin"
