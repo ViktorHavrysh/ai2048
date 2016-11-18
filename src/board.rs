@@ -3,7 +3,7 @@
 use integer_magic::{u8x4_to_u16, u16_to_u8x4};
 use itertools::Itertools;
 use rand::{self, Rng};
-use std::{fmt, iter, u16};
+use std::{fmt, u16};
 
 /// `Board` saves its state as a 4x4 array of `u8` values.
 ///
@@ -41,19 +41,15 @@ pub const MOVES: [Move; 4] = [Move::Left, Move::Right, Move::Up, Move::Down];
 
 impl fmt::Display for Board {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let s: String = self.grid
-            .iter()
-            .flat_map(|row| {
-                row.iter()
-                    .map(|&val| {
-                        let human = human(val);
-                        format!("{number:>width$}", number = human, width = 6)
-                    })
-                    .chain(iter::once("\n".to_string()))
-            })
-            .collect();
+        for row in &self.grid {
+            for &val in row {
+                let human = human(val);
+                write!(f, "{number:>width$}", number = human, width = 6)?;
+            }
+            write!(f, "\n")?;
+        }
 
-        write!(f, "{}", s)
+        Ok(())
     }
 }
 
@@ -119,8 +115,12 @@ impl Board {
         let mut new_grid = self.grid;
 
         {
-            let mut val =
-                new_grid.iter_mut().flatten().filter(move |&&mut v| v == 0).nth(position).unwrap();
+            let mut val = new_grid.iter_mut()
+                .flatten()
+                .filter(move |&&mut v| v == 0)
+                .nth(position)
+                .unwrap();
+
             *val = value;
         }
 
@@ -177,7 +177,7 @@ impl Board {
     fn move_left(&self) -> Board {
         let mut result = [[0; 4]; 4];
 
-        for (from_row, to_row) in self.grid.iter().zip(result.iter_mut()) {
+        for (to_row, from_row) in result.iter_mut().zip(self.grid.iter()) {
             *to_row = Self::move_row_left_cached(*from_row);
         }
 
@@ -188,7 +188,7 @@ impl Board {
     fn move_right(&self) -> Board {
         let mut result = [[0; 4]; 4];
 
-        for (from_row, to_row) in self.grid.iter().zip(result.iter_mut()) {
+        for (to_row, from_row) in result.iter_mut().zip(self.grid.iter()) {
             *to_row = Self::move_row_right_cached(*from_row)
         }
 

@@ -13,8 +13,6 @@ use super::*;
 
 const MIN: f32 = -1_600_000f32;
 
-const USE_CACHE: bool = true;
-
 /// A heuristic that uses some other heuristics in tandem. Might be better
 /// to rewrite as an aggregate of smaller heuristics.
 #[derive(Default)]
@@ -23,29 +21,6 @@ pub struct CompositeHeuristic;
 impl Heuristic for CompositeHeuristic {
     #[inline]
     fn eval(&self, node: &PlayerNode) -> f32 {
-        if USE_CACHE {
-            self.eval_with_cache(node)
-        } else {
-            self.eval_without_cache(node)
-        }
-    }
-}
-
-impl CompositeHeuristic {
-    #[inline]
-    fn eval_without_cache(&self, node: &PlayerNode) -> f32 {
-        if node.children().is_empty() {
-            return MIN;
-        }
-
-        (super::monotonicity(node.board()) * 47) as f32 +
-        (super::empty_cell_count(node.board()) * 270) as f32 +
-        (super::adjacent(node.board()) * 700) as f32 +
-        super::sum(node.board()) * 11.0
-    }
-
-    #[inline]
-    fn eval_with_cache(&self, node: &PlayerNode) -> f32 {
         if node.children().is_empty() {
             return MIN;
         }
@@ -54,11 +29,12 @@ impl CompositeHeuristic {
             .grid()
             .iter()
             .chain(node.board().transpose().grid().iter())
-            .map(|&row| eval_row(row))
+            .map(eval_row)
             .sum()
     }
 }
 
+// Pre-cache heuristic for every possible row with values that can fit a nybble
 lazy_static! {
     static ref CACHE: [f32; u16::MAX as usize] = {
         let mut cache = [0f32; u16::MAX as usize];
@@ -70,19 +46,24 @@ lazy_static! {
 }
 
 #[inline]
-fn eval_row(row: [u8; 4]) -> f32 {
-    match u8x4_to_u16(row) {
+fn eval_row(row: &[u8; 4]) -> f32 {
+    match u8x4_to_u16(*row) {
         Some(u) => CACHE[u as usize],
-        None => eval_row_nocache(row),
+        None => eval_row_nocache(*row),
     }
 }
 
+const MONOTONICITY_STRENGTH: f32 = 47.0;
+const EMPTY_STRENGTH: f32 = 270.0;
+const ADJACENT_STRENGTH: f32 = 700.0;
+const SUM_STRENGTH: f32 = 11.0;
+
 #[inline]
 fn eval_row_nocache(row: [u8; 4]) -> f32 {
-    let monotonicity = super::monotonicity_row(row) as f32 * 47.0;
-    let empty = super::empty_cell_count_row(row) as f32 * 270.0;
-    let adjacent = super::adjacent_row(row) as f32 * 700.0;
-    let sum = super::sum_row(row) * 11.0;
+    let monotonicity = super::monotonicity_row(row) as f32 * MONOTONICITY_STRENGTH;
+    let empty = super::empty_cell_count_row(row) as f32 * EMPTY_STRENGTH;
+    let adjacent = super::adjacent_row(row) as f32 * ADJACENT_STRENGTH;
+    let sum = super::sum_row(row) * SUM_STRENGTH;
 
     monotonicity + empty + adjacent + sum
 }

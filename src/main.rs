@@ -3,31 +3,25 @@ extern crate ai2048;
 use ai2048::agent::Agent;
 use ai2048::board::Board;
 use ai2048::heuristic::composite::CompositeHeuristic;
+use ai2048::SearchStatistics;
+use ai2048::SearchResult;
 
 fn main() {
     let heuristic = CompositeHeuristic::default();
 
     let mut board = Board::default().add_random_tile().add_random_tile();
     let mut agent = Agent::new(board, heuristic, 0.002, 6);
+    let mut aggregate_search_statistics = SearchStatistics::default();  
 
     loop {
         let result = agent.make_decision();
-        print!("{}[2J", 27 as char);
-        println!("{}", board);
-        println!("{}", result.search_statistics.to_string());
+        aggregate_search_statistics += result.search_statistics;
 
-        for mv in &ai2048::board::MOVES {
-            println!("{:?}: {}",
-                     mv,
-                     match result.move_evaluations.get(mv) {
-                         Some(eval) => format!("{}", eval),
-                         None => "invalid".to_string(),
-                     });
-        }
+        print!("{}[2J", 27 as char);
+        println!("{}", build_display(&result, &aggregate_search_statistics));
 
         match result.best_move {
-            Some((mv, eval)) => {
-                println!("Best evaluation: {}", eval);
+            Some((mv, _)) => {
                 board = board.make_move(mv).add_random_tile();
                 agent.update_state(board);
             }
@@ -38,4 +32,27 @@ fn main() {
     }
 
     println!("Game over!");
+}
+
+use std::fmt::Write;
+
+fn build_display(result: &SearchResult, aggregate_stats: &SearchStatistics) -> String {
+    let mut s = String::new();
+    writeln!(&mut s, "{}", result.root_board).unwrap();
+    writeln!(&mut s, "{}", result.search_statistics).unwrap();
+    writeln!(&mut s, "Total:\n{}", aggregate_stats).unwrap();
+
+    for mv in &ai2048::board::MOVES {
+        write!(&mut s, "{:?}: ", mv).unwrap();
+        match result.move_evaluations.get(mv) {
+            Some(eval) => writeln!(&mut s, "{}", eval).unwrap(),
+            None => writeln!(&mut s, "invalid").unwrap(),
+        }
+    }
+
+    if let Some((_, eval)) = result.best_move {
+        writeln!(&mut s, "Best: {}", eval).unwrap();
+    }
+
+    s
 }

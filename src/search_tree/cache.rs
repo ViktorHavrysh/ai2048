@@ -99,7 +99,6 @@ impl<K, V> GetOrInsert<K, V> for CachingHashMap<K, V>
 
 #[cfg(test)]
 mod tests {
-
     use std::rc::Rc;
     use super::{Cache, CachingHashMap, Gc};
 
