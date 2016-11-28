@@ -16,7 +16,7 @@ pub fn u8x4_to_u16(row: [u8; 4]) -> Option<u16> {
     Some(result)
 }
 
-/// Unpacks a 2-byte integer into an array of 4 bytes by splitting the the integer
+/// Unpacks a 2-byte integer into an array of 4 bytes by splitting the integer
 /// into 4 nybbles.
 #[inline]
 pub fn u16_to_u8x4(row: u16) -> [u8; 4] {
