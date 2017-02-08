@@ -214,7 +214,8 @@ impl<H: Heuristic> ExpectiMaxer<H> {
             .children()
             .iter()
             .map(|(m, n)| {
-                let eval = self.computer_node_eval(n, self.max_search_depth, 1f32, &mut search_statistics);
+                let eval =
+                    self.computer_node_eval(n, self.max_search_depth, 1f32, &mut search_statistics);
                 (m, eval)
             })
             .collect()
@@ -262,17 +263,19 @@ impl<H: Heuristic> ExpectiMaxer<H> {
         let child_with2_probability = probability * PROBABILITY_OF2 / (count as f32);
         let child_with4_probability = probability * PROBABILITY_OF4 / (count as f32);
 
-        let avg_with2 = children.with2()
-            .map(|n| {
-                self.player_node_eval(n, depth - 1, child_with2_probability, &mut statistics)
-            })
-            .sum::<f32>() / (count as f32);
+        let avg_with2 =
+            children.with2()
+                .map(|n| {
+                    self.player_node_eval(n, depth - 1, child_with2_probability, &mut statistics)
+                })
+                .sum::<f32>() / (count as f32);
 
-        let avg_with4 = children.with4()
-            .map(|n| {
-                self.player_node_eval(n, depth - 1, child_with4_probability, &mut statistics)
-            })
-            .sum::<f32>() / (count as f32);
+        let avg_with4 =
+            children.with4()
+                .map(|n| {
+                    self.player_node_eval(n, depth - 1, child_with4_probability, &mut statistics)
+                })
+                .sum::<f32>() / (count as f32);
 
         avg_with2 * PROBABILITY_OF2 + avg_with4 * PROBABILITY_OF4
     }
@@ -280,10 +283,10 @@ impl<H: Heuristic> ExpectiMaxer<H> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use board::Board;
     use heuristic::composite::CompositeHeuristic;
     use search_tree::SearchTree;
-    use super::*;
 
     #[test]
     fn can_search_result() {

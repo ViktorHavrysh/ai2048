@@ -130,22 +130,19 @@ impl Board {
     /// Returns all possible `Board`s that can result from the computer spawning a `2` in a random
     /// empty cell.
     #[inline]
-    #[allow(needless_lifetimes)]
-    pub fn possible_boards_with2<'a>(&'a self) -> impl Iterator<Item=Board> + 'a {
+    pub fn possible_boards_with2<'a>(&'a self) -> impl Iterator<Item = Board> + 'a {
         self.possible_boards(1)
     }
 
     /// Returns all possible `Board`s that can result from the computer spawning a `4` in a random
     /// empty cell.
     #[inline]
-    #[allow(needless_lifetimes)]
-    pub fn possible_boards_with4<'a>(&'a self) -> impl Iterator<Item=Board> + 'a {
+    pub fn possible_boards_with4<'a>(&'a self) -> impl Iterator<Item = Board> + 'a {
         self.possible_boards(2)
     }
 
     #[inline]
-    #[allow(needless_lifetimes)]
-    fn possible_boards<'a>(&'a self, new_value: u8) -> impl Iterator<Item=Board> + 'a {
+    fn possible_boards<'a>(&'a self, new_value: u8) -> impl Iterator<Item = Board> + 'a {
         self.grid
             .into_iter()
             .enumerate()
@@ -304,8 +301,8 @@ fn parse_to_logspace(n: u32) -> Option<u8> {
 
 #[cfg(test)]
 mod tests {
-    use itertools::Itertools;
     use super::*;
+    use itertools::Itertools;
 
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]

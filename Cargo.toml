@@ -1,19 +1,21 @@
 [package]
-name = "ai2048"
-version = "0.1.0"
 authors = ["Victor Gavrish <victor.gavrish@gmail.com>"]
 license = "LGPL"
-
-[dependencies]
-rand = "0.3"
-time = "0.1"
-itertools = "0.5"
-lazycell = "0.2"
-fnv = "1.0"
-lazy_static = "0.2"
+name = "ai2048"
+version = "0.1.0"
 
 [[bin]]
 name = "ai2048_bin"
+
+[dependencies]
+fnv = "1.0"
+itertools = "0.5"
+lazy_static = "0.2"
+lazycell = "0.5.0"
+rand = "0.3"
+time = "0.1"
+
+[profile]
 
 [profile.dev]
 codegen-units = 4

@@ -40,9 +40,9 @@ impl<H: Heuristic> Agent<H> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use board::Board;
     use heuristic::composite::CompositeHeuristic;
-    use super::*;
 
     #[test]
     fn can_make_decision() {

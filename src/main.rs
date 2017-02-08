@@ -1,17 +1,17 @@
 extern crate ai2048;
 
+use ai2048::SearchResult;
+use ai2048::SearchStatistics;
 use ai2048::agent::Agent;
 use ai2048::board::Board;
 use ai2048::heuristic::composite::CompositeHeuristic;
-use ai2048::SearchStatistics;
-use ai2048::SearchResult;
 
 fn main() {
     let heuristic = CompositeHeuristic::default();
 
     let mut board = Board::default().add_random_tile().add_random_tile();
     let mut agent = Agent::new(board, heuristic, 0.002, 6);
-    let mut aggregate_search_statistics = SearchStatistics::default();  
+    let mut aggregate_search_statistics = SearchStatistics::default();
 
     loop {
         let result = agent.make_decision();

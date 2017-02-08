@@ -6,10 +6,10 @@
 //! I haven't made any benchmarks yet, but I think my usage of transposition
 //! tables should considerably speed up the search.
 
+use super::*;
 use integer_magic::{u8x4_to_u16, u16_to_u8x4};
 use search_tree::PlayerNode;
 use std::u16;
-use super::*;
 
 const MIN: f32 = -1_600_000f32;
 
