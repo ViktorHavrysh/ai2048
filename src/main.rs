@@ -1,10 +1,11 @@
-extern crate ai2048;
+extern crate ai2048_lib;
 
-use ai2048::SearchResult;
-use ai2048::SearchStatistics;
-use ai2048::agent::Agent;
-use ai2048::board::Board;
-use ai2048::heuristic::composite::CompositeHeuristic;
+use ai2048_lib::SearchResult;
+use ai2048_lib::SearchStatistics;
+use ai2048_lib::agent::Agent;
+use ai2048_lib::board::Board;
+use ai2048_lib::heuristic::composite::CompositeHeuristic;
+use ai2048_lib::board::MOVES;
 
 fn main() {
     let heuristic = CompositeHeuristic::default();
@@ -42,7 +43,7 @@ fn build_display(result: &SearchResult, aggregate_stats: &SearchStatistics) -> S
     writeln!(&mut s, "{}", result.search_statistics).unwrap();
     writeln!(&mut s, "Total:\n{}", aggregate_stats).unwrap();
 
-    for mv in &ai2048::board::MOVES {
+    for mv in &MOVES {
         write!(&mut s, "{:?}: ", mv).unwrap();
         match result.move_evaluations.get(mv) {
             Some(eval) => writeln!(&mut s, "{}", eval).unwrap(),

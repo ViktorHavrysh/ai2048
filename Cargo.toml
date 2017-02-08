@@ -4,23 +4,8 @@ license = "LGPL"
 name = "ai2048"
 version = "0.1.0"
 
-[[bin]]
-name = "ai2048_bin"
-
 [dependencies]
-fnv = "1.0"
-itertools = "0.5"
-lazy_static = "0.2"
-lazycell = "0.5.0"
-rand = "0.3"
-time = "0.1"
 
-[profile]
-
-[profile.dev]
-codegen-units = 4
-
-[profile.release]
-debug = true
-lto = true
-opt-level = 3
+[dependencies.ai2048_lib]
+optional = false
+path = "./ai2048_lib"
