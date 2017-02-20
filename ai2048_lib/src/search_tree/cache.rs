@@ -62,15 +62,12 @@ impl<K, V> Gc for CachingHashMap<K, V>
     where K: Eq + Hash + Clone
 {
     fn gc(&mut self) {
-        let stale_keys: Vec<K> = self.iter()
-            .filter_map(|pair| {
-                let (key, value) = pair;
-                match value.upgrade() {
-                    Some(_) => None,
-                    None => Some(key.clone()),
-                }
+        let stale_keys = self.iter()
+            .filter_map(|(key, value)| match value.upgrade() {
+                Some(_) => None,
+                None => Some(key.clone()),
             })
-            .collect();
+            .collect::<Vec<_>>();
 
         for key in stale_keys {
             self.remove(&key);
@@ -79,21 +76,22 @@ impl<K, V> Gc for CachingHashMap<K, V>
 }
 
 trait GetOrInsert<K, V> {
-    fn get_or_insert_with<F: FnOnce() -> V>(&mut self, key: K, default: F) -> Rc<V>;
+    fn get_or_insert_with<F>(&mut self, key: K, default: F) -> Rc<V> where F: FnOnce() -> V;
 }
 
 impl<K, V> GetOrInsert<K, V> for CachingHashMap<K, V>
     where K: Eq + Hash
 {
-    fn get_or_insert_with<F: FnOnce() -> V>(&mut self, key: K, default: F) -> Rc<V> {
-        match self.get(&key).and_then(|v| v.upgrade()) {
-            Some(value) => value,
-            None => {
+    fn get_or_insert_with<F>(&mut self, key: K, default: F) -> Rc<V>
+        where F: FnOnce() -> V
+    {
+        self.get(&key)
+            .and_then(|v| v.upgrade())
+            .unwrap_or_else(|| {
                 let value = Rc::new(default());
                 self.insert(key, Rc::downgrade(&value));
                 value
-            }
-        }
+            })
     }
 }
 

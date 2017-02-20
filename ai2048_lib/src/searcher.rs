@@ -177,7 +177,7 @@ impl<H: Heuristic> Searcher for ExpectiMaxer<H> {
         let best_move = hashmap.iter()
             .sorted_by(|a, b| b.1.partial_cmp(a.1).unwrap())
             .into_iter()
-            .map(|(&mv, &eval)| (mv, eval))
+            .map(|(mv, eval)| (*mv, *eval))
             .next();
 
         SearchResult {

@@ -9,3 +9,13 @@ version = "0.1.0"
 [dependencies.ai2048_lib]
 optional = false
 path = "./ai2048_lib"
+
+[profile]
+
+[profile.dev]
+codegen-units = 4
+
+[profile.release]
+debug = true
+lto = true
+opt-level = 3

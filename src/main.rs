@@ -18,17 +18,13 @@ fn main() {
         let result = agent.make_decision();
         aggregate_search_statistics += result.search_statistics;
 
-        print!("{}[2J", 27 as char);
         println!("{}", build_display(&result, &aggregate_search_statistics));
 
-        match result.best_move {
-            Some((mv, _)) => {
-                board = board.make_move(mv).add_random_tile();
-                agent.update_state(board);
-            }
-            None => {
-                break;
-            }
+        if let Some((mv, _)) = result.best_move {
+            board = board.make_move(mv).add_random_tile();
+            agent.update_state(board);
+        } else {
+            break;
         }
     }
 
@@ -39,6 +35,8 @@ use std::fmt::Write;
 
 fn build_display(result: &SearchResult, aggregate_stats: &SearchStatistics) -> String {
     let mut s = String::new();
+    write!(&mut s, "{}[2J", 27 as char).unwrap(); // clear screen
+
     writeln!(&mut s, "{}", result.root_board).unwrap();
     writeln!(&mut s, "{}", result.search_statistics).unwrap();
     writeln!(&mut s, "Total:\n{}", aggregate_stats).unwrap();
