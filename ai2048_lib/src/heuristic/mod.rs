@@ -15,25 +15,34 @@ use std::i32;
 
 /// A type that can evaluate a board position and return an `f32`, with
 /// higher values meaning better outcome
-pub trait Heuristic {
+pub trait Heuristic<T>
+where
+    T: Copy + Default,
+{
     /// Analyzes the game state represented by `PlayerNode` and returns
     /// an evaluation
-    fn eval(&self, &PlayerNode) -> f32;
+    fn eval(&self, &PlayerNode<T>) -> f32;
 }
 
 #[inline]
 fn empty_cell_count(board: &Board) -> usize {
-    board.grid().iter().flatten().filter(|&&v| v == 0).count()
+    board
+        .grid()
+        .iter()
+        .flatten()
+        .filter(|v| **v == 0)
+        .count()
 }
 
 #[inline]
 fn empty_cell_count_row(row: [u8; 4]) -> usize {
-    row.iter().filter(|&&v| v == 0).count()
+    row.iter().filter(|v| **v == 0).count()
 }
 
 #[inline]
 fn adjacent(board: &Board) -> u16 {
-    board.grid()
+    board
+        .grid()
         .iter()
         .chain(board.transpose().grid().iter())
         .map(|&row| adjacent_row(row))
@@ -59,12 +68,17 @@ fn adjacent_row(row: [u8; 4]) -> u8 {
 
 #[inline]
 fn sum(board: &Board) -> f32 {
-    -board.grid().iter().flatten().map(|&v| (v as f32).powf(3.5)).sum::<f32>()
+    -board
+         .grid()
+         .iter()
+         .flatten()
+         .map(|v| (*v as f32).powf(3.5))
+         .sum::<f32>()
 }
 
 #[inline]
 fn sum_row(row: [u8; 4]) -> f32 {
-    -row.iter().map(|&v| (v as f32).powf(3.5)).sum::<f32>()
+    -row.iter().map(|v| (*v as f32).powf(3.5)).sum::<f32>()
 }
 
 #[inline]
@@ -74,7 +88,11 @@ fn monotonicity(board: &Board) -> i32 {
 
 #[inline]
 fn monotonicity_rows(board: &Board) -> i32 {
-    board.grid().iter().map(|&row| monotonicity_row(row)).sum()
+    board
+        .grid()
+        .iter()
+        .map(|&row| monotonicity_row(row))
+        .sum()
 }
 
 #[inline]
@@ -102,15 +120,17 @@ fn smoothness(board: &Board) -> i32 {
 
     for cell_y in 0..4 {
         for cell_x in 0..4 {
-            if let Some(neighbor_x) = ((cell_x + 1)..4).filter(|&x| grid[x][cell_y] != 0).nth(0) {
+            if let Some(neighbor_x) = ((cell_x + 1)..4)
+                   .filter(|&x| grid[x][cell_y] != 0)
+                   .nth(0) {
                 smoothness += smoothness -
-                              i32::abs(grid[cell_x][cell_y] as i32 -
-                                       grid[neighbor_x][cell_y] as i32);
+                              i32::abs(grid[cell_x][cell_y] as i32 - grid[neighbor_x][cell_y] as i32,);
             }
-            if let Some(neighbor_y) = ((cell_y + 1)..4).filter(|&y| grid[cell_x][y] != 0).nth(0) {
+            if let Some(neighbor_y) = ((cell_y + 1)..4)
+                   .filter(|&y| grid[cell_x][y] != 0)
+                   .nth(0) {
                 smoothness += smoothness -
-                              i32::abs(grid[cell_x][cell_y] as i32 -
-                                       grid[cell_x][neighbor_y] as i32);
+                              i32::abs(grid[cell_x][cell_y] as i32 - grid[cell_x][neighbor_y] as i32,);
             }
         }
     }

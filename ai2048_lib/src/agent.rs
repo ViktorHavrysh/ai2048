@@ -4,23 +4,31 @@
 use board::Board;
 use heuristic::Heuristic;
 use search_tree::SearchTree;
-use searcher::{ExpectiMaxer, SearchResult, Searcher};
+use searcher::{ExpectiMaxer, ExpectiMaxerCache, SearchResult, Searcher};
 
 /// `Agent` aggregates all the other parts of the library in order to achieve its whole point.
-pub struct Agent<H: Heuristic> {
-    search_tree: SearchTree,
-    searcher: ExpectiMaxer<H>,
+pub struct Agent<T, S>
+where
+    T: Copy + Default,
+    S: Searcher<T>,
+{
+    search_tree: SearchTree<T>,
+    searcher: S,
 }
 
-impl<H: Heuristic> Agent<H> {
+impl<H> Agent<ExpectiMaxerCache, ExpectiMaxer<H>>
+where
+    H: Heuristic<ExpectiMaxerCache>,
+{
     /// Creates a new `Agent`. Requires the starting state of the `Board`, the heuristic to use,
     /// the limit on the probability of reaching `Board` state before it stops the search, and the
     /// maximum depth ot the search.
-    pub fn new(starting_state: Board,
-               heuristic: H,
-               min_probability: f32,
-               max_search_depth: u8)
-               -> Self {
+    pub fn new(
+        starting_state: Board,
+        heuristic: H,
+        min_probability: f32,
+        max_search_depth: u8,
+    ) -> Self {
         Agent {
             search_tree: SearchTree::new(starting_state),
             searcher: ExpectiMaxer::new(min_probability, max_search_depth, heuristic),

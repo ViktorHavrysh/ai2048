@@ -18,9 +18,12 @@ const MIN: f32 = -1_600_000f32;
 #[derive(Default)]
 pub struct CompositeHeuristic;
 
-impl Heuristic for CompositeHeuristic {
+impl<T> Heuristic<T> for CompositeHeuristic
+where
+    T: Copy + Default,
+{
     #[inline]
-    fn eval(&self, node: &PlayerNode) -> f32 {
+    fn eval(&self, node: &PlayerNode<T>) -> f32 {
         if node.children().is_empty() {
             return MIN;
         }

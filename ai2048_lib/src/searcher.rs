@@ -4,7 +4,7 @@
 //! after which, with perfect play, we expect the heuristic value to be the highest, on average.
 //!
 //! Of course, it's impossible to calculate the whole tree in most board positions, so we stop
-//! going deeper into the search tree as soon as we either reach a node whose probabiltiy is lower
+//! going deeper into the search tree as soon as we either reach a node whose probability is lower
 //! than some value, or as soon as we reach a certain depth, whichever happens first.
 //!
 //! As soon as that happens, or we reach a terminal (Game Over) node, we run the provided heuristic
@@ -30,18 +30,14 @@ const PROBABILITY_OF4: f32 = 0.1;
 
 /// Not sure why I created a trait. I used to experiment a lot with different search methods,
 /// but I don't think I'll find a better algorithm than `ExpectiMax` now.
-pub trait Searcher {
-    fn search(&self, search_tree: &SearchTree) -> SearchResult;
+pub trait Searcher<T>
+where
+    T: Copy + Default,
+{
+    fn search(&self, search_tree: &SearchTree<T>) -> SearchResult;
 }
 
-/// The main consumer of computational resources of the program.
-pub struct ExpectiMaxer<H: Heuristic> {
-    min_probability: f32,
-    max_search_depth: u8,
-    heuristic: H,
-}
-
-/// Return a numnber of interesting statistics together with a recommendation for the best move.
+/// Return a number of interesting statistics together with a recommendation for the best move.
 #[derive(Debug)]
 pub struct SearchResult {
     /// Some useful statistics
@@ -65,6 +61,8 @@ pub struct SearchStatistics {
     pub nodes_traversed: usize,
     /// The number of nodes for which the game state was evaluated with a heuristic.
     pub terminal_traversed: usize,
+    /// The number of shortcuts taken due to reaching the same node at higher level.
+    pub shortcuts_hit: usize,
     /// Known unique search tree nodes that represent the Player's turn.
     pub known_player_nodes: usize,
     /// Known unique search tree nodes that represent the Computer's turn.
@@ -85,6 +83,7 @@ impl Add for SearchStatistics {
             search_duration: self.search_duration + other.search_duration,
             nodes_traversed: self.nodes_traversed + other.nodes_traversed,
             terminal_traversed: self.terminal_traversed + other.terminal_traversed,
+            shortcuts_hit: self.shortcuts_hit + other.shortcuts_hit,
             known_player_nodes: self.known_player_nodes + other.known_player_nodes,
             known_computer_nodes: self.known_computer_nodes + other.known_computer_nodes,
             new_player_nodes: self.known_player_nodes + other.known_player_nodes,
@@ -100,7 +99,7 @@ impl AddAssign for SearchStatistics {
     }
 }
 
-// Unfortunately, can't derive, since `Duration` apparently doesn't implemnt it
+// Unfortunately, can't derive, since `Duration` apparently doesn't implement it
 // (why?)
 impl Default for SearchStatistics {
     fn default() -> Self {
@@ -108,6 +107,7 @@ impl Default for SearchStatistics {
             search_duration: Duration::zero(),
             nodes_traversed: 0,
             terminal_traversed: 0,
+            shortcuts_hit: 0,
             known_player_nodes: 0,
             known_computer_nodes: 0,
             new_player_nodes: 0,
@@ -142,14 +142,40 @@ impl fmt::Display for SearchStatistics {
         writeln!(f, "Nodes traversed:       {}", self.nodes_traversed)?;
         writeln!(f, "New nodes:             {}", self.new_nodes())?;
         writeln!(f, "Terminal nodes:        {}", self.terminal_traversed)?;
+        writeln!(f, "Shortcuts hit:         {}", self.shortcuts_hit)?;
         writeln!(f, "Nodes per second:      {}", self.nodes_per_second())?;
         writeln!(f, "New nodes per second:  {}", self.new_nodes_per_second())
     }
 }
 
-impl<H: Heuristic> Searcher for ExpectiMaxer<H> {
+/// Potentially cached data in the evaluated node.
+pub type ExpectiMaxerCache = Option<ExpectiMaxerCachedData>;
+
+/// Cached temporary data
+#[derive(Copy, Clone, Default)]
+pub struct ExpectiMaxerCachedData {
+    /// Cached heuristic for a previously seen node
+    cached_heuristic: f32,
+    /// The maximum probability of encountering this node
+    max_probability: f32,
+}
+
+/// The main consumer of computational resources of the program.
+pub struct ExpectiMaxer<H>
+where
+    H: Heuristic<ExpectiMaxerCache>,
+{
+    min_probability: f32,
+    max_search_depth: u8,
+    heuristic: H,
+}
+
+impl<H> Searcher<ExpectiMaxerCache> for ExpectiMaxer<H>
+where
+    H: Heuristic<ExpectiMaxerCache>,
+{
     /// Do the search.
-    fn search(&self, search_tree: &SearchTree) -> SearchResult {
+    fn search(&self, search_tree: &SearchTree<ExpectiMaxerCache>) -> SearchResult {
         let mut statistics = SearchStatistics::default();
 
         // gather some data before starting the search
@@ -174,7 +200,8 @@ impl<H: Heuristic> Searcher for ExpectiMaxer<H> {
         statistics.known_player_nodes = known_player_nodes_finish;
 
         // find the best evaluation and move
-        let best_move = hashmap.iter()
+        let best_move = hashmap
+            .iter()
             .sorted_by(|a, b| b.1.partial_cmp(a.1).unwrap())
             .into_iter()
             .map(|(mv, eval)| (*mv, *eval))
@@ -189,7 +216,10 @@ impl<H: Heuristic> Searcher for ExpectiMaxer<H> {
     }
 }
 
-impl<H: Heuristic> ExpectiMaxer<H> {
+impl<H> ExpectiMaxer<H>
+where
+    H: Heuristic<ExpectiMaxerCache>,
+{
     /// Creates a new `ExpectiMaxer`. Require the heuristic to use, the limit probability
     /// lower than which we'll won't search, and the maximum search depth.
     pub fn new(min_probability: f32, max_search_depth: u8, heuristic: H) -> Self {
@@ -201,81 +231,121 @@ impl<H: Heuristic> ExpectiMaxer<H> {
         }
     }
 
-    fn init(&self,
-            search_tree: &SearchTree,
-            mut search_statistics: &mut SearchStatistics)
-            -> HashMap<Move, f32> {
+    fn init(
+        &self,
+        search_tree: &SearchTree<ExpectiMaxerCache>,
+        mut search_statistics: &mut SearchStatistics,
+    ) -> HashMap<Move, f32> {
         if search_tree.root().children().is_empty() {
             // Game over
             return HashMap::new();
         }
 
-        search_tree.root()
+        search_tree
+            .root()
             .children()
             .iter()
-            .map(|(m, n)| {
-                let eval =
-                    self.computer_node_eval(n, self.max_search_depth, 1f32, &mut search_statistics);
-                (m, eval)
-            })
+            .map(
+                |(m, n)| {
+                    let eval =
+                        self.computer_node_eval(n, self.max_search_depth, 1f32, &mut search_statistics);
+                    (m, eval)
+                },
+            )
             .collect()
     }
 
-    fn player_node_eval(&self,
-                        node: &PlayerNode,
-                        depth: u8,
-                        probability: f32,
-                        mut statistics: &mut SearchStatistics)
-                        -> f32 {
+    fn player_node_eval(
+        &self,
+        node: &PlayerNode<ExpectiMaxerCache>,
+        depth: u8,
+        probability: f32,
+        mut statistics: &mut SearchStatistics,
+    ) -> f32 {
         statistics.nodes_traversed += 1;
+
+        let data = node.data.get();
+
+        // Have we seen this node on the same level or deeper in the tree?
+        if let Some(data) = data {
+            if probability <= data.max_probability {
+                statistics.shortcuts_hit += 1;
+                return data.cached_heuristic;
+            } 
+        }
 
         if node.children().is_empty() || depth == 0 || probability < self.min_probability {
             statistics.terminal_traversed += 1;
 
-            let heur = match node.heuristic.get() {
-                Some(heur) => heur,
+            return match data {
+                Some(data) => data.cached_heuristic,
                 None => {
                     let heur = self.heuristic.eval(node);
-                    node.heuristic.set(Some(heur));
+                    let new_data = Some(
+                        ExpectiMaxerCachedData {
+                            cached_heuristic: heur,
+                            max_probability: probability,
+                        },
+                    );
+                    node.data.set(new_data);
                     heur
                 }
             };
-
-            return heur;
         }
 
-        node.children()
+        let heur = node.children()
             .values()
-            .map(|n| self.computer_node_eval(n, depth, probability, &mut statistics))
-            .fold(f32::NAN, f32::max)
+            .map(|n| self.computer_node_eval(n, depth, probability, &mut statistics),)
+            .fold(f32::NAN, f32::max);
+
+        match data {
+            Some(data) if data.max_probability >= probability => (),
+            _ => {
+                node.data.set(
+                    Some(
+                        ExpectiMaxerCachedData {
+                            cached_heuristic: heur,
+                            max_probability: probability,
+                        },
+                    ),
+                );
+            },
+        };
+
+        heur
     }
 
-    fn computer_node_eval(&self,
-                          node: &ComputerNode,
-                          depth: u8,
-                          probability: f32,
-                          mut statistics: &mut SearchStatistics)
-                          -> f32 {
+    fn computer_node_eval(
+        &self,
+        node: &ComputerNode<ExpectiMaxerCache>,
+        depth: u8,
+        probability: f32,
+        mut statistics: &mut SearchStatistics,
+    ) -> f32 {
         statistics.nodes_traversed += 1;
         let children = node.children();
-        let count = children.variants();
+        let count = children.variants() as f32;
 
         let child_with2_probability = probability * PROBABILITY_OF2 / (count as f32);
         let child_with4_probability = probability * PROBABILITY_OF4 / (count as f32);
 
-        let avg_with2 =
-            children.with2()
-                .map(|n| {
+        let avg_with2 = children
+            .with2()
+            .map(
+                |n| {
                     self.player_node_eval(n, depth - 1, child_with2_probability, &mut statistics)
-                })
-                .sum::<f32>() / (count as f32);
+                },
+            )
+            .sum::<f32>() / count;
 
-        let avg_with4 =
-            children.with4()
-                .map(|n| {
+        let avg_with4 = children
+            .with4()
+            .map(
+                |n| {
                     self.player_node_eval(n, depth - 1, child_with4_probability, &mut statistics)
-                })
-                .sum::<f32>() / (count as f32);
+                },
+            )
+            .sum::<f32>() / count;
 
         avg_with2 * PROBABILITY_OF2 + avg_with4 * PROBABILITY_OF4
     }

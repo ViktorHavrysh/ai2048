@@ -20,9 +20,12 @@ use search_tree::cache::Cache;
 use std::cell::Cell;
 use std::rc::Rc;
 
-struct NodeCache {
-    player_node: Cache<Board, PlayerNode>,
-    computer_node: Cache<Board, ComputerNode>,
+struct NodeCache<T>
+where
+    T: Copy + Default,
+{
+    player_node: Cache<Board, PlayerNode<T>>,
+    computer_node: Cache<Board, ComputerNode<T>>,
 }
 
 /// The `SearchTree` type is the root of the tree of nodes that form all possible board states in
@@ -30,25 +33,29 @@ struct NodeCache {
 /// `SearchTree` by providing an initial board state, or use a mutable reference to an existing
 /// `SearchTree` to update its root board state in order to reuse nodes already calculated from
 /// the previous state.
-pub struct SearchTree {
-    root_node: Rc<PlayerNode>,
-    // I think that, in theory, this cache could be owned by this type, while all its
-    // descendats would get a reference to this object, since a `SearchTree` root is expected
-    // to outlive all its descendats. However, some of the descendants produce Rc<T> references
-    // to nodes, so until I solve that in theory a node can outlive the `SearchTree`, so reference
-    // counting it is, for the moment.
-    cache: Rc<NodeCache>,
+pub struct SearchTree<T>
+where
+    T: Copy + Default,
+{
+    root_node: Rc<PlayerNode<T>>,
+    cache: Rc<NodeCache<T>>,
 }
 
-impl SearchTree {
+impl<T> SearchTree<T>
+where
+    T: Copy + Default,
+{
     /// Creates a new `SearchTree` from an initial `Board` state.
     pub fn new(board: Board) -> Self {
-        let cache = Rc::new(NodeCache {
-            player_node: Cache::new(),
-            computer_node: Cache::new(),
-        });
+        let cache = Rc::new(
+            NodeCache {
+                player_node: Cache::new(),
+                computer_node: Cache::new(),
+            },
+        );
 
-        let node = cache.player_node
+        let node = cache
+            .player_node
             .get_or_insert_with(board, || PlayerNode::new(board, cache.clone()));
 
         SearchTree {
@@ -73,7 +80,7 @@ impl SearchTree {
     }
 
     /// Gets a reference to the current root node.
-    pub fn root(&self) -> &PlayerNode {
+    pub fn root(&self) -> &PlayerNode<T> {
         self.root_node.as_ref()
     }
 
@@ -94,11 +101,17 @@ impl SearchTree {
 }
 
 /// This type represents the children of a `PlayerNode`.
-pub struct PlayerNodeChildren {
-    nodes: [Option<Rc<ComputerNode>>; 4],
+pub struct PlayerNodeChildren<T>
+where
+    T: Copy + Default,
+{
+    nodes: [Option<Rc<ComputerNode<T>>>; 4],
 }
 
-impl PlayerNodeChildren {
+impl<T> PlayerNodeChildren<T>
+where
+    T: Copy + Default,
+{
     /// Returns true if there are no children. This is true for a game over node's children.
     #[inline]
     pub fn is_empty(&self) -> bool {
@@ -107,57 +120,65 @@ impl PlayerNodeChildren {
 
     /// Iterates over children, returning `(Move, &ComputerNode)` tuples.
     #[inline]
-    pub fn iter<'a>(&'a self) -> impl Iterator<Item = (Move, &'a ComputerNode)> + 'a {
+    pub fn iter<'a>(&'a self) -> impl Iterator<Item = (Move, &'a ComputerNode<T>)> + 'a {
         self.nodes
             .iter()
             .enumerate()
-            .filter_map(|(index, opt)| {
-                opt.as_ref().map(|node| {
-                    let mv = match index {
-                        0 => Move::Left,
-                        1 => Move::Right,
-                        2 => Move::Up,
-                        3 => Move::Down,
-                        _ => unreachable!(),
-                    };
+            .filter_map(
+                |(index, opt)| {
+                    opt.as_ref()
+                        .map(
+                            |node| {
+                                let mv = match index {
+                                    0 => Move::Left,
+                                    1 => Move::Right,
+                                    2 => Move::Up,
+                                    3 => Move::Down,
+                                    _ => unreachable!(),
+                                };
 
-                    (mv, node.as_ref())
-                })
-            })
+                                (mv, node.as_ref())
+                            },
+                        )
+                },
+            )
     }
 
     /// Iterates over children, returning `&ComputerNode`s without moves.
     #[inline]
-    pub fn values<'a>(&'a self) -> impl Iterator<Item = &'a ComputerNode> + 'a {
+    pub fn values<'a>(&'a self) -> impl Iterator<Item = &'a ComputerNode<T>> + 'a {
         self.nodes
             .iter()
             .filter_map(|opt| opt.as_ref().map(|node| node.as_ref()))
     }
 }
 
-/// This type rerpresents a `Board` state that can be reached on the Player's turn. This type
+/// This type represents a `Board` state that can be reached on the Player's turn. This type
 /// is logically immutable, and there should be no way to create this type from outside the module
 /// through any means other than querying the `SearchTree` root and its descendants.
 ///
-/// However, this type makes use of interior mutability to defer generating its children unitl
+/// However, this type makes use of interior mutability to defer generating its children until
 /// such time as it is asked to do so, and only do it once even then.
-pub struct PlayerNode {
+pub struct PlayerNode<T>
+where
+    T: Copy + Default,
+{
     board: Board,
-    cache: Rc<NodeCache>,
-    children: LazyCell<PlayerNodeChildren>,
-    /// This is ugly, because the only reason these are here is that I need them in the searcher.
-    /// However, I can't think of a less cumbersome way to keep these around and associated with
-    /// a particular node without the searcher having to keep its own `HashMap` of `Board` states.
-    pub heuristic: Cell<Option<f32>>,
+    cache: Rc<NodeCache<T>>,
+    children: LazyCell<PlayerNodeChildren<T>>,
+    pub data: Cell<T>,
 }
 
-impl PlayerNode {
-    fn new(board: Board, cache: Rc<NodeCache>) -> Self {
+impl<T> PlayerNode<T>
+where
+    T: Copy + Default,
+{
+    fn new(board: Board, cache: Rc<NodeCache<T>>) -> Self {
         PlayerNode {
             board: board,
             cache: cache,
             children: LazyCell::new(),
-            heuristic: Cell::new(None),
+            data: Cell::new(T::default()),
         }
     }
 
@@ -168,11 +189,11 @@ impl PlayerNode {
 
     /// Returns a `PlayerNodeChildren` which represents all possible `Move`:`ComputerNode` pairs
     /// possible in the current position.
-    pub fn children(&self) -> &PlayerNodeChildren {
+    pub fn children(&self) -> &PlayerNodeChildren<T> {
         self.children.borrow_with(|| self.create_children())
     }
 
-    fn create_children(&self) -> PlayerNodeChildren {
+    fn create_children(&self) -> PlayerNodeChildren<T> {
         let mut children = [None, None, None, None];
 
         for &m in &board::MOVES {
@@ -180,10 +201,9 @@ impl PlayerNode {
 
             // It is illegal to make a move that doesn't change anything.
             if new_grid != self.board {
-                let computer_node = self.cache
-                    .computer_node
-                    .get_or_insert_with(new_grid,
-                                        || ComputerNode::new(new_grid, self.cache.clone()));
+                let computer_node = self.cache.computer_node.get_or_insert_with(new_grid, || {
+                    ComputerNode::new(new_grid, self.cache.clone())
+                });
 
                 children[m as u8 as usize] = Some(computer_node);
             }
@@ -197,21 +217,27 @@ impl PlayerNode {
 /// that were generated by spawning a 2 from ones that were spawned with a 4, because in a game
 /// of 2048 a 4 only spawns 10% of the time, and it's important to take into account how likely
 /// an outcome is.
-pub struct ComputerNodeChildren {
-    with2: Vec<Rc<PlayerNode>>,
-    with4: Vec<Rc<PlayerNode>>,
+pub struct ComputerNodeChildren<T>
+where
+    T: Copy + Default,
+{
+    with2: Vec<Rc<PlayerNode<T>>>,
+    with4: Vec<Rc<PlayerNode<T>>>,
 }
 
-impl ComputerNodeChildren {
+impl<T> ComputerNodeChildren<T>
+where
+    T: Copy + Default,
+{
     /// Game states generated by the computer spawning a 2.
     #[inline]
-    pub fn with2<'a>(&'a self) -> impl Iterator<Item = &'a PlayerNode> + 'a {
+    pub fn with2<'a>(&'a self) -> impl Iterator<Item = &'a PlayerNode<T>> + 'a {
         self.with2.iter().map(|n| n.as_ref())
     }
 
     /// Game states generated by the computer spawning a 4.
     #[inline]
-    pub fn with4<'a>(&'a self) -> impl Iterator<Item = &'a PlayerNode> + 'a {
+    pub fn with4<'a>(&'a self) -> impl Iterator<Item = &'a PlayerNode<T>> + 'a {
         self.with4.iter().map(|n| n.as_ref())
     }
 
@@ -221,20 +247,26 @@ impl ComputerNodeChildren {
     }
 }
 
-/// This type rerpresents a `Board` state that can be reached on the Computer's turn. This type
-/// is logically immutable, and there should be no way to create this type from outside the moduel
+/// This type represents a `Board` state that can be reached on the Computer's turn. This type
+/// is logically immutable, and there should be no way to create this type from outside the module
 /// through any means other than querying a `PlayerNode`.
 ///
-/// However, this type makes use of interior mutability to defer generating its children unitl
+/// However, this type makes use of interior mutability to defer generating its children until
 /// such time as it is asked to do so, and only do it once even then.
-pub struct ComputerNode {
+pub struct ComputerNode<T>
+where
+    T: Copy + Default,
+{
     board: Board,
-    cache: Rc<NodeCache>,
-    children: LazyCell<ComputerNodeChildren>,
+    cache: Rc<NodeCache<T>>,
+    children: LazyCell<ComputerNodeChildren<T>>,
 }
 
-impl ComputerNode {
-    fn new(board: Board, cache: Rc<NodeCache>) -> Self {
+impl<T> ComputerNode<T>
+where
+    T: Copy + Default,
+{
+    fn new(board: Board, cache: Rc<NodeCache<T>>) -> Self {
         ComputerNode {
             board: board,
             cache: cache,
@@ -250,27 +282,31 @@ impl ComputerNode {
     /// Returns an `ComputerNodeChildren` that represents all possible states that the Player
     /// can face following a computer spawning a random 2 or 4 tile. Can't be empty, by the game'search_tree
     /// logic.
-    pub fn children(&self) -> &ComputerNodeChildren {
+    pub fn children(&self) -> &ComputerNodeChildren<T> {
         self.children.borrow_with(|| self.create_children())
     }
 
-    fn create_children(&self) -> ComputerNodeChildren {
+    fn create_children(&self) -> ComputerNodeChildren<T> {
         let children_with2 = self.board
             .possible_boards_with2()
-            .map(|board| {
-                self.cache
-                    .player_node
-                    .get_or_insert_with(board, || PlayerNode::new(board, self.cache.clone()))
-            })
+            .map(
+                |board| {
+                    self.cache
+                        .player_node
+                        .get_or_insert_with(board, || PlayerNode::new(board, self.cache.clone()))
+                },
+            )
             .collect::<Vec<_>>();
 
         let children_with4 = self.board
             .possible_boards_with4()
-            .map(|board| {
-                self.cache
-                    .player_node
-                    .get_or_insert_with(board, || PlayerNode::new(board, self.cache.clone()))
-            })
+            .map(
+                |board| {
+                    self.cache
+                        .player_node
+                        .get_or_insert_with(board, || PlayerNode::new(board, self.cache.clone()))
+                },
+            )
             .collect::<Vec<_>>();
 
         debug_assert!(children_with2.len() != 0);
@@ -285,16 +321,15 @@ impl ComputerNode {
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
     use board::{Board, Move};
 
     use std::collections::{HashMap, HashSet};
 
     #[test]
-    fn can_create_new_searchtree() {
+    fn can_create_new_search_tree() {
         let expected_grid = Board::default().add_random_tile();
-        let search_tree = SearchTree::new(expected_grid);
+        let search_tree: SearchTree<()> = SearchTree::new(expected_grid);
         let actual_grid = *search_tree.root().board();
 
         assert_eq!(expected_grid, actual_grid);
@@ -304,7 +339,7 @@ mod tests {
     fn can_set_new_root() {
         let grid1 = Board::default().add_random_tile();
         let grid2 = Board::default().add_random_tile().add_random_tile();
-        let mut search_tree = SearchTree::new(grid1);
+        let mut search_tree: SearchTree<()> = SearchTree::new(grid1);
 
         search_tree.set_root(grid2);
 
@@ -316,15 +351,15 @@ mod tests {
 
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
-    fn can_playernode_children_by_move() {
+    fn can_player_node_children_by_move() {
         let board = Board::new(&[
             [0, 0, 0, 2],
             [0, 2, 0, 2],
             [4, 0, 0, 2],
-            [0, 0, 0, 2]
+            [0, 0, 0, 2],
         ]).unwrap();
 
-        let search_tree = SearchTree::new(board);
+        let search_tree: SearchTree<()> = SearchTree::new(board);
 
         let player_node = search_tree.root();
 
@@ -333,25 +368,25 @@ mod tests {
             [2, 0, 0, 0],
             [4, 0, 0, 0],
             [4, 2, 0, 0],
-            [2, 0, 0, 0]
+            [2, 0, 0, 0],
         ]).unwrap());
         expected.insert(Move::Right, Board::new(&[
             [0, 0, 0, 2],
             [0, 0, 0, 4],
             [0, 0, 4, 2],
-            [0, 0, 0, 2]
+            [0, 0, 0, 2],
         ]).unwrap());
         expected.insert(Move::Up, Board::new(&[
             [4, 2, 0, 4],
             [0, 0, 0, 4],
             [0, 0, 0, 0],
-            [0, 0, 0, 0]
+            [0, 0, 0, 0],
         ]).unwrap());
         expected.insert(Move::Down, Board::new(&[
             [0, 0, 0, 0],
             [0, 0, 0, 0],
             [0, 0, 0, 4],
-            [4, 2, 0, 4]
+            [4, 2, 0, 4],
         ]).unwrap());
 
         let actual = player_node.children().iter().collect::<HashMap<_, _>>();
@@ -366,14 +401,14 @@ mod tests {
 
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
-    fn can_computernode_children() {
+    fn can_computer_node_children() {
         let board = Board::new(&[
             [0, 2, 4, 2],
             [0, 4, 2, 4],
             [4, 2, 4, 2],
-            [2, 4, 2, 4]
+            [2, 4, 2, 4],
         ]).unwrap();
-        let search_tree = SearchTree::new(board);
+        let search_tree: SearchTree<()> = SearchTree::new(board);
 
         // two possible moves: up and left
         // up:   [4, 2, 4, 2],
@@ -392,25 +427,25 @@ mod tests {
             [4, 2, 4, 2],
             [2, 4, 2, 4],
             [2, 2, 4, 2],
-            [0, 4, 2, 4]
+            [0, 4, 2, 4],
         ]).unwrap());
         expected_with2.insert(Board::new(&[
             [4, 2, 4, 2],
             [2, 4, 2, 4],
             [0, 2, 4, 2],
-            [2, 4, 2, 4]
+            [2, 4, 2, 4],
         ]).unwrap());
         expected_with2.insert(Board::new(&[
             [2, 4, 2, 2],
             [4, 2, 4, 0],
             [4, 2, 4, 2],
-            [2, 4, 2, 4]
+            [2, 4, 2, 4],
         ]).unwrap());
         expected_with2.insert(Board::new(&[
             [2, 4, 2, 0],
             [4, 2, 4, 2],
             [4, 2, 4, 2],
-            [2, 4, 2, 4]
+            [2, 4, 2, 4],
         ]).unwrap());
 
         let mut expected_with4 = HashSet::new();
@@ -418,25 +453,25 @@ mod tests {
             [2, 4, 2, 4],
             [4, 2, 4, 0],
             [4, 2, 4, 2],
-            [2, 4, 2, 4]
+            [2, 4, 2, 4],
         ]).unwrap());
         expected_with4.insert(Board::new(&[
             [2, 4, 2, 0],
             [4, 2, 4, 4],
             [4, 2, 4, 2],
-            [2, 4, 2, 4]
+            [2, 4, 2, 4],
         ]).unwrap());
         expected_with4.insert(Board::new(&[
             [4, 2, 4, 2],
             [2, 4, 2, 4],
             [4, 2, 4, 2],
-            [0, 4, 2, 4]
+            [0, 4, 2, 4],
         ]).unwrap());
         expected_with4.insert(Board::new(&[
             [4, 2, 4, 2],
             [2, 4, 2, 4],
             [0, 2, 4, 2],
-            [4, 4, 2, 4]
+            [4, 4, 2, 4],
         ]).unwrap());
 
         let actual_with2 = search_tree.root()

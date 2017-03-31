@@ -21,7 +21,8 @@ pub struct Cache<K, V> {
 }
 
 impl<K, V> Cache<K, V>
-    where K: Eq + Hash + Clone
+where
+    K: Eq + Hash + Clone,
 {
     /// Returns an emtpy `Cache`.
     pub fn new() -> Self {
@@ -36,7 +37,11 @@ impl<K, V> Cache<K, V>
 
     /// Returns the number of non-invalidated values that are stored in the cache.
     pub fn strong_count(&self) -> usize {
-        self.data.borrow().values().filter(|v| v.upgrade().is_some()).count()
+        self.data
+            .borrow()
+            .values()
+            .filter(|v| v.upgrade().is_some())
+            .count()
     }
 
     /// Returns the length of the inner `HashMap` together with invalidated, but not cleaned,
@@ -59,14 +64,17 @@ trait Gc {
 }
 
 impl<K, V> Gc for CachingHashMap<K, V>
-    where K: Eq + Hash + Clone
+where
+    K: Eq + Hash + Clone,
 {
     fn gc(&mut self) {
         let stale_keys = self.iter()
-            .filter_map(|(key, value)| match value.upgrade() {
-                Some(_) => None,
-                None => Some(key.clone()),
-            })
+            .filter_map(
+                |(key, value)| match value.upgrade() {
+                    Some(_) => None,
+                    None => Some(key.clone()),
+                },
+            )
             .collect::<Vec<_>>();
 
         for key in stale_keys {
@@ -76,22 +84,28 @@ impl<K, V> Gc for CachingHashMap<K, V>
 }
 
 trait GetOrInsert<K, V> {
-    fn get_or_insert_with<F>(&mut self, key: K, default: F) -> Rc<V> where F: FnOnce() -> V;
+    fn get_or_insert_with<F>(&mut self, key: K, default: F) -> Rc<V>
+    where
+        F: FnOnce() -> V;
 }
 
 impl<K, V> GetOrInsert<K, V> for CachingHashMap<K, V>
-    where K: Eq + Hash
+where
+    K: Eq + Hash,
 {
     fn get_or_insert_with<F>(&mut self, key: K, default: F) -> Rc<V>
-        where F: FnOnce() -> V
+    where
+        F: FnOnce() -> V,
     {
         self.get(&key)
             .and_then(|v| v.upgrade())
-            .unwrap_or_else(|| {
-                let value = Rc::new(default());
-                self.insert(key, Rc::downgrade(&value));
-                value
-            })
+            .unwrap_or_else(
+                || {
+                    let value = Rc::new(default());
+                    self.insert(key, Rc::downgrade(&value));
+                    value
+                },
+            )
     }
 }
 
@@ -111,8 +125,12 @@ mod tests {
             hashmap.insert(2, Rc::downgrade(&rc_destroyed));
         }
 
-        assert_eq!(1,
-                   hashmap.values().filter(|v| v.upgrade().is_some()).count());
+        let some_count = hashmap
+            .values()
+            .filter(|v| v.upgrade().is_some())
+            .count();
+
+        assert_eq!(1, some_count);
         assert_eq!(2, hashmap.len());
 
         hashmap.gc();
