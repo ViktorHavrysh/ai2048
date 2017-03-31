@@ -5,6 +5,8 @@ name = "ai2048"
 version = "0.1.0"
 
 [dependencies]
+futures = "0.1"
+futures-cpupool = "0.1"
 
 [dependencies.ai2048_lib]
 optional = false

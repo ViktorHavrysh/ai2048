@@ -38,7 +38,7 @@ where
 }
 
 /// Return a number of interesting statistics together with a recommendation for the best move.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct SearchResult {
     /// Some useful statistics
     pub search_statistics: SearchStatistics,
