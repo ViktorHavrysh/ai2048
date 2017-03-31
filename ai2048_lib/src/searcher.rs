@@ -28,6 +28,8 @@ use time::{self, Duration};
 const PROBABILITY_OF2: f32 = 0.9;
 const PROBABILITY_OF4: f32 = 0.1;
 
+const USE_DETAILED_STATS: bool = true;
+
 /// Not sure why I created a trait. I used to experiment a lot with different search methods,
 /// but I don't think I'll find a better algorithm than `ExpectiMax` now.
 pub trait Searcher<T>
@@ -60,7 +62,9 @@ pub struct SearchStatistics {
     /// The number of search tree nodes visited.
     pub nodes_traversed: usize,
     /// The number of nodes for which the game state was evaluated with a heuristic.
-    pub terminal_traversed: usize,
+    pub terminal_new: usize,
+    /// The number of end nodes for which the heuristic was already cached.
+    pub terminal_cached: usize,
     /// The number of shortcuts taken due to reaching the same node at higher level.
     pub shortcuts_hit: usize,
     /// Known unique search tree nodes that represent the Player's turn.
@@ -75,26 +79,66 @@ pub struct SearchStatistics {
     pub new_computer_nodes: usize,
 }
 
-impl Add for SearchStatistics {
-    type Output = SearchStatistics;
+/// Statistics aggregated for several searches
+#[derive(Clone, Copy, Debug)]
+pub struct AggregateSearchStatistics {
+    /// Total number of searches
+    pub searches: usize,
+    /// Total time it took to search
+    pub search_duration: Duration,
+    /// Total nodes traversed
+    pub nodes_traversed: usize,
+    /// Total new terminal nodes traversed
+    pub terminal_new: usize,
+    /// Total cached terminal nodes traversed
+    pub terminal_cached: usize,
+    /// Total number of shortcuts hit
+    pub shortcuts_hit: usize,
+    known_player_nodes: usize,
+    known_computer_nodes: usize,
+    new_player_nodes: usize,
+    new_computer_nodes: usize,
+}
 
-    fn add(self, other: SearchStatistics) -> SearchStatistics {
-        SearchStatistics {
-            search_duration: self.search_duration + other.search_duration,
-            nodes_traversed: self.nodes_traversed + other.nodes_traversed,
-            terminal_traversed: self.terminal_traversed + other.terminal_traversed,
-            shortcuts_hit: self.shortcuts_hit + other.shortcuts_hit,
-            known_player_nodes: self.known_player_nodes + other.known_player_nodes,
-            known_computer_nodes: self.known_computer_nodes + other.known_computer_nodes,
-            new_player_nodes: self.known_player_nodes + other.known_player_nodes,
-            new_computer_nodes: self.known_computer_nodes + other.known_computer_nodes,
+impl From<SearchStatistics> for AggregateSearchStatistics {
+    fn from(ss: SearchStatistics) -> Self {
+        AggregateSearchStatistics {
+            searches: 1,
+            search_duration: ss.search_duration,
+            nodes_traversed: ss.nodes_traversed,
+            terminal_new: ss.terminal_new,
+            terminal_cached: ss.terminal_cached,
+            shortcuts_hit: ss.shortcuts_hit,
+            known_player_nodes: ss.known_player_nodes,
+            known_computer_nodes: ss.known_computer_nodes,
+            new_player_nodes: ss.new_player_nodes,
+            new_computer_nodes: ss.new_computer_nodes,
         }
     }
 }
 
-impl AddAssign for SearchStatistics {
+impl Add for AggregateSearchStatistics {
+    type Output = AggregateSearchStatistics;
+
+    fn add(self, other: Self) -> Self::Output {
+        AggregateSearchStatistics {
+            searches: self.searches + other.searches,
+            search_duration: self.search_duration + other.search_duration,
+            nodes_traversed: self.nodes_traversed + other.nodes_traversed,
+            terminal_new: self.terminal_new + other.terminal_new,
+            terminal_cached: self.terminal_cached + other.terminal_cached,
+            shortcuts_hit: self.shortcuts_hit + other.shortcuts_hit,
+            known_player_nodes: self.known_player_nodes + other.known_player_nodes,
+            known_computer_nodes: self.known_computer_nodes + other.known_computer_nodes,
+            new_player_nodes: self.new_player_nodes + other.new_player_nodes,
+            new_computer_nodes: self.new_computer_nodes + other.new_computer_nodes,
+        }
+    }
+}
+
+impl AddAssign for AggregateSearchStatistics {
     #[allow(assign_op_pattern)]
-    fn add_assign(&mut self, other: SearchStatistics) {
+    fn add_assign(&mut self, other: Self) {
         *self = *self + other;
     }
 }
@@ -106,7 +150,25 @@ impl Default for SearchStatistics {
         SearchStatistics {
             search_duration: Duration::zero(),
             nodes_traversed: 0,
-            terminal_traversed: 0,
+            terminal_new: 0,
+            terminal_cached: 0,
+            shortcuts_hit: 0,
+            known_player_nodes: 0,
+            known_computer_nodes: 0,
+            new_player_nodes: 0,
+            new_computer_nodes: 0,
+        }
+    }
+}
+
+impl Default for AggregateSearchStatistics {
+    fn default() -> Self {
+        AggregateSearchStatistics {
+            searches: 0,
+            search_duration: Duration::zero(),
+            nodes_traversed: 0,
+            terminal_new: 0,
+            terminal_cached: 0,
             shortcuts_hit: 0,
             known_player_nodes: 0,
             known_computer_nodes: 0,
@@ -133,18 +195,83 @@ impl SearchStatistics {
          (1_000_000_000f32 / self.search_duration.num_nanoseconds().unwrap() as f32)) as u64
     }
 }
+impl AggregateSearchStatistics {
+    fn known_nodes(&self) -> usize {
+        self.known_player_nodes + self.known_computer_nodes
+    }
+    fn new_nodes(&self) -> usize {
+        self.new_player_nodes + self.new_computer_nodes
+    }
+    fn nodes_per_second(&self) -> u64 {
+        (self.nodes_traversed as f32 *
+         (1_000_000_000f32 / self.search_duration.num_nanoseconds().unwrap() as f32)) as u64
+    }
+    fn new_nodes_per_second(&self) -> u64 {
+        (self.new_nodes() as f32 *
+         (1_000_000_000f32 / self.search_duration.num_nanoseconds().unwrap() as f32)) as u64
+    }
+    fn average_search_duration(&self) -> Duration {
+        self.search_duration / (self.searches as i32)
+    }
+    fn average_new_nodes(&self) -> usize {
+        self.new_nodes() / self.searches
+    }
+    fn average_known_nodes(&self) -> usize {
+        self.known_nodes() / self.searches
+    }
+    fn average_nodes_traversed(&self) -> usize {
+        self.nodes_traversed / self.searches
+    }
+    fn average_terminal_new(&self) -> usize {
+        self.terminal_new / self.searches
+    }
+    fn average_terminal_cached(&self) -> usize {
+        self.terminal_cached / self.searches
+    }
+    fn average_shortcuts_hit(&self) -> usize {
+        self.shortcuts_hit / self.searches
+    }
+}
 
 impl fmt::Display for SearchStatistics {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "Statistics:")?;
-        writeln!(f, "Search duration:       {}", self.search_duration)?;
-        writeln!(f, "Known nodes:           {}", self.known_nodes())?;
-        writeln!(f, "Nodes traversed:       {}", self.nodes_traversed)?;
-        writeln!(f, "New nodes:             {}", self.new_nodes())?;
-        writeln!(f, "Terminal nodes:        {}", self.terminal_traversed)?;
-        writeln!(f, "Shortcuts hit:         {}", self.shortcuts_hit)?;
-        writeln!(f, "Nodes per second:      {}", self.nodes_per_second())?;
-        writeln!(f, "New nodes per second:  {}", self.new_nodes_per_second())
+        writeln!(f, "Search duration:                  {}", self.search_duration)?;
+        writeln!(f, "Known nodes:                      {}", self.known_nodes())?;
+        writeln!(f, "New nodes:                        {}", self.new_nodes())?;
+        writeln!(f, "New nodes per second:             {}", self.new_nodes_per_second())?;
+
+        if USE_DETAILED_STATS {
+            writeln!(f, "Nodes traversed:                  {}", self.nodes_traversed)?;
+            writeln!(f, "Nodes per second:                 {}", self.nodes_per_second())?;
+            writeln!(f, "Shortcuts hit:                    {}", self.shortcuts_hit)?;
+            writeln!(f, "Terminal nodes (new):             {}", self.terminal_new)?;
+            writeln!(f, "Terminal nodes (cached):          {}", self.terminal_cached)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl fmt::Display for AggregateSearchStatistics {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "Total statistics:")?;
+        writeln!(f, "Searches conducted:               {}", self.searches)?;
+        writeln!(f, "Total search duration:            {}", self.search_duration)?;
+        writeln!(f, "Average search duration:          {}", self.average_search_duration())?;
+        writeln!(f, "Average known nodes:              {}", self.average_known_nodes())?;
+        writeln!(f, "Average new nodes:                {}", self.average_new_nodes())?;
+        writeln!(f, "New nodes per second:             {}", self.new_nodes_per_second())?;
+
+        if USE_DETAILED_STATS {
+            writeln!(f, "Average nodes traversed:          {}", self.average_nodes_traversed())?;
+            writeln!(f, "Nodes per second:                 {}", self.nodes_per_second())?;
+            writeln!(f, "Average shortcuts hit:            {}", self.average_shortcuts_hit())?;
+            writeln!(f, "Average terminal nodes (new):     {}", self.average_terminal_new())?;
+            writeln!(f, "Average terminal nodes (cached):  {}", self.average_terminal_cached())?;
+        }
+
+        Ok(())
     }
 }
 
@@ -262,24 +389,34 @@ where
         probability: f32,
         mut statistics: &mut SearchStatistics,
     ) -> f32 {
-        statistics.nodes_traversed += 1;
+        if USE_DETAILED_STATS {
+            statistics.nodes_traversed += 1;
+        }
 
         let data = node.data.get();
 
         // Have we seen this node on the same level or deeper in the tree?
         if let Some(data) = data {
             if probability <= data.max_probability {
-                statistics.shortcuts_hit += 1;
+                if USE_DETAILED_STATS {
+                    statistics.shortcuts_hit += 1;
+                }
                 return data.cached_heuristic;
-            } 
+            }
         }
 
         if node.children().is_empty() || depth == 0 || probability < self.min_probability {
-            statistics.terminal_traversed += 1;
-
-            return match data {
-                Some(data) => data.cached_heuristic,
+            match data {
+                Some(data) => {
+                    if USE_DETAILED_STATS {
+                        statistics.terminal_cached += 1;
+                    }
+                    return data.cached_heuristic;
+                }
                 None => {
+                    if USE_DETAILED_STATS {
+                        statistics.terminal_new += 1;
+                    }
                     let heur = self.heuristic.eval(node);
                     let new_data = Some(
                         ExpectiMaxerCachedData {
@@ -288,7 +425,7 @@ where
                         },
                     );
                     node.data.set(new_data);
-                    heur
+                    return heur;
                 }
             };
         }
@@ -301,15 +438,16 @@ where
         match data {
             Some(data) if data.max_probability >= probability => (),
             _ => {
-                node.data.set(
-                    Some(
-                        ExpectiMaxerCachedData {
-                            cached_heuristic: heur,
-                            max_probability: probability,
-                        },
-                    ),
-                );
-            },
+                node.data
+                    .set(
+                        Some(
+                            ExpectiMaxerCachedData {
+                                cached_heuristic: heur,
+                                max_probability: probability,
+                            },
+                        ),
+                    );
+            }
         };
 
         heur
@@ -322,12 +460,14 @@ where
         probability: f32,
         mut statistics: &mut SearchStatistics,
     ) -> f32 {
-        statistics.nodes_traversed += 1;
+        if USE_DETAILED_STATS {
+            statistics.nodes_traversed += 1;
+        }
         let children = node.children();
         let count = children.variants() as f32;
 
-        let child_with2_probability = probability * PROBABILITY_OF2 / (count as f32);
-        let child_with4_probability = probability * PROBABILITY_OF4 / (count as f32);
+        let child_with2_probability = probability * PROBABILITY_OF2 / count;
+        let child_with4_probability = probability * PROBABILITY_OF4 / count;
 
         let avg_with2 = children
             .with2()

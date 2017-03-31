@@ -2,11 +2,9 @@ extern crate ai2048_lib;
 extern crate futures;
 extern crate futures_cpupool;
 
-use ai2048_lib::SearchResult;
-use ai2048_lib::SearchStatistics;
+use ai2048_lib::{SearchResult, AggregateSearchStatistics};
 use ai2048_lib::agent::Agent;
-use ai2048_lib::board::Board;
-use ai2048_lib::board::MOVES;
+use ai2048_lib::board::{Board, MOVES};
 use ai2048_lib::heuristic::composite::CompositeHeuristic;
 
 use futures::Future;
@@ -59,14 +57,14 @@ fn run() -> Result<(), Error> {
 
     let display_loop = pool.spawn_fn(
         move || {
-            let mut aggregate_search_statistics = SearchStatistics::default();
+            let mut aggregate_search_statistics = AggregateSearchStatistics::default();
             loop {
                 let message = rx.recv()?;
 
                 match message {
                     Signal::Stop => break,
                     Signal::Display(result) => {
-                        aggregate_search_statistics += result.search_statistics;
+                        aggregate_search_statistics += result.search_statistics.into();
                         println!("{}", build_display(&result, &aggregate_search_statistics)?);
                     }
                 };
@@ -104,26 +102,32 @@ fn run() -> Result<(), Error> {
 
 fn build_display(
     result: &SearchResult,
-    aggregate_stats: &SearchStatistics,
+    aggregate_stats: &AggregateSearchStatistics,
 ) -> Result<String, fmt::Error> {
     let mut s = String::new();
     write!(&mut s, "{}[2J", 27 as char)?; // clear screen
 
     writeln!(&mut s, "{}", result.root_board)?;
     writeln!(&mut s, "{}", result.search_statistics)?;
-    writeln!(&mut s, "Total:\n{}", aggregate_stats)?;
+    writeln!(&mut s, "{}", aggregate_stats)?;
 
     for mv in &MOVES {
-        write!(&mut s, "{:?}: ", mv)?;
+        write!(&mut s, "{:>6}: ", mv)?;
         match result.move_evaluations.get(mv) {
-            Some(eval) => writeln!(&mut s, "{}", eval)?,
-            None => writeln!(&mut s, "invalid")?,
+            Some(eval) => writeln!(&mut s, "{eval:>16.*}", 3, eval = eval)?,
+            None => writeln!(&mut s, "{:>16}", "illegal move")?,
         }
     }
 
     if let Some((_, eval)) = result.best_move {
-        writeln!(&mut s, "Best: {}", eval)?;
+        writeln!(&mut s)?;
+        writeln!(&mut s, "  Best: {eval:>16.*}", 3, eval = eval)?;
     }
+
+    writeln!(&mut s)?;
+
+    writeln!(&mut s, "Depth: {}", SEARCH_DEPTH)?;
+    writeln!(&mut s, "Cutoff probability: {}", MIN_PROBABILITY)?;
 
     Ok(s)
 }

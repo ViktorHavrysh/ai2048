@@ -25,7 +25,7 @@ extern crate fnv;
 #[macro_use]
 extern crate lazy_static;
 
-pub use searcher::{SearchResult, SearchStatistics};
+pub use searcher::{SearchResult, SearchStatistics, AggregateSearchStatistics};
 
 pub mod board;
 pub mod agent;

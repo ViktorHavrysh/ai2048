@@ -53,6 +53,18 @@ impl fmt::Display for Board {
     }
 }
 
+impl fmt::Display for Move {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let move_str = match *self {
+            Move::Down => "Down",
+            Move::Left => "Left",
+            Move::Right => "Right",
+            Move::Up => "Up",
+        };
+        move_str.fmt(f)
+    }
+}
+
 // I marked methods that might be performance-critical with #[inline]. I'm not sure it makes a
 // difference, though.
 impl Board {
