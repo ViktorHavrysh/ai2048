@@ -1,7 +1,7 @@
 use super::Heuristic;
 use std::f32;
-use board::Board;
-use search_tree::PlayerNode;
+use crate::board::Board;
+use crate::search_tree::PlayerNode;
 
 type HeatMap = [[i64; 4]; 4];
 

@@ -14,9 +14,9 @@
 
 mod cache;
 
-use board::{self, Board, Move};
+use crate::board::{self, Board, Move};
+use crate::search_tree::cache::Cache;
 use lazycell::LazyCell;
-use search_tree::cache::Cache;
 use std::cell::Cell;
 use std::rc::Rc;
 
@@ -68,7 +68,8 @@ where
     /// have no known way to be reached). This also explicitly cleans up the invalidated keys
     /// from the cache.
     pub fn set_root(&mut self, board: Board) {
-        let node = self.cache
+        let node = self
+            .cache
             .player_node
             .get_or_insert_with(board, || PlayerNode::new(board, self.cache.clone()));
 
@@ -277,7 +278,8 @@ where
     }
 
     fn create_children(&self) -> ComputerNodeChildren<T> {
-        let children_with2 = self.board
+        let children_with2 = self
+            .board
             .possible_boards_with2()
             .map(|board| {
                 self.cache
@@ -286,7 +288,8 @@ where
             })
             .collect::<Vec<_>>();
 
-        let children_with4 = self.board
+        let children_with4 = self
+            .board
             .possible_boards_with4()
             .map(|board| {
                 self.cache

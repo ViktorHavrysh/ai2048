@@ -14,23 +14,16 @@
 #![allow(unknown_lints)]
 #![deny(missing_docs)]
 
-extern crate bytecount;
-extern crate fnv;
-extern crate itertools;
-extern crate lazycell;
-extern crate rand;
-extern crate time;
-
 #[macro_use]
 extern crate lazy_static;
 
-pub use searcher::{AggregateSearchStatistics, SearchResult, SearchStatistics};
+pub use crate::searcher::{AggregateSearchStatistics, SearchResult, SearchStatistics};
 
-pub mod board;
 pub mod agent;
+pub mod board;
 pub mod heuristic;
 
 mod search_tree;
 
-mod searcher;
 mod integer_magic;
+mod searcher;

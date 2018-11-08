@@ -3,6 +3,7 @@ authors = ["Victor Gavrish <victor.gavrish@gmail.com>"]
 license = "LGPL"
 name = "ai2048_lib"
 version = "0.1.0"
+edition = "2018"
 
 [dependencies]
 fnv = "1.0"

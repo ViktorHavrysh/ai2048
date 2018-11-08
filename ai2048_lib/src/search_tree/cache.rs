@@ -70,7 +70,8 @@ where
     K: Eq + Hash + Clone,
 {
     fn gc(&mut self) {
-        let stale_keys = self.iter()
+        let stale_keys = self
+            .iter()
             .filter_map(|(key, value)| match value.upgrade() {
                 Some(_) => None,
                 None => Some(key.clone()),

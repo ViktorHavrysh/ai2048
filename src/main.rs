@@ -1,11 +1,7 @@
-extern crate ai2048_lib;
-extern crate futures;
-extern crate futures_cpupool;
-
-use ai2048_lib::{AggregateSearchStatistics, SearchResult};
 use ai2048_lib::agent::Agent;
 use ai2048_lib::board::{Board, MOVES};
 use ai2048_lib::heuristic::composite::CompositeHeuristic;
+use ai2048_lib::{AggregateSearchStatistics, SearchResult};
 use futures::Future;
 use futures_cpupool::CpuPool;
 use std::fmt::{self, Write};

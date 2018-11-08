@@ -15,10 +15,10 @@
 //!
 //! Computer nodes are AVG nodes that return the weighted average of its child states.
 
-use board::{Board, Move};
-use heuristic::Heuristic;
+use crate::board::{Board, Move};
+use crate::heuristic::Heuristic;
+use crate::search_tree::{ComputerNode, PlayerNode, SearchTree};
 use itertools::Itertools;
-use search_tree::{ComputerNode, PlayerNode, SearchTree};
 use std::collections::HashMap;
 use std::f32;
 use std::fmt;
@@ -498,7 +498,8 @@ where
             };
         }
 
-        let heur = node.children()
+        let heur = node
+            .children()
             .values()
             .map(|n| self.computer_node_eval(n, depth, probability, &mut statistics))
             .fold(f32::NAN, f32::max);
@@ -535,12 +536,14 @@ where
         let avg_with2 = children
             .with2()
             .map(|n| self.player_node_eval(n, depth - 1, child_with2_probability, &mut statistics))
-            .sum::<f32>() / count;
+            .sum::<f32>()
+            / count;
 
         let avg_with4 = children
             .with4()
             .map(|n| self.player_node_eval(n, depth - 1, child_with4_probability, &mut statistics))
-            .sum::<f32>() / count;
+            .sum::<f32>()
+            / count;
 
         avg_with2 * PROBABILITY_OF2 + avg_with4 * PROBABILITY_OF4
     }

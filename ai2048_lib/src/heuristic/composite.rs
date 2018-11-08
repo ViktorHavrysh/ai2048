@@ -7,8 +7,8 @@
 //! tables should considerably speed up the search.
 
 use super::*;
-use integer_magic::{u16_to_u8x4, u8x4_to_u16};
-use search_tree::PlayerNode;
+use crate::integer_magic::{u16_to_u8x4, u8x4_to_u16};
+use crate::search_tree::PlayerNode;
 use std::u16;
 
 const MIN: f32 = -1_600_000f32;
@@ -41,7 +41,7 @@ where
 lazy_static! {
     static ref CACHE: [f32; u16::MAX as usize] = {
         let mut cache = [0f32; u16::MAX as usize];
-        for (index, mut row) in cache.iter_mut().enumerate() {
+        for (index, row) in cache.iter_mut().enumerate() {
             *row = eval_row_nocache(u16_to_u8x4(index as u16));
         }
         cache

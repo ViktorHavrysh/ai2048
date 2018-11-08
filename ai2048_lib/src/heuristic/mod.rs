@@ -5,11 +5,11 @@
 
 pub mod composite;
 
-use board::Board;
-use search_tree::PlayerNode;
+use bytecount;
+use crate::board::Board;
+use crate::search_tree::PlayerNode;
 use std::cmp;
 use std::i32;
-use bytecount;
 
 /// A type that can evaluate a board position and return an `f32`, with
 /// higher values meaning better outcome

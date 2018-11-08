@@ -1,6 +1,6 @@
 //! `Board` represents the board state in a 2048 game.
 
-use integer_magic::{u16_to_u8x4, u8x4_to_u16};
+use crate::integer_magic::{u16_to_u8x4, u8x4_to_u16};
 use rand::{self, Rng};
 use std::{fmt, u16};
 
@@ -298,16 +298,15 @@ impl Board {
 lazy_static! {
     static ref CACHE_LEFT: [[u8; 4]; u16::MAX as usize] = {
         let mut cache = [[0; 4]; u16::MAX as usize];
-        for (index, mut row) in cache.iter_mut().enumerate() {
+        for (index, row) in cache.iter_mut().enumerate() {
             *row = Board::move_row_left(u16_to_u8x4(index as u16));
         }
 
         cache
     };
-
     static ref CACHE_RIGHT: [[u8; 4]; u16::MAX as usize] = {
         let mut cache = [[0; 4]; u16::MAX as usize];
-        for (index, mut row) in cache.iter_mut().enumerate() {
+        for (index, row) in cache.iter_mut().enumerate() {
             *row = Board::move_row_right(u16_to_u8x4(index as u16));
         }
 
@@ -402,7 +401,8 @@ mod tests {
             [16, 32, 64, 128],
             [256, 512, 1024, 2048],
             [4096, 8192, 16384, 32768],
-        ]).unwrap();
+        ])
+        .unwrap();
 
         let mut expected = String::new();
         expected.push_str("     0     2     4     8\n");
