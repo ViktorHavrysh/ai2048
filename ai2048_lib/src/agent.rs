@@ -77,6 +77,6 @@ mod tests {
         agent.update_state(board.make_move(best_move));
         let result = agent.make_decision();
 
-        assert!(result.root_board != board);
+        assert_ne!(result.root_board, board);
     }
 }

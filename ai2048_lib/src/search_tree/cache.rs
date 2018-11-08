@@ -26,7 +26,9 @@ where
 {
     /// Returns an emtpy `Cache`.
     pub fn new() -> Self {
-        Cache { data: RefCell::new(FnvHashMap::default()) }
+        Cache {
+            data: RefCell::new(FnvHashMap::default()),
+        }
     }
 
     /// Retrieves the cached value by key. If the value doesn't exist, uses the provided
@@ -69,12 +71,10 @@ where
 {
     fn gc(&mut self) {
         let stale_keys = self.iter()
-            .filter_map(
-                |(key, value)| match value.upgrade() {
-                    Some(_) => None,
-                    None => Some(key.clone()),
-                },
-            )
+            .filter_map(|(key, value)| match value.upgrade() {
+                Some(_) => None,
+                None => Some(key.clone()),
+            })
             .collect::<Vec<_>>();
 
         for key in stale_keys {
@@ -97,15 +97,11 @@ where
     where
         F: FnOnce() -> V,
     {
-        self.get(&key)
-            .and_then(|v| v.upgrade())
-            .unwrap_or_else(
-                || {
-                    let value = Rc::new(default());
-                    self.insert(key, Rc::downgrade(&value));
-                    value
-                },
-            )
+        self.get(&key).and_then(|v| v.upgrade()).unwrap_or_else(|| {
+            let value = Rc::new(default());
+            self.insert(key, Rc::downgrade(&value));
+            value
+        })
     }
 }
 
@@ -125,10 +121,7 @@ mod tests {
             hashmap.insert(2, Rc::downgrade(&rc_destroyed));
         }
 
-        let some_count = hashmap
-            .values()
-            .filter(|v| v.upgrade().is_some())
-            .count();
+        let some_count = hashmap.values().filter(|v| v.upgrade().is_some()).count();
 
         assert_eq!(1, some_count);
         assert_eq!(2, hashmap.len());

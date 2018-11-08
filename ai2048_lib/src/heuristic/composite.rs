@@ -7,7 +7,7 @@
 //! tables should considerably speed up the search.
 
 use super::*;
-use integer_magic::{u8x4_to_u16, u16_to_u8x4};
+use integer_magic::{u16_to_u8x4, u8x4_to_u16};
 use search_tree::PlayerNode;
 use std::u16;
 

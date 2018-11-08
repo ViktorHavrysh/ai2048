@@ -6,26 +6,25 @@
 //!
 //! The `heuristic` module contains various heuristics that the AI player can use to evaluate
 //! board positions and try to maximize. It also contains the `Heuristic` trait that can be used
-//! to implemnt your own heuristic.
+//! to implement your own heuristic.
 //!
 //! The `SearchResult` and `SearchStatistics` types are containers for the results of the AI
 //! player's evaluation of a position and some interesting statistics.
 
-#![feature(conservative_impl_trait)]
-
 #![allow(unknown_lints)]
 #![deny(missing_docs)]
 
-extern crate rand;
-extern crate time;
+extern crate bytecount;
+extern crate fnv;
 extern crate itertools;
 extern crate lazycell;
-extern crate fnv;
+extern crate rand;
+extern crate time;
 
 #[macro_use]
 extern crate lazy_static;
 
-pub use searcher::{SearchResult, SearchStatistics, AggregateSearchStatistics};
+pub use searcher::{AggregateSearchStatistics, SearchResult, SearchStatistics};
 
 pub mod board;
 pub mod agent;

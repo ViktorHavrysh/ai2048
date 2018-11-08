@@ -2,14 +2,12 @@ extern crate ai2048_lib;
 extern crate futures;
 extern crate futures_cpupool;
 
-use ai2048_lib::{SearchResult, AggregateSearchStatistics};
+use ai2048_lib::{AggregateSearchStatistics, SearchResult};
 use ai2048_lib::agent::Agent;
 use ai2048_lib::board::{Board, MOVES};
 use ai2048_lib::heuristic::composite::CompositeHeuristic;
-
 use futures::Future;
 use futures_cpupool::CpuPool;
-
 use std::fmt::{self, Write};
 use std::sync::mpsc;
 
@@ -19,8 +17,8 @@ const SEARCH_DEPTH: u8 = 6;
 #[derive(Debug)]
 enum Error {
     Fmt(fmt::Error),
-    RecvError(mpsc::RecvError),
-    SendError(mpsc::SendError<Signal>),
+    Recv(mpsc::RecvError),
+    Send(mpsc::SendError<Signal>),
 }
 
 #[derive(Debug)]
@@ -37,13 +35,13 @@ impl From<fmt::Error> for Error {
 
 impl From<mpsc::RecvError> for Error {
     fn from(error: mpsc::RecvError) -> Self {
-        Error::RecvError(error)
+        Error::Recv(error)
     }
 }
 
 impl From<mpsc::SendError<Signal>> for Error {
     fn from(error: mpsc::SendError<Signal>) -> Self {
-        Error::SendError(error)
+        Error::Send(error)
     }
 }
 
@@ -55,45 +53,41 @@ fn run() -> Result<(), Error> {
     let pool = CpuPool::new_num_cpus();
     let (tx, rx) = mpsc::channel();
 
-    let display_loop = pool.spawn_fn(
-        move || {
-            let mut aggregate_search_statistics = AggregateSearchStatistics::default();
-            loop {
-                let message = rx.recv()?;
+    let display_loop = pool.spawn_fn(move || {
+        let mut aggregate_search_statistics = AggregateSearchStatistics::default();
+        loop {
+            let message = rx.recv()?;
 
-                match message {
-                    Signal::Stop => break,
-                    Signal::Display(result) => {
-                        aggregate_search_statistics += result.search_statistics.into();
-                        println!("{}", build_display(&result, &aggregate_search_statistics)?);
-                    }
-                };
-            }
-            println!("Game over!");
-            Ok(())
-        },
-    );
-
-    let compute_loop = pool.spawn_fn(
-        move || {
-            let heuristic = CompositeHeuristic::default();
-            let mut board = Board::default().add_random_tile().add_random_tile();
-            let mut agent = Agent::new(board, heuristic, MIN_PROBABILITY, SEARCH_DEPTH);
-            loop {
-                let result = agent.make_decision();
-                tx.send(Signal::Display(result.clone()))?;
-
-                if let Some((mv, _)) = result.best_move {
-                    board = board.make_move(mv).add_random_tile();
-                    agent.update_state(board);
-                } else {
-                    tx.send(Signal::Stop)?;
-                    let res: Result<(), Error> = Ok(());
-                    return res;
+            match message {
+                Signal::Stop => break,
+                Signal::Display(result) => {
+                    aggregate_search_statistics += result.search_statistics.into();
+                    println!("{}", build_display(&result, &aggregate_search_statistics)?);
                 }
+            };
+        }
+        println!("Game over!");
+        Ok(())
+    });
+
+    let compute_loop = pool.spawn_fn(move || {
+        let heuristic = CompositeHeuristic::default();
+        let mut board = Board::default().add_random_tile().add_random_tile();
+        let mut agent = Agent::new(board, heuristic, MIN_PROBABILITY, SEARCH_DEPTH);
+        loop {
+            let result = agent.make_decision();
+            tx.send(Signal::Display(result.clone()))?;
+
+            if let Some((mv, _)) = result.best_move {
+                board = board.make_move(mv).add_random_tile();
+                agent.update_state(board);
+            } else {
+                tx.send(Signal::Stop)?;
+                let res: Result<(), Error> = Ok(());
+                return res;
             }
-        },
-    );
+        }
+    });
 
     compute_loop.join(display_loop).wait()?;
 

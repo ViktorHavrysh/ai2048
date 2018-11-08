@@ -100,7 +100,7 @@ impl HeatMapHeuristic {
             heat_maps[x + 4] = HeatMapHeuristic::mirror(&heat_maps[x]);
         }
 
-        HeatMapHeuristic { heat_maps: heat_maps }
+        HeatMapHeuristic { heat_maps }
     }
 
     fn rotate_cw(heat_map: &HeatMap) -> HeatMap {
@@ -156,6 +156,6 @@ mod tests {
 
         let eval = heur.eval(search_tree.root());
 
-        assert!(eval != f32::NAN);
+        assert_ne!(eval, f32::NAN);
     }
 }

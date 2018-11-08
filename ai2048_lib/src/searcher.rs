@@ -187,12 +187,14 @@ impl SearchStatistics {
         self.new_player_nodes + self.new_computer_nodes
     }
     fn nodes_per_second(&self) -> u64 {
-        (self.nodes_traversed as f32 *
-         (1_000_000_000f32 / self.search_duration.num_nanoseconds().unwrap() as f32)) as u64
+        (self.nodes_traversed as f32
+            * (1_000_000_000f32 / self.search_duration.num_nanoseconds().unwrap() as f32))
+            as u64
     }
     fn new_nodes_per_second(&self) -> u64 {
-        (self.new_nodes() as f32 *
-         (1_000_000_000f32 / self.search_duration.num_nanoseconds().unwrap() as f32)) as u64
+        (self.new_nodes() as f32
+            * (1_000_000_000f32 / self.search_duration.num_nanoseconds().unwrap() as f32))
+            as u64
     }
 }
 impl AggregateSearchStatistics {
@@ -203,12 +205,14 @@ impl AggregateSearchStatistics {
         self.new_player_nodes + self.new_computer_nodes
     }
     fn nodes_per_second(&self) -> u64 {
-        (self.nodes_traversed as f32 *
-         (1_000_000_000f32 / self.search_duration.num_nanoseconds().unwrap() as f32)) as u64
+        (self.nodes_traversed as f32
+            * (1_000_000_000f32 / self.search_duration.num_nanoseconds().unwrap() as f32))
+            as u64
     }
     fn new_nodes_per_second(&self) -> u64 {
-        (self.new_nodes() as f32 *
-         (1_000_000_000f32 / self.search_duration.num_nanoseconds().unwrap() as f32)) as u64
+        (self.new_nodes() as f32
+            * (1_000_000_000f32 / self.search_duration.num_nanoseconds().unwrap() as f32))
+            as u64
     }
     fn average_search_duration(&self) -> Duration {
         self.search_duration / (self.searches as i32)
@@ -236,17 +240,45 @@ impl AggregateSearchStatistics {
 impl fmt::Display for SearchStatistics {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "Statistics:")?;
-        writeln!(f, "Search duration:                  {}", self.search_duration)?;
-        writeln!(f, "Known nodes:                      {}", self.known_nodes())?;
+        writeln!(
+            f,
+            "Search duration:                  {}",
+            self.search_duration
+        )?;
+        writeln!(
+            f,
+            "Known nodes:                      {}",
+            self.known_nodes()
+        )?;
         writeln!(f, "New nodes:                        {}", self.new_nodes())?;
-        writeln!(f, "New nodes per second:             {}", self.new_nodes_per_second())?;
+        writeln!(
+            f,
+            "New nodes per second:             {}",
+            self.new_nodes_per_second()
+        )?;
 
         if USE_DETAILED_STATS {
-            writeln!(f, "Nodes traversed:                  {}", self.nodes_traversed)?;
-            writeln!(f, "Nodes per second:                 {}", self.nodes_per_second())?;
-            writeln!(f, "Shortcuts hit:                    {}", self.shortcuts_hit)?;
+            writeln!(
+                f,
+                "Nodes traversed:                  {}",
+                self.nodes_traversed
+            )?;
+            writeln!(
+                f,
+                "Nodes per second:                 {}",
+                self.nodes_per_second()
+            )?;
+            writeln!(
+                f,
+                "Shortcuts hit:                    {}",
+                self.shortcuts_hit
+            )?;
             writeln!(f, "Terminal nodes (new):             {}", self.terminal_new)?;
-            writeln!(f, "Terminal nodes (cached):          {}", self.terminal_cached)?;
+            writeln!(
+                f,
+                "Terminal nodes (cached):          {}",
+                self.terminal_cached
+            )?;
         }
 
         Ok(())
@@ -257,18 +289,58 @@ impl fmt::Display for AggregateSearchStatistics {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "Total statistics:")?;
         writeln!(f, "Searches conducted:               {}", self.searches)?;
-        writeln!(f, "Total search duration:            {}", self.search_duration)?;
-        writeln!(f, "Average search duration:          {}", self.average_search_duration())?;
-        writeln!(f, "Average known nodes:              {}", self.average_known_nodes())?;
-        writeln!(f, "Average new nodes:                {}", self.average_new_nodes())?;
-        writeln!(f, "New nodes per second:             {}", self.new_nodes_per_second())?;
+        writeln!(
+            f,
+            "Total search duration:            {}",
+            self.search_duration
+        )?;
+        writeln!(
+            f,
+            "Average search duration:          {}",
+            self.average_search_duration()
+        )?;
+        writeln!(
+            f,
+            "Average known nodes:              {}",
+            self.average_known_nodes()
+        )?;
+        writeln!(
+            f,
+            "Average new nodes:                {}",
+            self.average_new_nodes()
+        )?;
+        writeln!(
+            f,
+            "New nodes per second:             {}",
+            self.new_nodes_per_second()
+        )?;
 
         if USE_DETAILED_STATS {
-            writeln!(f, "Average nodes traversed:          {}", self.average_nodes_traversed())?;
-            writeln!(f, "Nodes per second:                 {}", self.nodes_per_second())?;
-            writeln!(f, "Average shortcuts hit:            {}", self.average_shortcuts_hit())?;
-            writeln!(f, "Average terminal nodes (new):     {}", self.average_terminal_new())?;
-            writeln!(f, "Average terminal nodes (cached):  {}", self.average_terminal_cached())?;
+            writeln!(
+                f,
+                "Average nodes traversed:          {}",
+                self.average_nodes_traversed()
+            )?;
+            writeln!(
+                f,
+                "Nodes per second:                 {}",
+                self.nodes_per_second()
+            )?;
+            writeln!(
+                f,
+                "Average shortcuts hit:            {}",
+                self.average_shortcuts_hit()
+            )?;
+            writeln!(
+                f,
+                "Average terminal nodes (new):     {}",
+                self.average_terminal_new()
+            )?;
+            writeln!(
+                f,
+                "Average terminal nodes (cached):  {}",
+                self.average_terminal_cached()
+            )?;
         }
 
         Ok(())
@@ -338,7 +410,7 @@ where
             root_board: *search_tree.root().board(),
             move_evaluations: hashmap,
             search_statistics: statistics,
-            best_move: best_move,
+            best_move,
         }
     }
 }
@@ -350,11 +422,11 @@ where
     /// Creates a new `ExpectiMaxer`. Require the heuristic to use, the limit probability
     /// lower than which we'll won't search, and the maximum search depth.
     pub fn new(min_probability: f32, max_search_depth: u8, heuristic: H) -> Self {
-        assert!(max_search_depth != 0);
+        assert_ne!(max_search_depth, 0);
         ExpectiMaxer {
-            min_probability: min_probability,
-            max_search_depth: max_search_depth,
-            heuristic: heuristic,
+            min_probability,
+            max_search_depth,
+            heuristic,
         }
     }
 
@@ -372,13 +444,11 @@ where
             .root()
             .children()
             .iter()
-            .map(
-                |(m, n)| {
-                    let eval =
-                        self.computer_node_eval(n, self.max_search_depth, 1f32, &mut search_statistics);
-                    (m, eval)
-                },
-            )
+            .map(|(m, n)| {
+                let eval =
+                    self.computer_node_eval(n, self.max_search_depth, 1f32, &mut search_statistics);
+                (m, eval)
+            })
             .collect()
     }
 
@@ -418,12 +488,10 @@ where
                         statistics.terminal_new += 1;
                     }
                     let heur = self.heuristic.eval(node);
-                    let new_data = Some(
-                        ExpectiMaxerCachedData {
-                            cached_heuristic: heur,
-                            max_probability: probability,
-                        },
-                    );
+                    let new_data = Some(ExpectiMaxerCachedData {
+                        cached_heuristic: heur,
+                        max_probability: probability,
+                    });
                     node.data.set(new_data);
                     return heur;
                 }
@@ -432,21 +500,16 @@ where
 
         let heur = node.children()
             .values()
-            .map(|n| self.computer_node_eval(n, depth, probability, &mut statistics),)
+            .map(|n| self.computer_node_eval(n, depth, probability, &mut statistics))
             .fold(f32::NAN, f32::max);
 
         match data {
             Some(data) if data.max_probability >= probability => (),
             _ => {
-                node.data
-                    .set(
-                        Some(
-                            ExpectiMaxerCachedData {
-                                cached_heuristic: heur,
-                                max_probability: probability,
-                            },
-                        ),
-                    );
+                node.data.set(Some(ExpectiMaxerCachedData {
+                    cached_heuristic: heur,
+                    max_probability: probability,
+                }));
             }
         };
 
@@ -471,20 +534,12 @@ where
 
         let avg_with2 = children
             .with2()
-            .map(
-                |n| {
-                    self.player_node_eval(n, depth - 1, child_with2_probability, &mut statistics)
-                },
-            )
+            .map(|n| self.player_node_eval(n, depth - 1, child_with2_probability, &mut statistics))
             .sum::<f32>() / count;
 
         let avg_with4 = children
             .with4()
-            .map(
-                |n| {
-                    self.player_node_eval(n, depth - 1, child_with4_probability, &mut statistics)
-                },
-            )
+            .map(|n| self.player_node_eval(n, depth - 1, child_with4_probability, &mut statistics))
             .sum::<f32>() / count;
 
         avg_with2 * PROBABILITY_OF2 + avg_with4 * PROBABILITY_OF4

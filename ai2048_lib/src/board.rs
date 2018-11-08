@@ -1,7 +1,6 @@
 //! `Board` represents the board state in a 2048 game.
 
-use integer_magic::{u8x4_to_u16, u16_to_u8x4};
-use itertools::Itertools;
+use integer_magic::{u16_to_u8x4, u8x4_to_u16};
 use rand::{self, Rng};
 use std::{fmt, u16};
 
@@ -14,7 +13,7 @@ use std::{fmt, u16};
 /// more than enough storage for a single cell. `0` stays a `0`.
 ///
 /// `Board`, in general, encodes all the rules of the game: it can generate new states
-/// given a move a player makes, or all possible states following the computer spwaning a random
+/// given a move a player makes, or all possible states following the computer spawning a random
 /// tile. Unsurprisingly, in order to write an AI for a game, the AI needs an emulation of the
 /// game itself.
 #[derive(Eq, PartialEq, Hash, Copy, Clone, Debug, Default)]
@@ -75,7 +74,7 @@ impl Board {
 
         for (x, row) in grid.iter().enumerate() {
             for (y, &val) in row.iter().enumerate() {
-                let log = parse_to_logspace(val);
+                let log = parse_to_log_space(val);
 
                 match log {
                     Some(l) => {
@@ -96,7 +95,7 @@ impl Board {
         self.grid
             .iter()
             .flatten()
-            .map(|&cell| cell as u32)
+            .map(|&cell| u32::from(cell))
             .sum()
     }
 
@@ -109,25 +108,41 @@ impl Board {
     /// Gets a transposed copy of the `Board`.
     #[inline]
     pub fn transpose(&self) -> Board {
-        let row0 = [self.grid[0][0], self.grid[1][0], self.grid[2][0], self.grid[3][0]];
-        let row1 = [self.grid[0][1], self.grid[1][1], self.grid[2][1], self.grid[3][1]];
-        let row2 = [self.grid[0][2], self.grid[1][2], self.grid[2][2], self.grid[3][2]];
-        let row3 = [self.grid[0][3], self.grid[1][3], self.grid[2][3], self.grid[3][3]];
+        let row0 = [
+            self.grid[0][0],
+            self.grid[1][0],
+            self.grid[2][0],
+            self.grid[3][0],
+        ];
+        let row1 = [
+            self.grid[0][1],
+            self.grid[1][1],
+            self.grid[2][1],
+            self.grid[3][1],
+        ];
+        let row2 = [
+            self.grid[0][2],
+            self.grid[1][2],
+            self.grid[2][2],
+            self.grid[3][2],
+        ];
+        let row3 = [
+            self.grid[0][3],
+            self.grid[1][3],
+            self.grid[2][3],
+            self.grid[3][3],
+        ];
 
         let grid = [row0, row1, row2, row3];
 
-        Board { grid: grid }
+        Board { grid }
     }
 
     /// Creates a new `Board` with a random tile (10% of times a `2`, 90% of times a `4`) added to a
     /// random empty cell on the board.
     pub fn add_random_tile(&self) -> Board {
         let mut rng = rand::thread_rng();
-        let empty_cell_count = self.grid
-            .iter()
-            .flatten()
-            .filter(|v| **v == 0)
-            .count();
+        let empty_cell_count = self.grid.iter().flatten().filter(|v| **v == 0).count();
         let position = rng.gen_range(0, empty_cell_count);
         let create_four = rng.gen_weighted_bool(10);
         let value = if create_four { 2 } else { 1 };
@@ -135,7 +150,7 @@ impl Board {
         let mut new_grid = self.grid;
 
         {
-            let mut val = new_grid
+            let val = new_grid
                 .iter_mut()
                 .flatten()
                 .filter(|v| **v == 0)
@@ -167,21 +182,19 @@ impl Board {
         self.grid
             .into_iter()
             .enumerate()
-            .flat_map(
-                |(x, row)| {
-                    row.into_iter()
-                        .enumerate()
-                        .filter(|&(_, val)| *val == 0)
-                        .map(move |(y, _)| (x, y))
-                },
-            )
-            .map(
-                move |(x, y)| {
-                    let mut possible_grid = self.grid;
-                    possible_grid[x][y] = new_value;
-                    Board { grid: possible_grid }
-                },
-            )
+            .flat_map(|(x, row)| {
+                row.into_iter()
+                    .enumerate()
+                    .filter(|&(_, val)| *val == 0)
+                    .map(move |(y, _)| (x, y))
+            })
+            .map(move |(x, y)| {
+                let mut possible_grid = self.grid;
+                possible_grid[x][y] = new_value;
+                Board {
+                    grid: possible_grid,
+                }
+            })
     }
 
     /// Returns a `Board` that would result from making a certain `Move` in the current state.
@@ -309,7 +322,7 @@ fn human(n: u8) -> u32 {
     }
 }
 
-fn parse_to_logspace(n: u32) -> Option<u8> {
+fn parse_to_log_space(n: u32) -> Option<u8> {
     use std::f32;
 
     let log = match n {
@@ -331,15 +344,9 @@ mod tests {
     use itertools::Itertools;
 
     #[test]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_create_empty_board() {
         let expected = Board {
-            grid: [
-                [0, 0, 0, 0],
-                [0, 0, 0, 0],
-                [0, 0, 0, 0],
-                [0, 0, 0, 0],
-            ]
+            grid: [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
         };
 
         let actual = Board::default();
@@ -348,20 +355,14 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_create_board_from_human_input() {
-        let expected: [[u8; 4]; 4] = [
-            [0, 1, 2, 3],
-            [4, 5, 6, 7],
-            [8, 9, 10, 11],
-            [12, 13, 14, 15],
-        ];
+        let expected: [[u8; 4]; 4] = [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12, 13, 14, 15]];
 
         let actual = Board::new(&[
             [0, 2, 4, 8],
             [16, 32, 64, 128],
             [256, 512, 1024, 2048],
-            [4096, 8192, 16384, 32768]
+            [4096, 8192, 16384, 32768],
         ]);
 
         assert!(actual.is_some());
@@ -369,14 +370,8 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_return_none_on_invalid_input() {
-        let result = Board::new(&[
-            [0, 1, 2, 3],
-            [4, 5, 6, 7],
-            [8, 9, 10, 11],
-            [12, 13, 14, 15],
-        ]);
+        let result = Board::new(&[[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12, 13, 14, 15]]);
 
         assert!(result.is_none());
     }
@@ -401,7 +396,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_to_string() {
         let board = Board::new(&[
             [0, 2, 4, 8],
@@ -422,20 +416,10 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_make_move_left() {
-        let board = Board::new(&[
-            [2, 2, 4, 4],
-            [0, 2, 2, 0],
-            [0, 2, 2, 2],
-            [2, 0, 0, 2],
-        ]).unwrap();
-        let expected = Board::new(&[
-            [4, 8, 0, 0],
-            [4, 0, 0, 0],
-            [4, 2, 0, 0],
-            [4, 0, 0, 0],
-        ]).unwrap();
+        let board = Board::new(&[[2, 2, 4, 4], [0, 2, 2, 0], [0, 2, 2, 2], [2, 0, 0, 2]]).unwrap();
+        let expected =
+            Board::new(&[[4, 8, 0, 0], [4, 0, 0, 0], [4, 2, 0, 0], [4, 0, 0, 0]]).unwrap();
 
         let actual = board.make_move(Move::Left);
 
@@ -443,20 +427,10 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_make_move_right() {
-        let board = Board::new(&[
-            [2, 2, 4, 4],
-            [0, 2, 2, 0],
-            [0, 2, 2, 2],
-            [2, 0, 0, 2],
-        ]).unwrap();
-        let expected = Board::new(&[
-            [0, 0, 4, 8],
-            [0, 0, 0, 4],
-            [0, 0, 2, 4],
-            [0, 0, 0, 4],
-        ]).unwrap();
+        let board = Board::new(&[[2, 2, 4, 4], [0, 2, 2, 0], [0, 2, 2, 2], [2, 0, 0, 2]]).unwrap();
+        let expected =
+            Board::new(&[[0, 0, 4, 8], [0, 0, 0, 4], [0, 0, 2, 4], [0, 0, 0, 4]]).unwrap();
 
         let actual = board.make_move(Move::Right);
 
@@ -464,20 +438,10 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_make_move_up() {
-        let board = Board::new(&[
-            [2, 2, 4, 4],
-            [0, 2, 2, 0],
-            [0, 2, 2, 2],
-            [2, 0, 0, 2],
-        ]).unwrap();
-        let expected = Board::new(&[
-            [4, 4, 4, 4],
-            [0, 2, 4, 4],
-            [0, 0, 0, 0],
-            [0, 0, 0, 0],
-        ]).unwrap();
+        let board = Board::new(&[[2, 2, 4, 4], [0, 2, 2, 0], [0, 2, 2, 2], [2, 0, 0, 2]]).unwrap();
+        let expected =
+            Board::new(&[[4, 4, 4, 4], [0, 2, 4, 4], [0, 0, 0, 0], [0, 0, 0, 0]]).unwrap();
 
         let actual = board.make_move(Move::Up);
 
@@ -485,20 +449,10 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_make_move_down() {
-        let board = Board::new(&[
-            [2, 2, 4, 4],
-            [0, 2, 2, 0],
-            [0, 2, 2, 2],
-            [2, 0, 0, 2],
-        ]).unwrap();
-        let expected = Board::new(&[
-            [0, 0, 0, 0],
-            [0, 0, 0, 0],
-            [0, 2, 4, 4],
-            [4, 4, 4, 4],
-        ]).unwrap();
+        let board = Board::new(&[[2, 2, 4, 4], [0, 2, 2, 0], [0, 2, 2, 2], [2, 0, 0, 2]]).unwrap();
+        let expected =
+            Board::new(&[[0, 0, 0, 0], [0, 0, 0, 0], [0, 2, 4, 4], [4, 4, 4, 4]]).unwrap();
 
         let actual = board.make_move(Move::Down);
 
@@ -506,40 +460,14 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_possible_boards_with2() {
-        let board = Board::new(&[
-            [0, 8, 8, 8],
-            [8, 8, 0, 8],
-            [8, 8, 8, 0],
-            [8, 0, 8, 8],
-        ]).unwrap();
+        let board = Board::new(&[[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap();
 
         let expected = vec![
-            Board::new(&[
-                [2, 8, 8, 8],
-                [8, 8, 0, 8],
-                [8, 8, 8, 0],
-                [8, 0, 8, 8],
-            ]).unwrap(),
-            Board::new(&[
-                [0, 8, 8, 8],
-                [8, 8, 2, 8],
-                [8, 8, 8, 0],
-                [8, 0, 8, 8],
-            ]).unwrap(),
-            Board::new(&[
-                [0, 8, 8, 8],
-                [8, 8, 0, 8],
-                [8, 8, 8, 2],
-                [8, 0, 8, 8],
-            ]).unwrap(),
-            Board::new(&[
-                [0, 8, 8, 8],
-                [8, 8, 0, 8],
-                [8, 8, 8, 0],
-                [8, 2, 8, 8],
-            ]).unwrap(),
+            Board::new(&[[2, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap(),
+            Board::new(&[[0, 8, 8, 8], [8, 8, 2, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap(),
+            Board::new(&[[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 2], [8, 0, 8, 8]]).unwrap(),
+            Board::new(&[[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 2, 8, 8]]).unwrap(),
         ];
 
         let actual = board.possible_boards_with2().collect::<Vec<_>>();
@@ -548,40 +476,14 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_possible_boards_with4() {
-        let board = Board::new(&[
-            [0, 8, 8, 8],
-            [8, 8, 0, 8],
-            [8, 8, 8, 0],
-            [8, 0, 8, 8],
-        ]).unwrap();
+        let board = Board::new(&[[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap();
 
         let expected = vec![
-            Board::new(&[
-                [4, 8, 8, 8],
-                [8, 8, 0, 8],
-                [8, 8, 8, 0],
-                [8, 0, 8, 8],
-            ]).unwrap(),
-            Board::new(&[
-                [0, 8, 8, 8],
-                [8, 8, 4, 8],
-                [8, 8, 8, 0],
-                [8, 0, 8, 8],
-            ]).unwrap(),
-            Board::new(&[
-                [0, 8, 8, 8],
-                [8, 8, 0, 8],
-                [8, 8, 8, 4],
-                [8, 0, 8, 8],
-            ]).unwrap(),
-            Board::new(&[
-                [0, 8, 8, 8],
-                [8, 8, 0, 8],
-                [8, 8, 8, 0],
-                [8, 4, 8, 8],
-            ]).unwrap(),
+            Board::new(&[[4, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap(),
+            Board::new(&[[0, 8, 8, 8], [8, 8, 4, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap(),
+            Board::new(&[[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 4], [8, 0, 8, 8]]).unwrap(),
+            Board::new(&[[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 4, 8, 8]]).unwrap(),
         ];
 
         let actual = board.possible_boards_with4().collect::<Vec<_>>();

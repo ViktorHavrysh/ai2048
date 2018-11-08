@@ -47,12 +47,10 @@ where
 {
     /// Creates a new `SearchTree` from an initial `Board` state.
     pub fn new(board: Board) -> Self {
-        let cache = Rc::new(
-            NodeCache {
-                player_node: Cache::new(),
-                computer_node: Cache::new(),
-            },
-        );
+        let cache = Rc::new(NodeCache {
+            player_node: Cache::new(),
+            computer_node: Cache::new(),
+        });
 
         let node = cache
             .player_node
@@ -60,7 +58,7 @@ where
 
         SearchTree {
             root_node: node,
-            cache: cache,
+            cache,
         }
     }
 
@@ -121,27 +119,19 @@ where
     /// Iterates over children, returning `(Move, &ComputerNode)` tuples.
     #[inline]
     pub fn iter<'a>(&'a self) -> impl Iterator<Item = (Move, &'a ComputerNode<T>)> + 'a {
-        self.nodes
-            .iter()
-            .enumerate()
-            .filter_map(
-                |(index, opt)| {
-                    opt.as_ref()
-                        .map(
-                            |node| {
-                                let mv = match index {
-                                    0 => Move::Left,
-                                    1 => Move::Right,
-                                    2 => Move::Up,
-                                    3 => Move::Down,
-                                    _ => unreachable!(),
-                                };
+        self.nodes.iter().enumerate().filter_map(|(index, opt)| {
+            opt.as_ref().map(|node| {
+                let mv = match index {
+                    0 => Move::Left,
+                    1 => Move::Right,
+                    2 => Move::Up,
+                    3 => Move::Down,
+                    _ => unreachable!(),
+                };
 
-                                (mv, node.as_ref())
-                            },
-                        )
-                },
-            )
+                (mv, node.as_ref())
+            })
+        })
     }
 
     /// Iterates over children, returning `&ComputerNode`s without moves.
@@ -175,8 +165,8 @@ where
 {
     fn new(board: Board, cache: Rc<NodeCache<T>>) -> Self {
         PlayerNode {
-            board: board,
-            cache: cache,
+            board,
+            cache,
             children: LazyCell::new(),
             data: Cell::new(T::default()),
         }
@@ -268,8 +258,8 @@ where
 {
     fn new(board: Board, cache: Rc<NodeCache<T>>) -> Self {
         ComputerNode {
-            board: board,
-            cache: cache,
+            board,
+            cache,
             children: LazyCell::new(),
         }
     }
@@ -289,28 +279,24 @@ where
     fn create_children(&self) -> ComputerNodeChildren<T> {
         let children_with2 = self.board
             .possible_boards_with2()
-            .map(
-                |board| {
-                    self.cache
-                        .player_node
-                        .get_or_insert_with(board, || PlayerNode::new(board, self.cache.clone()))
-                },
-            )
+            .map(|board| {
+                self.cache
+                    .player_node
+                    .get_or_insert_with(board, || PlayerNode::new(board, self.cache.clone()))
+            })
             .collect::<Vec<_>>();
 
         let children_with4 = self.board
             .possible_boards_with4()
-            .map(
-                |board| {
-                    self.cache
-                        .player_node
-                        .get_or_insert_with(board, || PlayerNode::new(board, self.cache.clone()))
-                },
-            )
+            .map(|board| {
+                self.cache
+                    .player_node
+                    .get_or_insert_with(board, || PlayerNode::new(board, self.cache.clone()))
+            })
             .collect::<Vec<_>>();
 
-        debug_assert!(children_with2.len() != 0);
-        debug_assert!(children_with4.len() != 0);
+        debug_assert!(!children_with2.is_empty());
+        debug_assert!(!children_with4.is_empty());
 
         ComputerNodeChildren {
             with2: children_with2,
@@ -323,7 +309,6 @@ where
 mod tests {
     use super::*;
     use board::{Board, Move};
-
     use std::collections::{HashMap, HashSet};
 
     #[test]
