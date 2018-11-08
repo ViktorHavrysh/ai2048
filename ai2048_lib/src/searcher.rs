@@ -552,9 +552,9 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use board::Board;
-    use heuristic::composite::CompositeHeuristic;
-    use search_tree::SearchTree;
+    use crate::board::Board;
+    use crate::heuristic::composite::CompositeHeuristic;
+    use crate::search_tree::SearchTree;
 
     #[test]
     fn can_search_result() {

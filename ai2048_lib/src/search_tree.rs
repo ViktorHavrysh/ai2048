@@ -311,7 +311,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use board::{Board, Move};
+    use crate::board::{Board, Move};
     use std::collections::{HashMap, HashSet};
 
     #[test]

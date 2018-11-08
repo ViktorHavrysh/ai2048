@@ -340,7 +340,6 @@ fn parse_to_log_space(n: u32) -> Option<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use itertools::Itertools;
 
     #[test]
     fn can_create_empty_board() {

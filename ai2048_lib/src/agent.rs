@@ -49,8 +49,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use board::Board;
-    use heuristic::composite::CompositeHeuristic;
+    use crate::board::Board;
+    use crate::heuristic::composite::CompositeHeuristic;
 
     #[test]
     fn can_make_decision() {
