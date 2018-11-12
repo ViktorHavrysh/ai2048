@@ -144,7 +144,7 @@ impl Board {
         let mut rng = rand::thread_rng();
         let empty_cell_count = self.grid.iter().flatten().filter(|v| **v == 0).count();
         let position = rng.gen_range(0, empty_cell_count);
-        let create_four = rng.gen_weighted_bool(10);
+        let create_four = rng.gen_bool(0.1);
         let value = if create_four { 2 } else { 1 };
 
         let mut new_grid = self.grid;

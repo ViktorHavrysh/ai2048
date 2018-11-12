@@ -6,13 +6,13 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-fnv = "1.0"
-itertools = "0.5"
+hashbrown = "0.1"
+itertools = "0.7"
 lazy_static = "0.2"
-lazycell = "0.5.0"
-rand = "0.3"
+lazycell = "1.2"
+rand = "0.5"
 time = "0.1"
-bytecount = "0.3.1"
+bytecount = "0.4"
 
 [profile]
 
@@ -23,3 +23,4 @@ codegen-units = 4
 debug = true
 lto = true
 opt-level = 3
+codegen-units = 1

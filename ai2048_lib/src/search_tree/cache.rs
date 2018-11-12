@@ -11,7 +11,7 @@
 //!
 //! The type is not thread safe.
 
-use fnv::FnvHashMap;
+use hashbrown::HashMap;
 use std::cell::RefCell;
 use std::hash::Hash;
 use std::rc::{Rc, Weak};
@@ -27,7 +27,7 @@ where
     /// Returns an emtpy `Cache`.
     pub fn new() -> Self {
         Cache {
-            data: RefCell::new(FnvHashMap::default()),
+            data: RefCell::new(HashMap::default()),
         }
     }
 
@@ -59,7 +59,7 @@ where
     }
 }
 
-type CachingHashMap<K, V> = FnvHashMap<K, Weak<V>>;
+type CachingHashMap<K, V> = HashMap<K, Weak<V>>;
 
 trait Gc {
     fn gc(&mut self);
