@@ -7,7 +7,7 @@
 //! tables should considerably speed up the search.
 
 use super::*;
-use crate::integer_magic::{u16_to_u8x4, u8x4_to_u16};
+use crate::board::Row;
 use crate::search_tree::PlayerNode;
 use std::u16;
 
@@ -29,9 +29,9 @@ where
         }
 
         node.board()
-            .grid()
+            .rows
             .iter()
-            .chain(node.board().transpose().grid().iter())
+            .chain(node.board().transpose().rows.iter())
             .map(eval_row)
             .sum()
     }
@@ -42,18 +42,15 @@ lazy_static! {
     static ref CACHE: [f32; u16::MAX as usize] = {
         let mut cache = [0f32; u16::MAX as usize];
         for (index, row) in cache.iter_mut().enumerate() {
-            *row = eval_row_nocache(u16_to_u8x4(index as u16));
+            *row = eval_row_nocache(Row(index as u16));
         }
         cache
     };
 }
 
 #[inline]
-fn eval_row(row: &[u8; 4]) -> f32 {
-    match u8x4_to_u16(*row) {
-        Some(u) => CACHE[u as usize],
-        None => eval_row_nocache(*row),
-    }
+fn eval_row(row: &Row) -> f32 {
+    CACHE[row.0 as usize]
 }
 
 const MONOTONICITY_STRENGTH: f32 = 47.0;
@@ -62,7 +59,8 @@ const ADJACENT_STRENGTH: f32 = 700.0;
 const SUM_STRENGTH: f32 = 11.0;
 
 #[inline]
-fn eval_row_nocache(row: [u8; 4]) -> f32 {
+fn eval_row_nocache(row: Row) -> f32 {
+    let row = row.unpack();
     let monotonicity = super::monotonicity_row(row) as f32 * MONOTONICITY_STRENGTH;
     let empty = super::empty_cell_count_row(row) as f32 * EMPTY_STRENGTH;
     let adjacent = super::adjacent_row(row) as f32 * ADJACENT_STRENGTH;

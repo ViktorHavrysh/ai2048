@@ -22,27 +22,28 @@ where
     fn eval(&self, node: &PlayerNode<T>) -> f32;
 }
 
-#[inline]
 fn empty_cell_count(board: &Board) -> usize {
-    board.grid().iter().flatten().filter(|v| **v == 0).count()
+    board
+        .unpack_u8()
+        .iter()
+        .flatten()
+        .filter(|v| **v == 0)
+        .count()
 }
 
-#[inline]
 fn empty_cell_count_row(row: [u8; 4]) -> usize {
     bytecount::count(&row, 0)
 }
 
-#[inline]
 fn adjacent(board: &Board) -> u16 {
     board
-        .grid()
+        .unpack_u8()
         .iter()
-        .chain(board.transpose().grid().iter())
+        .chain(board.transpose().unpack_u8().iter())
         .map(|&row| adjacent_row(row))
         .fold(0u16, |a, b| a as u16 + b as u16)
 }
 
-#[inline]
 fn adjacent_row(row: [u8; 4]) -> u8 {
     let mut adjacent_count = 0;
     let mut y = 0;
@@ -59,32 +60,31 @@ fn adjacent_row(row: [u8; 4]) -> u8 {
     adjacent_count
 }
 
-#[inline]
 fn sum(board: &Board) -> f32 {
     -board
-        .grid()
+        .unpack_u8()
         .iter()
         .flatten()
         .map(|v| (*v as f32).powf(3.5))
         .sum::<f32>()
 }
 
-#[inline]
 fn sum_row(row: [u8; 4]) -> f32 {
     -row.iter().map(|v| (*v as f32).powf(3.5)).sum::<f32>()
 }
 
-#[inline]
 fn monotonicity(board: &Board) -> i32 {
     monotonicity_rows(board) + monotonicity_rows(&board.transpose())
 }
 
-#[inline]
 fn monotonicity_rows(board: &Board) -> i32 {
-    board.grid().iter().map(|&row| monotonicity_row(row)).sum()
+    board
+        .unpack_u8()
+        .iter()
+        .map(|&row| monotonicity_row(row))
+        .sum()
 }
 
-#[inline]
 fn monotonicity_row(row: [u8; 4]) -> i32 {
     let mut left = 0;
     let mut right = 0;
@@ -100,10 +100,8 @@ fn monotonicity_row(row: [u8; 4]) -> i32 {
     -cmp::min(left, right)
 }
 
-#[inline]
-#[allow(needless_range_loop)]
 fn smoothness(board: &Board) -> i32 {
-    let grid = board.grid();
+    let grid = board.unpack_u8();
 
     let mut smoothness = 0;
 

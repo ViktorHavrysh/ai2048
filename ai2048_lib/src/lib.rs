@@ -25,5 +25,4 @@ pub mod heuristic;
 
 mod search_tree;
 
-mod integer_magic;
 mod searcher;

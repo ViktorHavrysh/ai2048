@@ -280,7 +280,8 @@ where
     fn create_children(&self) -> ComputerNodeChildren<T> {
         let children_with2 = self
             .board
-            .possible_boards_with2()
+            .ai_moves_with2()
+            .into_iter()
             .map(|board| {
                 self.cache
                     .player_node
@@ -290,7 +291,8 @@ where
 
         let children_with4 = self
             .board
-            .possible_boards_with4()
+            .ai_moves_with4()
+            .into_iter()
             .map(|board| {
                 self.cache
                     .player_node
@@ -340,7 +342,7 @@ mod tests {
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_player_node_children_by_move() {
-        let board = Board::new(&[
+        let board = Board::from_u32([
             [0, 0, 0, 2],
             [0, 2, 0, 2],
             [4, 0, 0, 2],
@@ -352,25 +354,25 @@ mod tests {
         let player_node = search_tree.root();
 
         let mut expected = HashMap::new();
-        expected.insert(Move::Left, Board::new(&[
+        expected.insert(Move::Left, Board::from_u32([
             [2, 0, 0, 0],
             [4, 0, 0, 0],
             [4, 2, 0, 0],
             [2, 0, 0, 0],
         ]).unwrap());
-        expected.insert(Move::Right, Board::new(&[
+        expected.insert(Move::Right, Board::from_u32([
             [0, 0, 0, 2],
             [0, 0, 0, 4],
             [0, 0, 4, 2],
             [0, 0, 0, 2],
         ]).unwrap());
-        expected.insert(Move::Up, Board::new(&[
+        expected.insert(Move::Up, Board::from_u32([
             [4, 2, 0, 4],
             [0, 0, 0, 4],
             [0, 0, 0, 0],
             [0, 0, 0, 0],
         ]).unwrap());
-        expected.insert(Move::Down, Board::new(&[
+        expected.insert(Move::Down, Board::from_u32([
             [0, 0, 0, 0],
             [0, 0, 0, 0],
             [0, 0, 0, 4],
@@ -390,7 +392,7 @@ mod tests {
     #[test]
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn can_computer_node_children() {
-        let board = Board::new(&[
+        let board = Board::from_u32([
             [0, 2, 4, 2],
             [0, 4, 2, 4],
             [4, 2, 4, 2],
@@ -411,25 +413,25 @@ mod tests {
 
         // this leads to 8 possible child nodes:
         let mut expected_with2 = HashSet::new();
-        expected_with2.insert(Board::new(&[
+        expected_with2.insert(Board::from_u32([
             [4, 2, 4, 2],
             [2, 4, 2, 4],
             [2, 2, 4, 2],
             [0, 4, 2, 4],
         ]).unwrap());
-        expected_with2.insert(Board::new(&[
+        expected_with2.insert(Board::from_u32([
             [4, 2, 4, 2],
             [2, 4, 2, 4],
             [0, 2, 4, 2],
             [2, 4, 2, 4],
         ]).unwrap());
-        expected_with2.insert(Board::new(&[
+        expected_with2.insert(Board::from_u32([
             [2, 4, 2, 2],
             [4, 2, 4, 0],
             [4, 2, 4, 2],
             [2, 4, 2, 4],
         ]).unwrap());
-        expected_with2.insert(Board::new(&[
+        expected_with2.insert(Board::from_u32([
             [2, 4, 2, 0],
             [4, 2, 4, 2],
             [4, 2, 4, 2],
@@ -437,25 +439,25 @@ mod tests {
         ]).unwrap());
 
         let mut expected_with4 = HashSet::new();
-        expected_with4.insert(Board::new(&[
+        expected_with4.insert(Board::from_u32([
             [2, 4, 2, 4],
             [4, 2, 4, 0],
             [4, 2, 4, 2],
             [2, 4, 2, 4],
         ]).unwrap());
-        expected_with4.insert(Board::new(&[
+        expected_with4.insert(Board::from_u32([
             [2, 4, 2, 0],
             [4, 2, 4, 4],
             [4, 2, 4, 2],
             [2, 4, 2, 4],
         ]).unwrap());
-        expected_with4.insert(Board::new(&[
+        expected_with4.insert(Board::from_u32([
             [4, 2, 4, 2],
             [2, 4, 2, 4],
             [4, 2, 4, 2],
             [0, 4, 2, 4],
         ]).unwrap());
-        expected_with4.insert(Board::new(&[
+        expected_with4.insert(Board::from_u32([
             [4, 2, 4, 2],
             [2, 4, 2, 4],
             [0, 2, 4, 2],
