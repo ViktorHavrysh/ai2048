@@ -33,8 +33,15 @@ impl fmt::Display for Move {
     }
 }
 
-#[derive(Eq, PartialEq, Hash, Copy, Clone, Debug, Default)]
+#[derive(Eq, PartialEq, Hash, Copy, Clone, Default)]
 pub(crate) struct Row(pub(crate) u16);
+
+impl fmt::Debug for Row {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let unpacked = self.unpack();
+        write!(f, "[{:0>4b} {:0>4b} {:0>4b} {:0>4b}]", unpacked[0], unpacked[1], unpacked[2], unpacked[3])
+    }
+}
 
 impl Row {
     pub(crate) fn pack(row: [u8; 4]) -> Option<Row> {
@@ -44,7 +51,7 @@ impl Row {
                 return None;
             }
             result <<= 4;
-            result += cell as u16;
+            result += u16::from(cell);
         }
         Some(Row(result))
     }
@@ -56,22 +63,6 @@ impl Row {
         let col2 = ((row & 0b0000_0000_1111_0000) >> 4) as u8;
         let col3 = (row & 0b0000_0000_0000_1111) as u8;
         [col0, col1, col2, col3]
-    }
-}
-
-fn parse_to_log_space(n: u32) -> Option<u8> {
-    use std::f32;
-
-    let log = match n {
-        0 => 0f32,
-        _ => (n as f32).log2(),
-    };
-
-    let rounded = log.round();
-    if (rounded - log) < 1e-10 {
-        Some(rounded as u8)
-    } else {
-        None
     }
 }
 
@@ -94,26 +85,52 @@ pub struct Board {
 
 impl fmt::Display for Board {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for row in self.unpack_u32().iter() {
+        for row in self.unpack_human().iter() {
             for &cell in row {
                 write!(f, "{number:>width$}", number = cell, width = 6)?;
             }
-            write!(f, "\n")?;
+            writeln!(f)?;
         }
 
         Ok(())
     }
 }
 
+fn to_log(n: u32) -> Option<u8> {
+    use std::f32;
+
+    let log = match n {
+        0 => 0f32,
+        _ => (n as f32).log2(),
+    };
+
+    let rounded = log.round();
+    if (rounded - log) < 1e-10 {
+        Some(rounded as u8)
+    } else {
+        None
+    }
+}
+
 impl Board {
+    /// Creates a new `Board` from an array of logarithmic numbers. (0 = 0, 1 = 2, 2 = 4, etc). Fails
+    /// to create a board if any one value is larger than 15, that is 32768 in human-readable format.
+    pub fn from_log(grid: [[u8; 4]; 4]) -> Option<Board> {
+        let mut board = Board::default();
+        for (x, &row) in grid.iter().enumerate() {
+            board.rows[x] = Row::pack(row)?;
+        }
+        Some(board)
+    }
+
     /// Creates a new `Board` from an array of human-looking numbers. If a tile fails to be
-    /// a power of 2, returns `None`.
-    pub fn from_u32(grid: [[u32; 4]; 4]) -> Option<Board> {
+    /// a power of 2, or is larger than 32768, returns `None`.
+    pub fn from_human(grid: [[u32; 4]; 4]) -> Option<Board> {
         let mut board = Board::default();
         for (x, &row) in grid.iter().enumerate() {
             let mut new_row = [0u8; 4];
             for (y, &cell) in row.iter().enumerate() {
-                let log = parse_to_log_space(cell)?;
+                let log = to_log(cell)?;
                 new_row[y] = log;
             }
 
@@ -122,16 +139,8 @@ impl Board {
         Some(board)
     }
 
-    fn from_u8(grid: [[u8; 4]; 4]) -> Option<Board> {
-        let mut board = Board::default();
-        for (x, &row) in grid.iter().enumerate() {
-            board.rows[x] = Row::pack(row)?;
-        }
-        Some(board)
-    }
-
     /// Unpacks a logarithmic representation from `Board`'s internal representation
-    pub fn unpack_u8(self) -> [[u8; 4]; 4] {
+    pub fn unpack_log(self) -> [[u8; 4]; 4] {
         let mut result = [[0; 4]; 4];
         for (x, row) in self.rows.iter().enumerate() {
             result[x] = row.unpack();
@@ -140,20 +149,60 @@ impl Board {
     }
 
     /// Unpacks a human-readable representation from `Board`'s internal representation
-    fn unpack_u32(self) -> [[u32; 4]; 4] {
+    pub fn unpack_human(self) -> [[u32; 4]; 4] {
         let mut result = [[0; 4]; 4];
-        let board_u8 = self.unpack_u8();
+        let board_u8 = self.unpack_log();
         for (x, row) in board_u8.iter().enumerate() {
             for (y, &cell) in row.iter().enumerate() {
-                result[x][y] = human(cell);
+                result[x][y] = match cell {
+                    0 => 0,
+                    _ => 1 << cell,
+                };
             }
         }
         result
     }
 
+    /// Creates a new `Board` with a random tile (10% of times a `2`, 90% of times a `4`) added to a
+    /// random empty cell on the board.
+    pub fn add_random_tile(self) -> Board {
+        let mut rng = rand::thread_rng();
+
+        let mut board = self.unpack_log();
+        let empty_cell_count = board.iter().flatten().filter(|v| **v == 0).count();
+        let position = rng.gen_range(0, empty_cell_count);
+        let create_four = rng.gen_bool(0.1);
+        let value = if create_four { 2 } else { 1 };
+
+        let val = board
+            .iter_mut()
+            .flatten()
+            .filter(|v| **v == 0)
+            .nth(position)
+            .unwrap();
+
+        *val = value;
+
+        Board::from_log(board).unwrap()
+    }
+
+    /// Returns all possible `Board`s that can result from the computer spawning a `2` in a random
+    /// empty cell.
+    #[inline(always)]
+    pub fn ai_moves_with2(self) -> impl Iterator<Item=Board> {
+        AiMoves::new(self, 1)
+    }
+
+    /// Returns all possible `Board`s that can result from the computer spawning a `4` in a random
+    /// empty cell.
+    #[inline(always)]
+    pub fn ai_moves_with4(self) -> impl Iterator<Item=Board> {
+        AiMoves::new(self, 2)
+    }
+
     /// Gets a transposed copy of the `Board`.
-    #[inline]
-    pub fn transpose(&self) -> Board {
+    #[inline(always)]
+    pub fn transpose(self) -> Board {
         let row0 = self.rows[0].0;
         let row1 = self.rows[1].0;
         let row2 = self.rows[2].0;
@@ -189,61 +238,9 @@ impl Board {
         }
     }
 
-    /// Creates a new `Board` with a random tile (10% of times a `2`, 90% of times a `4`) added to a
-    /// random empty cell on the board.
-    pub fn add_random_tile(&self) -> Board {
-        let mut rng = rand::thread_rng();
-
-        let mut board = self.unpack_u32();
-        let empty_cell_count = board.iter().flatten().filter(|v| **v == 0).count();
-        let position = rng.gen_range(0, empty_cell_count);
-        let create_four = rng.gen_bool(0.1);
-        let value = if create_four { 4 } else { 2 };
-
-        let val = board
-            .iter_mut()
-            .flatten()
-            .filter(|v| **v == 0)
-            .nth(position)
-            .unwrap();
-
-        *val = value;
-
-        Board::from_u32(board).unwrap()
-    }
-
-    /// Returns all possible `Board`s that can result from the computer spawning a `2` in a random
-    /// empty cell.
-    pub fn ai_moves_with2(&self) -> Vec<Board> {
-        self.ai_moves(1)
-    }
-
-    /// Returns all possible `Board`s that can result from the computer spawning a `4` in a random
-    /// empty cell.
-    pub fn ai_moves_with4(&self) -> Vec<Board> {
-        self.ai_moves(2)
-    }
-
-    fn ai_moves(&self, new_value: u8) -> Vec<Board> {
-        let board = self.unpack_u8();
-        let mut boards = Vec::new();
-
-        for (x, y) in board.iter().enumerate().flat_map(|(x, row)| {
-            row.iter()
-                .enumerate()
-                .filter(|&(_, val)| *val == 0)
-                .map(move |(y, _)| (x, y))
-        }) {
-            let mut new_board = board;
-            new_board[x][y] = new_value;
-            boards.push(Board::from_u8(new_board).unwrap());
-        }
-
-        boards
-    }
-
     /// Returns a `Board` that would result from making a certain `Move` in the current state.
-    pub fn make_move(&self, mv: Move) -> Board {
+    #[inline(always)]
+    pub fn make_move(self, mv: Move) -> Board {
         match mv {
             Move::Left => self.move_left(),
             Move::Right => self.move_right(),
@@ -252,7 +249,8 @@ impl Board {
         }
     }
 
-    fn move_left(&self) -> Board {
+    #[inline(always)]
+    fn move_left(self) -> Board {
         let mut board = Board::default();
 
         for (to_row, from_row) in board.rows.iter_mut().zip(self.rows.iter()) {
@@ -262,7 +260,8 @@ impl Board {
         board
     }
 
-    fn move_right(&self) -> Board {
+    #[inline(always)]
+    fn move_right(self) -> Board {
         let mut board = Board::default();
 
         for (to_row, from_row) in board.rows.iter_mut().zip(self.rows.iter()) {
@@ -272,17 +271,108 @@ impl Board {
         board
     }
 
-    #[inline]
+    #[inline(always)]
     fn move_row_left_cached(row: Row) -> Row {
         CACHE_LEFT[row.0 as usize]
     }
 
-    #[inline]
+    #[inline(always)]
     fn move_row_right_cached(row: Row) -> Row {
         CACHE_RIGHT[row.0 as usize]
     }
 }
 
+struct AiMoves {
+    board: Board,
+    x: u8,
+    y: i8,
+    new_value: u8,
+}
+
+impl AiMoves {
+    #[inline(always)]
+    fn new(board: Board, new_value: u8) -> AiMoves {
+        AiMoves {
+            board,
+            x: 0,
+            y: -1,
+            new_value
+        }
+    }
+
+    #[inline(always)]
+    fn fill_space_in_current(&self) -> Option<Board> {
+        let row = self.board.rows[self.x as usize];
+        let new_row = match self.y {
+            0 => {
+                if row.0 & 0b1111_0000_0000_0000 != 0 {
+                    return None;
+                } else {
+                    row.0 + ((self.new_value as u16) << 12)
+                }
+            }
+            1 => {
+                if row.0 & 0b0000_1111_0000_0000 != 0 {
+                    return None;
+                } else {
+                    row.0 + ((self.new_value as u16) << 8)
+                }
+            }
+            2 => {
+                if row.0 & 0b0000_0000_1111_0000 != 0 {
+                    return None;
+                } else {
+                    row.0 + ((self.new_value as u16) << 4)
+                }
+            }
+            3 => {
+                if row.0 & 0b0000_0000_0000_1111 != 0 {
+                    return None;
+                } else {
+                    row.0 + (self.new_value as u16)
+                }
+            }
+            _ => unreachable!()
+        };
+        let new_row = Row(new_row);
+        let mut board = self.board;
+        board.rows[self.x as usize] = new_row;
+        // println!("{:?}", board);
+        // ::std::thread::sleep(::std::time::Duration::from_millis(100));
+        Some(board)
+    }
+
+    #[inline(always)]
+    fn move_next(&mut self) -> bool {
+        if self.x == 3 && self.y == 3 {
+            return false;
+        }
+        if self.y == 3 {
+            self.x += 1;
+            self.y = -1;
+        }
+        self.y += 1;
+        true
+    }
+}
+
+impl Iterator for AiMoves {
+    type Item = Board;
+    #[inline(always)]
+    fn next(&mut self) -> Option<Board> {
+        loop {
+            if !self.move_next() {
+                return None;
+            }
+            // println!("x: {}, y: {}", self.x, self.y);
+            if let Some(board) = self.fill_space_in_current() {
+                return Some(board);
+            }
+        }
+    }
+}
+
+// Not much effort spent optimizing this, since it's going to be cached anyway
 fn move_row_left(row: Row) -> Row {
     let from_row = row.unpack();
 
@@ -290,24 +380,22 @@ fn move_row_left(row: Row) -> Row {
     let mut last = 0;
     let mut last_index = 0;
 
-    for y in 0..4 {
-        let current = from_row[y];
-
-        if current == 0 {
+    for &cell in from_row.iter() {
+        if cell == 0 {
             continue;
         }
 
         if last == 0 {
-            last = current;
+            last = cell;
             continue;
         }
 
-        if current == last {
+        if cell == last {
             to_row[last_index as usize] = last + 1;
             last = 0;
         } else {
             to_row[last_index as usize] = last;
-            last = current;
+            last = cell;
         }
 
         last_index += 1;
@@ -320,6 +408,7 @@ fn move_row_left(row: Row) -> Row {
     Row::pack(to_row).unwrap_or(Row::default())
 }
 
+// Not much effort spent optimizing this, since it's going to be cached anyway
 fn move_row_right(row: Row) -> Row {
     let from_row = row.unpack();
 
@@ -327,9 +416,7 @@ fn move_row_right(row: Row) -> Row {
     let mut last = 0;
     let mut last_index = 3;
 
-    for y in (0..4).rev() {
-        let current = from_row[y];
-
+    for &current in from_row.iter().rev() {
         if current == 0 {
             continue;
         }
@@ -376,13 +463,6 @@ lazy_static! {
     };
 }
 
-fn human(n: u8) -> u32 {
-    match n {
-        0 => 0,
-        _ => 1 << n,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -390,7 +470,7 @@ mod tests {
     #[test]
     fn can_create_empty_board() {
         let expected =
-            Board::from_u32([[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]).unwrap();
+            Board::from_human([[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]).unwrap();
 
         let actual = Board::default();
 
@@ -401,7 +481,7 @@ mod tests {
     fn can_create_board_from_human_input() {
         let expected: [[u8; 4]; 4] = [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12, 13, 14, 15]];
 
-        let actual = Board::from_u32([
+        let actual = Board::from_human([
             [0, 2, 4, 8],
             [16, 32, 64, 128],
             [256, 512, 1024, 2048],
@@ -409,13 +489,13 @@ mod tests {
         ]);
 
         assert!(actual.is_some());
-        assert_eq!(expected, actual.unwrap().unpack_u8());
+        assert_eq!(expected, actual.unwrap().unpack_log());
     }
 
     #[test]
     fn can_return_none_on_invalid_input() {
         let result =
-            Board::from_u32([[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12, 13, 14, 15]]);
+            Board::from_human([[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12, 13, 14, 15]]);
 
         assert!(result.is_none());
     }
@@ -429,7 +509,7 @@ mod tests {
             }
 
             let count = board
-                .unpack_u8()
+                .unpack_log()
                 .iter()
                 .flatten()
                 .filter(|&&v| v == 1 || v == 2)
@@ -441,7 +521,7 @@ mod tests {
 
     #[test]
     fn can_to_string() {
-        let board = Board::from_u32([
+        let board = Board::from_human([
             [0, 2, 4, 8],
             [16, 32, 64, 128],
             [256, 512, 1024, 2048],
@@ -463,9 +543,9 @@ mod tests {
     #[test]
     fn can_make_move_left() {
         let board =
-            Board::from_u32([[2, 2, 4, 4], [0, 2, 2, 0], [0, 2, 2, 2], [2, 0, 0, 2]]).unwrap();
+            Board::from_human([[2, 2, 4, 4], [0, 2, 2, 0], [0, 2, 2, 2], [2, 0, 0, 2]]).unwrap();
         let expected =
-            Board::from_u32([[4, 8, 0, 0], [4, 0, 0, 0], [4, 2, 0, 0], [4, 0, 0, 0]]).unwrap();
+            Board::from_human([[4, 8, 0, 0], [4, 0, 0, 0], [4, 2, 0, 0], [4, 0, 0, 0]]).unwrap();
 
         let actual = board.make_move(Move::Left);
 
@@ -475,9 +555,9 @@ mod tests {
     #[test]
     fn can_make_move_right() {
         let board =
-            Board::from_u32([[2, 2, 4, 4], [0, 2, 2, 0], [0, 2, 2, 2], [2, 0, 0, 2]]).unwrap();
+            Board::from_human([[2, 2, 4, 4], [0, 2, 2, 0], [0, 2, 2, 2], [2, 0, 0, 2]]).unwrap();
         let expected =
-            Board::from_u32([[0, 0, 4, 8], [0, 0, 0, 4], [0, 0, 2, 4], [0, 0, 0, 4]]).unwrap();
+            Board::from_human([[0, 0, 4, 8], [0, 0, 0, 4], [0, 0, 2, 4], [0, 0, 0, 4]]).unwrap();
 
         let actual = board.make_move(Move::Right);
 
@@ -487,9 +567,9 @@ mod tests {
     #[test]
     fn can_make_move_up() {
         let board =
-            Board::from_u32([[2, 2, 4, 4], [0, 2, 2, 0], [0, 2, 2, 2], [2, 0, 0, 2]]).unwrap();
+            Board::from_human([[2, 2, 4, 4], [0, 2, 2, 0], [0, 2, 2, 2], [2, 0, 0, 2]]).unwrap();
         let expected =
-            Board::from_u32([[4, 4, 4, 4], [0, 2, 4, 4], [0, 0, 0, 0], [0, 0, 0, 0]]).unwrap();
+            Board::from_human([[4, 4, 4, 4], [0, 2, 4, 4], [0, 0, 0, 0], [0, 0, 0, 0]]).unwrap();
 
         let actual = board.make_move(Move::Up);
 
@@ -499,9 +579,9 @@ mod tests {
     #[test]
     fn can_make_move_down() {
         let board =
-            Board::from_u32([[2, 2, 4, 4], [0, 2, 2, 0], [0, 2, 2, 2], [2, 0, 0, 2]]).unwrap();
+            Board::from_human([[2, 2, 4, 4], [0, 2, 2, 0], [0, 2, 2, 2], [2, 0, 0, 2]]).unwrap();
         let expected =
-            Board::from_u32([[0, 0, 0, 0], [0, 0, 0, 0], [0, 2, 4, 4], [4, 4, 4, 4]]).unwrap();
+            Board::from_human([[0, 0, 0, 0], [0, 0, 0, 0], [0, 2, 4, 4], [4, 4, 4, 4]]).unwrap();
 
         let actual = board.make_move(Move::Down);
 
@@ -511,16 +591,16 @@ mod tests {
     #[test]
     fn can_possible_boards_with2() {
         let board =
-            Board::from_u32([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap();
+            Board::from_human([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap();
 
         let expected = vec![
-            Board::from_u32([[2, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap(),
-            Board::from_u32([[0, 8, 8, 8], [8, 8, 2, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap(),
-            Board::from_u32([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 2], [8, 0, 8, 8]]).unwrap(),
-            Board::from_u32([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 2, 8, 8]]).unwrap(),
+            Board::from_human([[2, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap(),
+            Board::from_human([[0, 8, 8, 8], [8, 8, 2, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap(),
+            Board::from_human([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 2], [8, 0, 8, 8]]).unwrap(),
+            Board::from_human([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 2, 8, 8]]).unwrap(),
         ];
 
-        let actual = board.ai_moves_with2();
+        let actual = board.ai_moves_with2().collect::<Vec<_>>();
 
         assert_eq!(expected, actual);
     }
@@ -528,16 +608,16 @@ mod tests {
     #[test]
     fn can_possible_boards_with4() {
         let board =
-            Board::from_u32([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap();
+            Board::from_human([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap();
 
         let expected = vec![
-            Board::from_u32([[4, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap(),
-            Board::from_u32([[0, 8, 8, 8], [8, 8, 4, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap(),
-            Board::from_u32([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 4], [8, 0, 8, 8]]).unwrap(),
-            Board::from_u32([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 4, 8, 8]]).unwrap(),
+            Board::from_human([[4, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap(),
+            Board::from_human([[0, 8, 8, 8], [8, 8, 4, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap(),
+            Board::from_human([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 4], [8, 0, 8, 8]]).unwrap(),
+            Board::from_human([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 4, 8, 8]]).unwrap(),
         ];
 
-        let actual = board.ai_moves_with4();
+        let actual = board.ai_moves_with4().collect::<Vec<_>>();
 
         assert_eq!(expected, actual);
     }

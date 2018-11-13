@@ -24,7 +24,7 @@ where
 
 fn empty_cell_count(board: &Board) -> usize {
     board
-        .unpack_u8()
+        .unpack_log()
         .iter()
         .flatten()
         .filter(|v| **v == 0)
@@ -37,9 +37,9 @@ fn empty_cell_count_row(row: [u8; 4]) -> usize {
 
 fn adjacent(board: &Board) -> u16 {
     board
-        .unpack_u8()
+        .unpack_log()
         .iter()
-        .chain(board.transpose().unpack_u8().iter())
+        .chain(board.transpose().unpack_log().iter())
         .map(|&row| adjacent_row(row))
         .fold(0u16, |a, b| a as u16 + b as u16)
 }
@@ -62,7 +62,7 @@ fn adjacent_row(row: [u8; 4]) -> u8 {
 
 fn sum(board: &Board) -> f32 {
     -board
-        .unpack_u8()
+        .unpack_log()
         .iter()
         .flatten()
         .map(|v| (*v as f32).powf(3.5))
@@ -79,7 +79,7 @@ fn monotonicity(board: &Board) -> i32 {
 
 fn monotonicity_rows(board: &Board) -> i32 {
     board
-        .unpack_u8()
+        .unpack_log()
         .iter()
         .map(|&row| monotonicity_row(row))
         .sum()
@@ -101,7 +101,7 @@ fn monotonicity_row(row: [u8; 4]) -> i32 {
 }
 
 fn smoothness(board: &Board) -> i32 {
-    let grid = board.unpack_u8();
+    let grid = board.unpack_log();
 
     let mut smoothness = 0;
 

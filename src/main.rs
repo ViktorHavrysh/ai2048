@@ -8,7 +8,7 @@ use std::fmt::{self, Write};
 use std::sync::mpsc;
 
 const MIN_PROBABILITY: f32 = 0.001;
-const SEARCH_DEPTH: u8 = 6;
+const SEARCH_DEPTH: u8 = 8;
 
 #[derive(Debug)]
 enum Error {
@@ -41,11 +41,7 @@ impl From<mpsc::SendError<Signal>> for Error {
     }
 }
 
-fn main() {
-    run().unwrap();
-}
-
-fn run() -> Result<(), Error> {
+fn main() -> Result<(), Error> {
     let pool = CpuPool::new_num_cpus();
     let (tx, rx) = mpsc::channel();
 
