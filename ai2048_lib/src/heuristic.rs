@@ -10,7 +10,7 @@ pub fn eval(board: Board) -> f32 {
         .rows
         .iter()
         .chain(board.transpose().rows.iter())
-        .map(eval_row)
+        .map(|&r| eval_row(r))
         .sum()
 }
 
@@ -20,7 +20,7 @@ const ADJACENT_STRENGTH: f32 = 700.0;
 const SUM_STRENGTH: f32 = 11.0;
 
 #[inline]
-fn eval_row(row: &Row) -> f32 {
+fn eval_row(row: Row) -> f32 {
     CACHE[row.0 as usize]
 }
 
@@ -56,9 +56,9 @@ fn monotonicity_row(row: [u8; 4]) -> f32 {
 
     for (&current, &next) in row.iter().zip(row.iter().skip(1)) {
         if current > next {
-            left += (current as i32).pow(4) - (next as i32).pow(4);
+            left += i32::from(current).pow(4) - i32::from(next).pow(4);
         } else if next > current {
-            right += (next as i32).pow(4) - (current as i32).pow(4);
+            right += i32::from(next).pow(4) - i32::from(current).pow(4);
         }
     }
 
@@ -82,5 +82,5 @@ fn adjacent_row(row: [u8; 4]) -> f32 {
 }
 
 fn sum_row(row: [u8; 4]) -> f32 {
-    -row.iter().map(|v| (*v as f32).powf(3.5)).sum::<f32>()
+    -row.iter().map(|v| f32::from(*v).powf(3.5)).sum::<f32>()
 }

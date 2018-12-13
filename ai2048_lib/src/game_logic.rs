@@ -23,13 +23,12 @@ pub const MOVES: [Move; 4] = [Move::Left, Move::Right, Move::Up, Move::Down];
 
 impl fmt::Display for Move {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let move_str = match *self {
-            Move::Down => "Down",
-            Move::Left => "Left",
-            Move::Right => "Right",
-            Move::Up => "Up",
-        };
-        move_str.fmt(f)
+        match *self {
+            Move::Down => "Down".fmt(f),
+            Move::Left => "Left".fmt(f),
+            Move::Right => "Right".fmt(f),
+            Move::Up => "Up".fmt(f),
+        }
     }
 }
 
@@ -169,11 +168,7 @@ impl Board {
 
     #[inline]
     pub fn is_terminal(self) -> bool {
-        MOVES
-            .iter()
-            .filter(|&&m| self.make_move(m) != self)
-            .next()
-            .is_none()
+        MOVES.iter().find(|&&m| self.make_move(m) != self).is_none()
     }
 
     /// Creates a new `Board` with a random tile (10% of times a `2`, 90% of times a `4`) added to a
@@ -184,17 +179,15 @@ impl Board {
         let mut board = self.unpack_log();
         let empty_cell_count = board.iter().flatten().filter(|v| **v == 0).count();
         let position = rng.gen_range(0, empty_cell_count);
-        let create_four = rng.gen_bool(0.1);
-        let value = if create_four { 2 } else { 1 };
 
-        let val = board
+        let value = board
             .iter_mut()
             .flatten()
             .filter(|v| **v == 0)
             .nth(position)
             .unwrap();
 
-        *val = value;
+        *value = if rng.gen_bool(0.1) { 2 } else { 1 };
 
         Board::from_log(board).unwrap()
     }
@@ -332,28 +325,28 @@ impl AiMoves {
                 if row.0 & 0b1111_0000_0000_0000 != 0 {
                     return None;
                 } else {
-                    row.0 + ((self.new_value as u16) << 12)
+                    row.0 + (u16::from(self.new_value) << 12)
                 }
             }
             1 => {
                 if row.0 & 0b0000_1111_0000_0000 != 0 {
                     return None;
                 } else {
-                    row.0 + ((self.new_value as u16) << 8)
+                    row.0 + (u16::from(self.new_value) << 8)
                 }
             }
             2 => {
                 if row.0 & 0b0000_0000_1111_0000 != 0 {
                     return None;
                 } else {
-                    row.0 + ((self.new_value as u16) << 4)
+                    row.0 + (u16::from(self.new_value) << 4)
                 }
             }
             3 => {
                 if row.0 & 0b0000_0000_0000_1111 != 0 {
                     return None;
                 } else {
-                    row.0 + (self.new_value as u16)
+                    row.0 + u16::from(self.new_value)
                 }
             }
             _ => unreachable!(),
@@ -429,7 +422,7 @@ fn move_row_left(row: Row) -> Row {
         to_row[last_index as usize] = last;
     }
 
-    Row::pack(to_row).unwrap_or(Row::default())
+    Row::pack(to_row).unwrap_or_default()
 }
 
 // Not much effort spent optimizing this, since it's going to be cached anyway
@@ -465,7 +458,7 @@ fn move_row_right(row: Row) -> Row {
         to_row[last_index as usize] = last;
     }
 
-    Row::pack(to_row).unwrap_or(Row::default())
+    Row::pack(to_row).unwrap_or_default()
 }
 
 lazy_static! {
