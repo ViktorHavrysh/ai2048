@@ -34,7 +34,6 @@ pub struct Searcher {
     min_probability: f32,
 }
 
-const MIN: f32 = -1_600_000f32;
 const PROBABILITY_OF2: f32 = 0.9;
 const PROBABILITY_OF4: f32 = 0.1;
 
@@ -91,7 +90,7 @@ impl Searcher {
         }
 
         let eval = if board.is_terminal() {
-            MIN
+            0f32
         } else if depth <= 0 || probability < self.min_probability {
             heuristic::eval(board)
         } else {
@@ -113,9 +112,7 @@ impl Searcher {
         depth: i8,
         cache: &mut HashMap<Board, (f32, f32)>,
     ) -> f32 {
-        let mut moves_with2 = Vec::with_capacity(4);
-        moves_with2.extend(board.ai_moves_with2());
-        let count = moves_with2.len() as f32;
+        let count = board.ai_moves_with2().count() as f32;
 
         let prob2 = probability * PROBABILITY_OF2 / count;
         let prob4 = probability * PROBABILITY_OF4 / count;

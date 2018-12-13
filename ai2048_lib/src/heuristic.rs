@@ -14,6 +14,7 @@ pub fn eval(board: Board) -> f32 {
         .sum()
 }
 
+const NOT_LOST: f32 = 1_600_000f32;
 const MONOTONICITY_STRENGTH: f32 = 47.0;
 const EMPTY_STRENGTH: f32 = 270.0;
 const ADJACENT_STRENGTH: f32 = 700.0;
@@ -43,7 +44,7 @@ fn eval_row_nocache(row: Row) -> f32 {
     let adjacent = adjacent_row(row) * ADJACENT_STRENGTH;
     let sum = sum_row(row) * SUM_STRENGTH;
 
-    monotonicity + empty + adjacent + sum
+    NOT_LOST + monotonicity + empty + adjacent + sum
 }
 
 fn empty_cell_count_row(row: [u8; 4]) -> f32 {

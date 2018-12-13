@@ -206,6 +206,7 @@ impl Board {
         AiMoves::new(self, 2)
     }
 
+    #[inline(always)]
     pub fn player_moves(self) -> impl Iterator<Item = (Move, Board)> {
         MOVES.iter().filter_map(move |&m| {
             let new_board = self.make_move(m);
@@ -354,8 +355,6 @@ impl AiMoves {
         let new_row = Row(new_row);
         let mut board = self.board;
         board.rows[self.x as usize] = new_row;
-        // println!("{:?}", board);
-        // ::std::thread::sleep(::std::time::Duration::from_millis(100));
         Some(board)
     }
 
@@ -381,7 +380,6 @@ impl Iterator for AiMoves {
             if !self.move_next() {
                 return None;
             }
-            // println!("x: {}, y: {}", self.x, self.y);
             if let Some(board) = self.fill_space_in_current() {
                 return Some(board);
             }
