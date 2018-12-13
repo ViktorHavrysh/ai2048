@@ -10,19 +10,9 @@
 //!
 //! The `SearchResult` and `SearchStatistics` types are containers for the results of the AI
 //! player's evaluation of a position and some interesting statistics.
-
-#![allow(unknown_lints)]
-#![deny(missing_docs)]
-
 #[macro_use]
 extern crate lazy_static;
 
-pub use crate::searcher::{AggregateSearchStatistics, SearchResult, SearchStatistics};
-
-pub mod agent;
-pub mod board;
-pub mod heuristic;
-
-mod search_tree;
-
-mod searcher;
+pub mod game_logic;
+mod heuristic;
+pub mod searcher;

@@ -39,7 +39,11 @@ pub(crate) struct Row(pub(crate) u16);
 impl fmt::Debug for Row {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let unpacked = self.unpack();
-        write!(f, "[{:0>4b} {:0>4b} {:0>4b} {:0>4b}]", unpacked[0], unpacked[1], unpacked[2], unpacked[3])
+        write!(
+            f,
+            "[{:0>4b} {:0>4b} {:0>4b} {:0>4b}]",
+            unpacked[0], unpacked[1], unpacked[2], unpacked[3]
+        )
     }
 }
 
@@ -163,6 +167,15 @@ impl Board {
         result
     }
 
+    #[inline]
+    pub fn is_terminal(self) -> bool {
+        MOVES
+            .iter()
+            .filter(|&&m| self.make_move(m) != self)
+            .next()
+            .is_none()
+    }
+
     /// Creates a new `Board` with a random tile (10% of times a `2`, 90% of times a `4`) added to a
     /// random empty cell on the board.
     pub fn add_random_tile(self) -> Board {
@@ -189,15 +202,26 @@ impl Board {
     /// Returns all possible `Board`s that can result from the computer spawning a `2` in a random
     /// empty cell.
     #[inline(always)]
-    pub fn ai_moves_with2(self) -> impl Iterator<Item=Board> {
+    pub fn ai_moves_with2(self) -> impl Iterator<Item = Board> {
         AiMoves::new(self, 1)
     }
 
     /// Returns all possible `Board`s that can result from the computer spawning a `4` in a random
     /// empty cell.
     #[inline(always)]
-    pub fn ai_moves_with4(self) -> impl Iterator<Item=Board> {
+    pub fn ai_moves_with4(self) -> impl Iterator<Item = Board> {
         AiMoves::new(self, 2)
+    }
+
+    pub fn player_moves(self) -> impl Iterator<Item = (Move, Board)> {
+        MOVES.iter().filter_map(move |&m| {
+            let new_board = self.make_move(m);
+            if new_board == self {
+                None
+            } else {
+                Some((m, new_board))
+            }
+        })
     }
 
     /// Gets a transposed copy of the `Board`.
@@ -296,7 +320,7 @@ impl AiMoves {
             board,
             x: 0,
             y: -1,
-            new_value
+            new_value,
         }
     }
 
@@ -332,7 +356,7 @@ impl AiMoves {
                     row.0 + (self.new_value as u16)
                 }
             }
-            _ => unreachable!()
+            _ => unreachable!(),
         };
         let new_row = Row(new_row);
         let mut board = self.board;
@@ -620,5 +644,59 @@ mod tests {
         let actual = board.ai_moves_with4().collect::<Vec<_>>();
 
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn can_make_player_moves() {
+        let board =
+            Board::from_human([[0, 0, 0, 2], [0, 2, 0, 2], [4, 0, 0, 2], [0, 0, 0, 2]]).unwrap();
+
+        let mut player_moves = board.player_moves();
+
+        assert_eq!(
+            Some((
+                Move::Left,
+                Board::from_human([[2, 0, 0, 0], [4, 0, 0, 0], [4, 2, 0, 0], [2, 0, 0, 0]])
+                    .unwrap()
+            )),
+            player_moves.next()
+        );
+        assert_eq!(
+            Some((
+                Move::Right,
+                Board::from_human([[0, 0, 0, 2], [0, 0, 0, 4], [0, 0, 4, 2], [0, 0, 0, 2],])
+                    .unwrap()
+            )),
+            player_moves.next()
+        );
+        assert_eq!(
+            Some((
+                Move::Up,
+                Board::from_human([[4, 2, 0, 4], [0, 0, 0, 4], [0, 0, 0, 0], [0, 0, 0, 0],])
+                    .unwrap()
+            )),
+            player_moves.next()
+        );
+        assert_eq!(
+            Some((
+                Move::Down,
+                Board::from_human([[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 4], [4, 2, 0, 4],])
+                    .unwrap()
+            )),
+            player_moves.next()
+        );
+        assert_eq!(None, player_moves.next());
+    }
+
+    #[test]
+    fn can_detect_terminal_state() {
+        let terminal_board =
+            Board::from_human([[4, 16, 8, 4], [8, 128, 32, 2], [2, 32, 16, 8], [4, 2, 4, 2]])
+                .unwrap();
+        let normal_board =
+            Board::from_human([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap();
+
+        assert!(terminal_board.is_terminal());
+        assert!(!normal_board.is_terminal());
     }
 }
