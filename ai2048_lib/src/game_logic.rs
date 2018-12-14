@@ -67,6 +67,25 @@ impl Row {
         let col3 = (row & 0b0000_0000_0000_1111) as u8;
         [col0, col1, col2, col3]
     }
+
+    fn reverse(self) -> Self {
+        Row((self.0 >> 12) | ((self.0 >> 4) & 0x00F0) | ((self.0 << 4) & 0x0F00) | (self.0 << 12))
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+struct Column(u64);
+
+impl Column {
+    fn from_row(row: Row) -> Self {
+        let mut col = Column::default();
+        col.0 = (u64::from(row.0)
+            | u64::from(row.0) << 12
+            | u64::from(row.0) << 24
+            | u64::from(row.0) << 36)
+            & 0x000F_000F_000F_000f;
+        col
+    }
 }
 
 /// `Board` saves its state as a 4x4 array of `u8` values.
@@ -81,10 +100,8 @@ impl Row {
 /// given a move a player makes, or all possible states following the computer spawning a random
 /// tile. Unsurprisingly, in order to write an AI for a game, the AI needs an emulation of the
 /// game itself.
-#[derive(Eq, PartialEq, Hash, Copy, Clone, Debug, Default)]
-pub struct Board {
-    pub(crate) rows: [Row; 4],
-}
+#[derive(Eq, PartialEq, Hash, Copy, Clone, Default)]
+pub struct Board(u64);
 
 impl fmt::Display for Board {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -93,6 +110,16 @@ impl fmt::Display for Board {
                 write!(f, "{number:>width$}", number = cell, width = 6)?;
             }
             writeln!(f)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl fmt::Debug for Board {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for row in self.rows().iter() {
+            write!(f, "{:?} ", row)?;
         }
 
         Ok(())
@@ -116,20 +143,10 @@ fn to_log(n: u32) -> Option<u8> {
 }
 
 impl Board {
-    /// Creates a new `Board` from an array of logarithmic numbers. (0 = 0, 1 = 2, 2 = 4, etc). Fails
-    /// to create a board if any one value is larger than 15, that is 32768 in human-readable format.
-    pub fn from_log(grid: [[u8; 4]; 4]) -> Option<Board> {
-        let mut board = Board::default();
-        for (x, &row) in grid.iter().enumerate() {
-            board.rows[x] = Row::pack(row)?;
-        }
-        Some(board)
-    }
-
     /// Creates a new `Board` from an array of human-looking numbers. If a tile fails to be
     /// a power of 2, or is larger than 32768, returns `None`.
     pub fn from_human(grid: [[u32; 4]; 4]) -> Option<Board> {
-        let mut board = Board::default();
+        let mut rows = [Row::default(); 4];
         for (x, &row) in grid.iter().enumerate() {
             let mut new_row = [0u8; 4];
             for (y, &cell) in row.iter().enumerate() {
@@ -137,18 +154,9 @@ impl Board {
                 new_row[y] = log;
             }
 
-            board.rows[x] = Row::pack(new_row)?;
+            rows[x] = Row::pack(new_row)?;
         }
-        Some(board)
-    }
-
-    /// Unpacks a logarithmic representation from `Board`'s internal representation
-    pub fn unpack_log(self) -> [[u8; 4]; 4] {
-        let mut result = [[0; 4]; 4];
-        for (x, row) in self.rows.iter().enumerate() {
-            result[x] = row.unpack();
-        }
-        result
+        Some(Board::from_rows(rows))
     }
 
     /// Unpacks a human-readable representation from `Board`'s internal representation
@@ -166,7 +174,52 @@ impl Board {
         result
     }
 
-    #[inline]
+    pub(crate) fn from_log(grid: [[u8; 4]; 4]) -> Option<Board> {
+        let mut rows = [Row::default(); 4];
+        for (x, &row) in grid.iter().enumerate() {
+            rows[x] = Row::pack(row)?;
+        }
+        Some(Board::from_rows(rows))
+    }
+
+    pub(crate) fn unpack_log(self) -> [[u8; 4]; 4] {
+        let mut result = [[0; 4]; 4];
+        for (x, row) in self.rows().iter().enumerate() {
+            result[x] = row.unpack();
+        }
+        result
+    }
+
+    #[inline(always)]
+    pub(crate) fn rows(&self) -> [Row; 4] {
+        let row1 = Row(((self.0 & 0xFFFF_0000_0000_0000) >> 48) as u16);
+        let row2 = Row(((self.0 & 0x0000_FFFF_0000_0000) >> 32) as u16);
+        let row3 = Row(((self.0 & 0x0000_0000_FFFF_0000) >> 16) as u16);
+        let row4 = Row((self.0 & 0x0000_0000_0000_FFFF) as u16);
+        [row1, row2, row3, row4]
+    }
+
+    #[inline(always)]
+    pub(crate) fn from_rows(rows: [Row; 4]) -> Self {
+        let mut board = Board::default();
+        board.0 |= u64::from(rows[0].0) << 48;
+        board.0 |= u64::from(rows[1].0) << 32;
+        board.0 |= u64::from(rows[2].0) << 16;
+        board.0 |= u64::from(rows[3].0);
+        board
+    }
+
+    #[inline(always)]
+    fn from_columns(columns: [Column; 4]) -> Self {
+        let mut board = Board::default();
+        board.0 |= columns[0].0 << 12;
+        board.0 |= columns[1].0 << 8;
+        board.0 |= columns[2].0 << 4;
+        board.0 |= columns[3].0;
+        board
+    }
+
+    #[inline(always)]
     pub fn is_terminal(self) -> bool {
         MOVES.iter().find(|&&m| self.make_move(m) != self).is_none()
     }
@@ -221,39 +274,33 @@ impl Board {
     /// Gets a transposed copy of the `Board`.
     #[inline(always)]
     pub fn transpose(self) -> Board {
-        let row0 = self.rows[0].0;
-        let row1 = self.rows[1].0;
-        let row2 = self.rows[2].0;
-        let row3 = self.rows[3].0;
+        let x = self.0;
+        let a1 = x & 0xF0F00F0FF0F00F0F;
+        let a2 = x & 0x0000F0F00000F0F0;
+        let a3 = x & 0x0F0F00000F0F0000;
+        let a = a1 | (a2 << 12) | (a3 >> 12);
+        let b1 = a & 0xFF00FF0000FF00FF;
+        let b2 = a & 0x00FF00FF00000000;
+        let b3 = a & 0x00000000FF00FF00;
+        let ret = b1 | (b2 >> 24) | (b3 << 24);
+        Board(ret)
+    }
 
-        let row0_trans = (row0 & 0b1111_0000_0000_0000)
-            + ((row1 & 0b1111_0000_0000_0000) >> 4)
-            + ((row2 & 0b1111_0000_0000_0000) >> 8)
-            + ((row3 & 0b1111_0000_0000_0000) >> 12);
-
-        let row1_trans = ((row0 & 0b0000_1111_0000_0000) << 4)
-            + (row1 & 0b0000_1111_0000_0000)
-            + ((row2 & 0b0000_1111_0000_0000) >> 4)
-            + ((row3 & 0b0000_1111_0000_0000) >> 8);
-
-        let row2_trans = ((row0 & 0b0000_0000_1111_0000) << 8)
-            + ((row1 & 0b0000_0000_1111_0000) << 4)
-            + (row2 & 0b0000_0000_1111_0000)
-            + ((row3 & 0b0000_0000_1111_0000) >> 4);
-
-        let row3_trans = ((row0 & 0b0000_0000_0000_1111) << 12)
-            + ((row1 & 0b0000_0000_0000_1111) << 8)
-            + ((row2 & 0b0000_0000_0000_1111) << 4)
-            + (row3 & 0b0000_0000_0000_1111);
-
-        Board {
-            rows: [
-                Row(row0_trans),
-                Row(row1_trans),
-                Row(row2_trans),
-                Row(row3_trans),
-            ],
-        }
+    #[inline(always)]
+    pub fn count_empty(self) -> usize {
+        let mut x = self.0;
+        x |= (x >> 2) & 0x3333333333333333;
+        x |= x >> 1;
+        x = (!x) & 0x1111111111111111;
+        // At this point each nibble is:
+        //  0 if the original nibble was non-zero
+        //  1 if the original nibble was zero
+        // Next sum them all
+        x += x >> 32;
+        x += x >> 16;
+        x += x >> 8;
+        x += x >> 4; // this can overflow to the next nibble if there were 16 empty positions
+        return (x & 0xf) as usize;
     }
 
     /// Returns a `Board` that would result from making a certain `Move` in the current state.
@@ -262,49 +309,56 @@ impl Board {
         match mv {
             Move::Left => self.move_left(),
             Move::Right => self.move_right(),
-            Move::Up => self.transpose().move_left().transpose(),
-            Move::Down => self.transpose().move_right().transpose(),
+            Move::Up => self.move_up(),
+            Move::Down => self.move_down(),
         }
     }
 
     #[inline(always)]
     fn move_left(self) -> Board {
-        let mut board = Board::default();
-
-        for (to_row, from_row) in board.rows.iter_mut().zip(self.rows.iter()) {
-            *to_row = Self::move_row_left_cached(*from_row);
-        }
-
-        board
+        let rows = self.rows();
+        let row0 = CACHE_LEFT[rows[0].0 as usize];
+        let row1 = CACHE_LEFT[rows[1].0 as usize];
+        let row2 = CACHE_LEFT[rows[2].0 as usize];
+        let row3 = CACHE_LEFT[rows[3].0 as usize];
+        Board::from_rows([row0, row1, row2, row3])
     }
 
     #[inline(always)]
     fn move_right(self) -> Board {
-        let mut board = Board::default();
-
-        for (to_row, from_row) in board.rows.iter_mut().zip(self.rows.iter()) {
-            *to_row = Self::move_row_right_cached(*from_row)
-        }
-
-        board
+        let rows = self.rows();
+        let row0 = CACHE_RIGHT[rows[0].0 as usize];
+        let row1 = CACHE_RIGHT[rows[1].0 as usize];
+        let row2 = CACHE_RIGHT[rows[2].0 as usize];
+        let row3 = CACHE_RIGHT[rows[3].0 as usize];
+        Board::from_rows([row0, row1, row2, row3])
     }
 
     #[inline(always)]
-    fn move_row_left_cached(row: Row) -> Row {
-        CACHE_LEFT[row.0 as usize]
+    fn move_up(self) -> Board {
+        let rows = self.transpose().rows();
+        let col0 = CACHE_UP[rows[0].0 as usize];
+        let col1 = CACHE_UP[rows[1].0 as usize];
+        let col2 = CACHE_UP[rows[2].0 as usize];
+        let col3 = CACHE_UP[rows[3].0 as usize];
+        Board::from_columns([col0, col1, col2, col3])
     }
 
     #[inline(always)]
-    fn move_row_right_cached(row: Row) -> Row {
-        CACHE_RIGHT[row.0 as usize]
+    fn move_down(self) -> Board {
+        let rows = self.transpose().rows();
+        let col0 = CACHE_DOWN[rows[0].0 as usize];
+        let col1 = CACHE_DOWN[rows[1].0 as usize];
+        let col2 = CACHE_DOWN[rows[2].0 as usize];
+        let col3 = CACHE_DOWN[rows[3].0 as usize];
+        Board::from_columns([col0, col1, col2, col3])
     }
 }
 
 struct AiMoves {
     board: Board,
-    x: u8,
-    y: i8,
-    new_value: u8,
+    index: i8,
+    val: u8,
 }
 
 impl AiMoves {
@@ -312,63 +366,9 @@ impl AiMoves {
     fn new(board: Board, new_value: u8) -> AiMoves {
         AiMoves {
             board,
-            x: 0,
-            y: -1,
-            new_value,
+            index: 16,
+            val: new_value,
         }
-    }
-
-    #[inline(always)]
-    fn fill_space_in_current(&self) -> Option<Board> {
-        let row = self.board.rows[self.x as usize];
-        let new_row = match self.y {
-            0 => {
-                if row.0 & 0b1111_0000_0000_0000 != 0 {
-                    return None;
-                } else {
-                    row.0 + (u16::from(self.new_value) << 12)
-                }
-            }
-            1 => {
-                if row.0 & 0b0000_1111_0000_0000 != 0 {
-                    return None;
-                } else {
-                    row.0 + (u16::from(self.new_value) << 8)
-                }
-            }
-            2 => {
-                if row.0 & 0b0000_0000_1111_0000 != 0 {
-                    return None;
-                } else {
-                    row.0 + (u16::from(self.new_value) << 4)
-                }
-            }
-            3 => {
-                if row.0 & 0b0000_0000_0000_1111 != 0 {
-                    return None;
-                } else {
-                    row.0 + u16::from(self.new_value)
-                }
-            }
-            _ => unreachable!(),
-        };
-        let new_row = Row(new_row);
-        let mut board = self.board;
-        board.rows[self.x as usize] = new_row;
-        Some(board)
-    }
-
-    #[inline(always)]
-    fn move_next(&mut self) -> bool {
-        if self.x == 3 && self.y == 3 {
-            return false;
-        }
-        if self.y == 3 {
-            self.x += 1;
-            self.y = -1;
-        }
-        self.y += 1;
-        true
     }
 }
 
@@ -377,11 +377,15 @@ impl Iterator for AiMoves {
     #[inline(always)]
     fn next(&mut self) -> Option<Board> {
         loop {
-            if !self.move_next() {
+            self.index -= 1;
+            if self.index < 0 {
                 return None;
             }
-            if let Some(board) = self.fill_space_in_current() {
-                return Some(board);
+            let mask = 0b1111u64 << (self.index * 4);
+            if (self.board.0 & mask) == 0 {
+                return Some(Board(
+                    self.board.0 | u64::from(self.val) << (self.index * 4),
+                ));
             }
         }
     }
@@ -423,42 +427,6 @@ fn move_row_left(row: Row) -> Row {
     Row::pack(to_row).unwrap_or_default()
 }
 
-// Not much effort spent optimizing this, since it's going to be cached anyway
-fn move_row_right(row: Row) -> Row {
-    let from_row = row.unpack();
-
-    let mut to_row = [0; 4];
-    let mut last = 0;
-    let mut last_index = 3;
-
-    for &current in from_row.iter().rev() {
-        if current == 0 {
-            continue;
-        }
-
-        if last == 0 {
-            last = current;
-            continue;
-        }
-
-        if current == last {
-            to_row[last_index as usize] = last + 1;
-            last = 0;
-        } else {
-            to_row[last_index as usize] = last;
-            last = current;
-        }
-
-        last_index += -1;
-    }
-
-    if last != 0 {
-        to_row[last_index as usize] = last;
-    }
-
-    Row::pack(to_row).unwrap_or_default()
-}
-
 lazy_static! {
     static ref CACHE_LEFT: [Row; u16::MAX as usize] = {
         let mut cache = [Row::default(); u16::MAX as usize];
@@ -471,9 +439,22 @@ lazy_static! {
     static ref CACHE_RIGHT: [Row; u16::MAX as usize] = {
         let mut cache = [Row::default(); u16::MAX as usize];
         for (index, row) in cache.iter_mut().enumerate() {
-            *row = move_row_right(Row(index as u16));
+            *row = move_row_left(Row(index as u16).reverse()).reverse();
         }
-
+        cache
+    };
+    static ref CACHE_UP: [Column; u16::MAX as usize] = {
+        let mut cache = [Column::default(); u16::MAX as usize];
+        for (index, col) in cache.iter_mut().enumerate() {
+            *col = Column::from_row(CACHE_LEFT[index]);
+        }
+        cache
+    };
+    static ref CACHE_DOWN: [Column; u16::MAX as usize] = {
+        let mut cache = [Column::default(); u16::MAX as usize];
+        for (index, col) in cache.iter_mut().enumerate() {
+            *col = Column::from_row(CACHE_RIGHT[index]);
+        }
         cache
     };
 }
@@ -494,17 +475,17 @@ mod tests {
 
     #[test]
     fn can_create_board_from_human_input() {
-        let expected: [[u8; 4]; 4] = [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12, 13, 14, 15]];
-
-        let actual = Board::from_human([
+        let human = [
             [0, 2, 4, 8],
             [16, 32, 64, 128],
             [256, 512, 1024, 2048],
             [4096, 8192, 16384, 32768],
-        ]);
+        ];
+
+        let actual = Board::from_human(human);
 
         assert!(actual.is_some());
-        assert_eq!(expected, actual.unwrap().unpack_log());
+        assert_eq!(human, actual.unwrap().unpack_human());
     }
 
     #[test]
@@ -689,5 +670,54 @@ mod tests {
 
         assert!(terminal_board.is_terminal());
         assert!(!normal_board.is_terminal());
+    }
+
+    #[test]
+    fn can_transpose() {
+        let board = Board::from_human([
+            [1, 2, 4, 8],
+            [16, 32, 64, 128],
+            [256, 512, 1024, 2048],
+            [4096, 8192, 16384, 32768],
+        ])
+        .unwrap();
+        let expected = Board::from_human([
+            [1, 16, 256, 4096],
+            [2, 32, 512, 8192],
+            [4, 64, 1024, 16384],
+            [8, 128, 2048, 32768],
+        ])
+        .unwrap();
+        let transposed = board.transpose();
+        assert_eq!(transposed, expected);
+    }
+
+    #[test]
+    fn can_to_rows_from_rows() {
+        let board = Board::from_human([
+            [1, 2, 4, 8],
+            [16, 32, 64, 128],
+            [256, 512, 1024, 2048],
+            [4096, 8192, 16384, 32768],
+        ])
+        .unwrap();
+
+        let roundtrip = Board::from_rows(board.rows());
+
+        assert_eq!(roundtrip, board);
+    }
+
+    #[test]
+    fn can_make_board_from_columns() {
+        let col0 = Column::from_row(Row::pack([0, 4, 8, 12]).unwrap());
+        let col1 = Column::from_row(Row::pack([1, 5, 9, 13]).unwrap());
+        let col2 = Column::from_row(Row::pack([2, 6, 10, 14]).unwrap());
+        let col3 = Column::from_row(Row::pack([3, 7, 11, 15]).unwrap());
+        let board = Board::from_columns([col0, col1, col2, col3]);
+        let expected =
+            Board::from_log([[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12, 13, 14, 15]])
+                .unwrap();
+
+        assert_eq!(board, expected);
     }
 }

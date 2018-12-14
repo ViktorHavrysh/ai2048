@@ -2,8 +2,10 @@
 
 use crate::game_logic::{Board, Move};
 use crate::heuristic;
-use hashbrown::HashMap;
 use itertools::Itertools;
+//use std::collections::HashMap;
+//use hashbrown::HashMap;
+use fnv::FnvHashMap as HashMap;
 use std::f32;
 
 /// Return a number of interesting statistics together with a recommendation for the best move.
@@ -47,7 +49,7 @@ impl Searcher {
     }
 
     pub fn search(&self, board: Board) -> SearchResult {
-        let mut cache = HashMap::new();
+        let mut cache = HashMap::default();
         let move_evaluations = board
             .player_moves()
             .map(|(m, b)| {
@@ -112,7 +114,7 @@ impl Searcher {
         depth: i8,
         cache: &mut HashMap<Board, (f32, f32)>,
     ) -> f32 {
-        let count = board.ai_moves_with2().count() as f32;
+        let count = board.count_empty() as f32;
 
         let prob2 = probability * PROBABILITY_OF2 / count;
         let prob4 = probability * PROBABILITY_OF4 / count;

@@ -3,6 +3,7 @@ use ai2048_lib::searcher::{SearchResult, Searcher};
 use chrono::prelude::*;
 use futures::Future;
 use futures_cpupool::CpuPool;
+use std::alloc::System;
 use std::fmt::{self, Write};
 use std::sync::mpsc;
 
@@ -39,6 +40,9 @@ impl From<mpsc::SendError<Signal>> for Error {
         Error::Send(error)
     }
 }
+
+#[global_allocator]
+static A: System = System;
 
 fn main() -> Result<(), Error> {
     let pool = CpuPool::new_num_cpus();
@@ -102,43 +106,43 @@ fn build_display(
 
     writeln!(&mut s, "{}", result.root_board)?;
 
-    writeln!(&mut s, "Total moves: {:>10}\n", moves)?;
+    writeln!(&mut s, "Total moves:  {:>10}\n", moves)?;
 
-    writeln!(&mut s, "Cache size: {:>10}\n", result.stats.cache_size)?;
-
-    writeln!(
-        &mut s,
-        "Time taken for one move:            {:>16} ms",
-        one.num_milliseconds()
-    )?;
-    writeln!(
-        &mut s,
-        "Time taken for one move on average: {:>16} ms",
-        overall.num_milliseconds() / moves as i64
-    )?;
-    writeln!(
-        &mut s,
-        "Time taken for all moves:           {:>16} ms\n",
-        overall.num_milliseconds()
-    )?;
+    writeln!(&mut s, "Cache size:   {:>10}\n", result.stats.cache_size)?;
 
     for mv in &MOVES {
         write!(&mut s, "{:>6}: ", mv)?;
         match result.move_evaluations.get(mv) {
-            Some(eval) => writeln!(&mut s, "{eval:>16.*}", 3, eval = eval)?,
-            None => writeln!(&mut s, "{:>16}", "illegal move")?,
+            Some(eval) => writeln!(&mut s, "{eval:>16.*}", 0, eval = eval)?,
+            None => writeln!(&mut s, "{:>16}", "illegal")?,
         }
     }
 
     if let Some((_, eval)) = result.best_move {
         writeln!(&mut s)?;
-        writeln!(&mut s, "  Best: {eval:>16.*}", 3, eval = eval)?;
+        writeln!(&mut s, "  Best: {eval:>16.*}", 0, eval = eval)?;
     }
 
     writeln!(&mut s)?;
 
     writeln!(&mut s, "Depth: {}", SEARCH_DEPTH)?;
-    writeln!(&mut s, "Cutoff probability: {}", MIN_PROBABILITY)?;
+    writeln!(&mut s, "Cutoff probability: {}\n", MIN_PROBABILITY)?;
+
+    writeln!(
+        &mut s,
+        "Time taken:            {:>8} ms",
+        one.num_milliseconds()
+    )?;
+    writeln!(
+        &mut s,
+        "Time taken on average: {:>8} ms",
+        overall.num_milliseconds() / moves as i64
+    )?;
+    writeln!(
+        &mut s,
+        "Time since game start: {:>8} ms\n",
+        overall.num_milliseconds()
+    )?;
 
     Ok(s)
 }

@@ -4,12 +4,12 @@ use std::cmp;
 use std::i32;
 use std::u16;
 
-#[inline]
+#[inline(always)]
 pub fn eval(board: Board) -> f32 {
     board
-        .rows
+        .rows()
         .iter()
-        .chain(board.transpose().rows.iter())
+        .chain(board.transpose().rows().iter())
         .map(|&r| eval_row(r))
         .sum()
 }
@@ -20,7 +20,7 @@ const EMPTY_STRENGTH: f32 = 270.0;
 const ADJACENT_STRENGTH: f32 = 700.0;
 const SUM_STRENGTH: f32 = 11.0;
 
-#[inline]
+#[inline(always)]
 fn eval_row(row: Row) -> f32 {
     CACHE[row.0 as usize]
 }
