@@ -190,7 +190,6 @@ impl Board {
         result
     }
 
-    #[inline(always)]
     pub(crate) fn rows(&self) -> [Row; 4] {
         let row1 = Row(((self.0 & 0xFFFF_0000_0000_0000) >> 48) as u16);
         let row2 = Row(((self.0 & 0x0000_FFFF_0000_0000) >> 32) as u16);
@@ -199,7 +198,6 @@ impl Board {
         [row1, row2, row3, row4]
     }
 
-    #[inline(always)]
     pub(crate) fn from_rows(rows: [Row; 4]) -> Self {
         let mut board = Board::default();
         board.0 |= u64::from(rows[0].0) << 48;
@@ -209,7 +207,6 @@ impl Board {
         board
     }
 
-    #[inline(always)]
     fn from_columns(columns: [Column; 4]) -> Self {
         let mut board = Board::default();
         board.0 |= columns[0].0 << 12;
@@ -219,7 +216,6 @@ impl Board {
         board
     }
 
-    #[inline(always)]
     pub fn is_terminal(self) -> bool {
         MOVES.iter().find(|&&m| self.make_move(m) != self).is_none()
     }
@@ -247,19 +243,18 @@ impl Board {
 
     /// Returns all possible `Board`s that can result from the computer spawning a `2` in a random
     /// empty cell.
-    #[inline(always)]
+
     pub fn ai_moves_with2(self) -> impl Iterator<Item = Board> {
         AiMoves::new(self, 1)
     }
 
     /// Returns all possible `Board`s that can result from the computer spawning a `4` in a random
     /// empty cell.
-    #[inline(always)]
+
     pub fn ai_moves_with4(self) -> impl Iterator<Item = Board> {
         AiMoves::new(self, 2)
     }
 
-    #[inline(always)]
     pub fn player_moves(self) -> impl Iterator<Item = (Move, Board)> {
         MOVES.iter().filter_map(move |&m| {
             let new_board = self.make_move(m);
@@ -272,7 +267,7 @@ impl Board {
     }
 
     /// Gets a transposed copy of the `Board`.
-    #[inline(always)]
+
     pub fn transpose(self) -> Board {
         let x = self.0;
         let a1 = x & 0xF0F00F0FF0F00F0F;
@@ -286,7 +281,6 @@ impl Board {
         Board(ret)
     }
 
-    #[inline(always)]
     pub fn count_empty(self) -> usize {
         let mut x = self.0;
         x |= (x >> 2) & 0x3333333333333333;
@@ -304,7 +298,7 @@ impl Board {
     }
 
     /// Returns a `Board` that would result from making a certain `Move` in the current state.
-    #[inline(always)]
+
     pub fn make_move(self, mv: Move) -> Board {
         match mv {
             Move::Left => self.move_left(),
@@ -314,7 +308,6 @@ impl Board {
         }
     }
 
-    #[inline(always)]
     fn move_left(self) -> Board {
         let rows = self.rows();
         let row0 = CACHE_LEFT[rows[0].0 as usize];
@@ -324,7 +317,6 @@ impl Board {
         Board::from_rows([row0, row1, row2, row3])
     }
 
-    #[inline(always)]
     fn move_right(self) -> Board {
         let rows = self.rows();
         let row0 = CACHE_RIGHT[rows[0].0 as usize];
@@ -334,7 +326,6 @@ impl Board {
         Board::from_rows([row0, row1, row2, row3])
     }
 
-    #[inline(always)]
     fn move_up(self) -> Board {
         let rows = self.transpose().rows();
         let col0 = CACHE_UP[rows[0].0 as usize];
@@ -344,7 +335,6 @@ impl Board {
         Board::from_columns([col0, col1, col2, col3])
     }
 
-    #[inline(always)]
     fn move_down(self) -> Board {
         let rows = self.transpose().rows();
         let col0 = CACHE_DOWN[rows[0].0 as usize];
@@ -362,7 +352,6 @@ struct AiMoves {
 }
 
 impl AiMoves {
-    #[inline(always)]
     fn new(board: Board, new_value: u8) -> AiMoves {
         AiMoves {
             board,
@@ -374,7 +363,7 @@ impl AiMoves {
 
 impl Iterator for AiMoves {
     type Item = Board;
-    #[inline(always)]
+
     fn next(&mut self) -> Option<Board> {
         loop {
             self.index -= 1;

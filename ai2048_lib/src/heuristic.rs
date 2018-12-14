@@ -1,10 +1,8 @@
 use crate::game_logic::{Board, Row};
-use bytecount;
 use std::cmp;
 use std::i32;
 use std::u16;
 
-#[inline(always)]
 pub fn eval(board: Board) -> f32 {
     board
         .rows()
@@ -20,7 +18,6 @@ const EMPTY_STRENGTH: f32 = 270.0;
 const ADJACENT_STRENGTH: f32 = 700.0;
 const SUM_STRENGTH: f32 = 11.0;
 
-#[inline(always)]
 fn eval_row(row: Row) -> f32 {
     CACHE[row.0 as usize]
 }
@@ -48,7 +45,7 @@ fn eval_row_nocache(row: Row) -> f32 {
 }
 
 fn empty_cell_count_row(row: [u8; 4]) -> f32 {
-    bytecount::count(&row, 0) as f32
+    row.iter().filter(|&&c| c == 0).count() as f32
 }
 
 fn monotonicity_row(row: [u8; 4]) -> f32 {

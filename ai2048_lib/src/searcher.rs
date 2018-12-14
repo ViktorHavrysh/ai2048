@@ -2,7 +2,6 @@
 
 use crate::game_logic::{Board, Move};
 use crate::heuristic;
-use itertools::Itertools;
 use std::f32;
 
 use std::collections::HashMap;
@@ -50,21 +49,20 @@ impl Searcher {
 
     pub fn search(&self, board: Board) -> SearchResult {
         let mut cache = Cache::default();
-        let move_evaluations = board
+        let mut move_evaluations = board
             .player_moves()
             .map(|(m, b)| {
                 let eval =
                     self.computer_move_eval(b, 1.0f32, self.max_search_depth as i8, &mut cache);
                 (m, eval)
             })
-            .collect::<HashMap<Move, f32>>();
+            .collect::<Vec<_>>();
 
-        let best_move = move_evaluations
-            .iter()
-            .sorted_by(|a, b| b.1.partial_cmp(a.1).unwrap())
-            .into_iter()
-            .map(|(mv, eval)| (*mv, *eval))
-            .next();
+        move_evaluations.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+
+        let best_move = move_evaluations.iter().cloned().next();
+
+        let move_evaluations = move_evaluations.into_iter().collect();
 
         let stats = SearchStats {
             cache_size: cache.len(),

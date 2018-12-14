@@ -7,19 +7,6 @@ edition = "2018"
 
 [dependencies]
 hashbrown = "0.1"
-itertools = "0.7"
 lazy_static = "0.2"
 rand = "0.5"
-bytecount = "0.4"
 fnv = "1.0"
-
-[profile]
-
-[profile.dev]
-codegen-units = 4
-
-[profile.release]
-debug = true
-lto = true
-opt-level = 2
-codegen-units = 1

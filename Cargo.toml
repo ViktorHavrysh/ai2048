@@ -18,9 +18,11 @@ path = "./ai2048_lib"
 
 [profile.dev]
 codegen-units = 4
+panic = "abort"
 
 [profile.release]
 debug = true
 lto = true
 opt-level = 3
 codegen-units = 1
+panic = "abort"
