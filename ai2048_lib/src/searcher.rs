@@ -56,7 +56,7 @@ impl Searcher {
 
     pub fn search(&self, board: Board) -> SearchResult {
         let mut state = SearchState::default();
-        let depth = std::cmp::max(3, board.count_distinct_cells() - 2) as i8;
+        let depth = std::cmp::max(3, (board.count_distinct_cells() as i8) - 2);
         let mut move_evaluations = board
             .player_moves()
             .map(|(m, b)| {
