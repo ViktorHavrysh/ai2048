@@ -1,9 +1,8 @@
 import { Grid } from './grid.js';
 import { Tile } from './tile.js';
 
-import("../ai2048-wasm/pkg").then(module => {
-  module.run();
-});
+const ai2048 = import("../ai2048-wasm/pkg");
+ai2048.then(m => m.run());
 
 export class GameManager {
   constructor(size, InputManager, Actuator, StorageManager) {
@@ -15,10 +14,12 @@ export class GameManager {
     this.inputManager.on("move", this.move.bind(this));
     this.inputManager.on("restart", this.restart.bind(this));
     this.inputManager.on("keepPlaying", this.keepPlaying.bind(this));
+    this.inputManager.on("run", this.run.bind(this));
     this.setup();
   }
   // Restart the game
   restart() {
+    this.ai_on = false;
     this.storageManager.clearGameState();
     this.actuator.continueGame(); // Clear the game won/lost message
     this.setup();
@@ -27,6 +28,30 @@ export class GameManager {
   keepPlaying() {
     this.keepPlaying = true;
     this.actuator.continueGame(); // Clear the game won/lost message
+  }
+  run() {
+    this.ai_on = !this.ai_on;
+    this.run_loop()
+  }
+  run_loop() {
+    if (!this.ai_on)
+      return;
+
+    let b = [];
+    this.grid.cells.forEach(row => row.forEach(tile => {
+      if (tile == null) {
+        b.push(0);
+      } else {
+        b.push(tile.value);
+      }
+    }));
+    let board = new Uint32Array(b);
+    ai2048.then(m => {
+      let mv = m.evaluate_position(board);
+      if (mv == 4 || !this.ai_on) return;
+      this.move(mv);
+      setTimeout(() => this.run_loop(), 100);
+    });
   }
   // Return true if the game is lost, or has won and the user hasn't kept playing
   isGameTerminated() {
@@ -49,6 +74,7 @@ export class GameManager {
       this.over = false;
       this.won = false;
       this.keepPlaying = false;
+      this.ai_on = false;
       // Add the initial tiles
       this.addStartTiles();
     }
@@ -144,8 +170,8 @@ export class GameManager {
             tile.updatePosition(positions.next);
             // Update the score
             self.score += merged.value;
-            // The mighty 2048 tile
-            if (merged.value === 2048)
+            // The mighty 65536 tile
+            if (merged.value === 65536)
               self.won = true;
           }
           else {

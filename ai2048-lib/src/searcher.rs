@@ -6,6 +6,7 @@ use std::f32;
 
 use std::collections::HashMap;
 type Cache<K, V> = hashbrown::HashMap<K, V, fnv::FnvBuildHasher>;
+// type Cache<K, V> = HashMap<K, V, fnv::FnvBuildHasher>;
 
 /// Return a number of interesting statistics together with a recommendation for the best move.
 #[derive(Clone, Debug)]

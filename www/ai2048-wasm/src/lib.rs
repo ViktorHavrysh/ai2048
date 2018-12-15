@@ -1,9 +1,8 @@
-#[macro_use]
-extern crate cfg_if;
-extern crate wasm_bindgen;
-extern crate web_sys;
-
+use ai2048_lib::game_logic::{self, Board};
+use ai2048_lib::searcher::Searcher;
+use cfg_if::cfg_if;
 use wasm_bindgen::prelude::*;
+use web_sys::console;
 
 cfg_if! {
     // When the `console_error_panic_hook` feature is enabled, we can call the
@@ -27,20 +26,44 @@ cfg_if! {
     }
 }
 
+#[wasm_bindgen]
+#[repr(u8)]
+#[derive(Debug)]
+pub enum Move {
+    Up = 0,
+    Right = 1,
+    Down = 2,
+    Left = 3,
+    None = 4,
+}
+
+#[wasm_bindgen]
+pub fn evaluate_position(board: Box<[u32]>) -> u8 {
+    let row0 = [board[0], board[4], board[8], board[12]];
+    let row1 = [board[1], board[5], board[9], board[13]];
+    let row2 = [board[2], board[6], board[10], board[14]];
+    let row3 = [board[3], board[7], board[11], board[15]];
+    let board = [row0, row1, row2, row3];
+    let board = Board::from_human(board).unwrap();
+    console::log_1(&format!("{:?}", board).into());
+    console::log_1(&format!("{}", board).into());
+    let searcher = Searcher::new(0.0001);
+    let result = searcher.search(board);
+    console::log_1(&format!("{:?}", result).into());
+    let mv = match result.best_move {
+        Some((game_logic::Move::Up, _)) => Move::Up,
+        Some((game_logic::Move::Down, _)) => Move::Down,
+        Some((game_logic::Move::Left, _)) => Move::Left,
+        Some((game_logic::Move::Right, _)) => Move::Right,
+        None => Move::None,
+    };
+    console::log_1(&format!("{:?}", mv).into());
+
+    mv as u8
+}
+
 // Called by our JS entry point to run the example.
 #[wasm_bindgen]
-pub fn run() -> Result<(), JsValue> {
+pub fn run() {
     set_panic_hook();
-
-    let window = web_sys::window().expect("should have a Window");
-    let document = window.document().expect("should have a Document");
-
-    let p: web_sys::Node = document.create_element("p")?.into();
-    p.set_text_content(Some("Hello from Rust, WebAssembly, and Webpack!"));
-
-    let body = document.body().expect("should have a body");
-    let body: &web_sys::Node = body.as_ref();
-    body.append_child(&p)?;
-
-    Ok(())
 }

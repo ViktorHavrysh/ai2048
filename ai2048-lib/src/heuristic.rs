@@ -11,17 +11,17 @@ pub(crate) fn eval(board: Board) -> f32 {
 }
 
 fn eval_row(row: Row) -> f32 {
-    CACHE[row.0 as usize]
+    unsafe { *CACHE.get_unchecked(row.0 as usize) }
 }
 
 // Pre-cache heuristic for every possible row with values that can fit a nibble
 lazy_static! {
-    static ref CACHE: [f32; u16::MAX as usize] = {
-        let mut cache = [0f32; u16::MAX as usize];
-        for (index, row) in cache.iter_mut().enumerate() {
+    static ref CACHE: Box<[f32]> = {
+        let mut vec = vec![0f32; u16::MAX as usize];
+        for (index, row) in vec.iter_mut().enumerate() {
             *row = eval_row_nocache(Row(index as u16));
         }
-        cache
+        vec.into()
     };
 }
 

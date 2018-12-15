@@ -62,7 +62,8 @@ export class KeyboardInputManager {
     });
     // Respond to button presses
     this.bindButtonPress(".retry-button", this.restart);
-    this.bindButtonPress(".restart-button", this.restart);
+    this.bindButtonPress("#restart", this.restart);
+    this.bindButtonPress("#run", this.run);
     this.bindButtonPress(".keep-playing-button", this.keepPlaying);
     // Respond to swipe events
     var touchStartClientX, touchStartClientY;
@@ -112,6 +113,10 @@ export class KeyboardInputManager {
   restart(event) {
     event.preventDefault();
     this.emit("restart");
+  }
+  run(event) {
+    event.preventDefault();
+    this.emit("run");
   }
   keepPlaying(event) {
     event.preventDefault();

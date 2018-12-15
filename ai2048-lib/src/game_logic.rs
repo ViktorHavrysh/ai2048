@@ -417,47 +417,46 @@ fn move_row_left(row: Row) -> Row {
 }
 
 fn lookup_left(row: Row) -> Row {
-    CACHE_LEFT[row.0 as usize]
+    unsafe { *CACHE_LEFT.get_unchecked(row.0 as usize) }
 }
 fn lookup_right(row: Row) -> Row {
-    CACHE_RIGHT[row.0 as usize]
+    unsafe { *CACHE_RIGHT.get_unchecked(row.0 as usize) }
 }
 fn lookup_up(row: Row) -> Column {
-    CACHE_UP[row.0 as usize]
+    unsafe { *CACHE_UP.get_unchecked(row.0 as usize) }
 }
 fn lookup_down(row: Row) -> Column {
-    CACHE_DOWN[row.0 as usize]
+    unsafe { *CACHE_DOWN.get_unchecked(row.0 as usize) }
 }
 
 lazy_static! {
-    static ref CACHE_LEFT: [Row; u16::MAX as usize] = {
-        let mut cache = [Row::default(); u16::MAX as usize];
-        for (index, row) in cache.iter_mut().enumerate() {
+    static ref CACHE_LEFT: Box<[Row]> = {
+        let mut vec = vec![Row::default(); u16::MAX as usize];
+        for (index, row) in vec.iter_mut().enumerate() {
             *row = move_row_left(Row(index as u16));
         }
-
-        cache
+        vec.into()
     };
-    static ref CACHE_RIGHT: [Row; u16::MAX as usize] = {
-        let mut cache = [Row::default(); u16::MAX as usize];
-        for (index, row) in cache.iter_mut().enumerate() {
+    static ref CACHE_RIGHT: Box<[Row]> = {
+        let mut vec = vec![Row::default(); u16::MAX as usize];
+        for (index, row) in vec.iter_mut().enumerate() {
             *row = move_row_left(Row(index as u16).reverse()).reverse();
         }
-        cache
+        vec.into()
     };
-    static ref CACHE_UP: [Column; u16::MAX as usize] = {
-        let mut cache = [Column::default(); u16::MAX as usize];
-        for (index, col) in cache.iter_mut().enumerate() {
+    static ref CACHE_UP: Box<[Column]> = {
+        let mut vec = vec![Column::default(); u16::MAX as usize];
+        for (index, col) in vec.iter_mut().enumerate() {
             *col = Column::from_row(CACHE_LEFT[index]);
         }
-        cache
+        vec.into()
     };
-    static ref CACHE_DOWN: [Column; u16::MAX as usize] = {
-        let mut cache = [Column::default(); u16::MAX as usize];
-        for (index, col) in cache.iter_mut().enumerate() {
+    static ref CACHE_DOWN: Box<[Column]> = {
+        let mut vec = vec![Column::default(); u16::MAX as usize];
+        for (index, col) in vec.iter_mut().enumerate() {
             *col = Column::from_row(CACHE_RIGHT[index]);
         }
-        cache
+        vec.into()
     };
 }
 

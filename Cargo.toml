@@ -8,12 +8,6 @@ members = [
 
 [profile]
 
-[profile.dev]
-codegen-units = 4
-panic = "abort"
-
 [profile.release]
-debug = true
 lto = true
 codegen-units = 1
-panic = "abort"
