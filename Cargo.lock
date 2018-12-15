@@ -1,5 +1,5 @@
 [[package]]
-name = "ai2048"
+name = "ai2048_bin"
 version = "0.1.0"
 dependencies = [
  "ai2048_lib 0.1.0",

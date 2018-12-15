@@ -1,0 +1,25 @@
+[package]
+authors = ["Victor Gavrish <victor.gavrish@gmail.com>"]
+license = "LGPL"
+name = "ai2048_bin"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+futures = "0.1"
+futures-cpupool = "0.1"
+chrono = "0.4"
+ai2048_lib = { path = "../ai2048_lib" }
+
+[profile]
+
+[profile.dev]
+codegen-units = 4
+panic = "abort"
+
+[profile.release]
+debug = true
+lto = true
+opt-level = 3
+codegen-units = 1
+panic = "abort"
