@@ -2,11 +2,12 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug",
             "type": "lldb",
             "request": "launch",
-            "program": "${workspaceRoot}/target/debug/ai2048_bin",
-            "args": []
+            "name": "lldb",
+            "program": "${workspaceFolder}/target/debug/ai2048_bin",
+            "args": [],
+            "cwd": "${workspaceFolder}"
         }
     ]
 }
