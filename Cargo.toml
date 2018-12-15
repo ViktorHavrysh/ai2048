@@ -8,6 +8,7 @@ edition = "2018"
 [dependencies]
 futures = "0.1"
 futures-cpupool = "0.1"
+chrono = "0.4"
 
 [dependencies.ai2048_lib]
 optional = false
@@ -17,9 +18,11 @@ path = "./ai2048_lib"
 
 [profile.dev]
 codegen-units = 4
+panic = "abort"
 
 [profile.release]
 debug = true
 lto = true
 opt-level = 3
 codegen-units = 1
+panic = "abort"

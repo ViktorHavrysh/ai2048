@@ -1,50 +1,67 @@
-//! A module for Heuristics. The root module provides a trait for implementing
-//! the heuristics, while submodules provide some example implementations.
+use crate::game_logic::{Board, Row};
+use std::{cmp, i32, u16};
 
-#![allow(dead_code)]
-
-pub mod composite;
-
-use bytecount;
-use crate::board::Board;
-use crate::search_tree::PlayerNode;
-use std::cmp;
-use std::i32;
-
-/// A type that can evaluate a board position and return an `f32`, with
-/// higher values meaning better outcome
-pub trait Heuristic<T>
-where
-    T: Copy + Default,
-{
-    /// Analyzes the game state represented by `PlayerNode` and returns
-    /// an evaluation
-    fn eval(&self, node: &PlayerNode<T>) -> f32;
-}
-
-fn empty_cell_count(board: &Board) -> usize {
+pub(crate) fn eval(board: Board) -> f32 {
     board
-        .unpack_log()
+        .rows()
         .iter()
-        .flatten()
-        .filter(|v| **v == 0)
-        .count()
+        .chain(board.transpose().rows().iter())
+        .map(|&r| eval_row(r))
+        .sum()
 }
 
-fn empty_cell_count_row(row: [u8; 4]) -> usize {
-    bytecount::count(&row, 0)
+fn eval_row(row: Row) -> f32 {
+    CACHE[row.0 as usize]
 }
 
-fn adjacent(board: &Board) -> u16 {
-    board
-        .unpack_log()
-        .iter()
-        .chain(board.transpose().unpack_log().iter())
-        .map(|&row| adjacent_row(row))
-        .fold(0u16, |a, b| a as u16 + b as u16)
+// Pre-cache heuristic for every possible row with values that can fit a nibble
+lazy_static! {
+    static ref CACHE: [f32; u16::MAX as usize] = {
+        let mut cache = [0f32; u16::MAX as usize];
+        for (index, row) in cache.iter_mut().enumerate() {
+            *row = eval_row_nocache(Row(index as u16));
+        }
+        cache
+    };
 }
 
-fn adjacent_row(row: [u8; 4]) -> u8 {
+const NOT_LOST: f32 = 1_600_000f32;
+const MONOTONICITY_STRENGTH: f32 = 47.0;
+const EMPTY_STRENGTH: f32 = 270.0;
+const ADJACENT_STRENGTH: f32 = 700.0;
+const SUM_STRENGTH: f32 = 11.0;
+
+fn eval_row_nocache(row: Row) -> f32 {
+    let row = row.unpack();
+
+    let empty = empty_cell_count_row(row) * EMPTY_STRENGTH;
+    let monotonicity = monotonicity_row(row) * MONOTONICITY_STRENGTH;
+    let adjacent = adjacent_row(row) * ADJACENT_STRENGTH;
+    let sum = sum_row(row) * SUM_STRENGTH;
+
+    NOT_LOST + monotonicity + empty + adjacent + sum
+}
+
+fn empty_cell_count_row(row: [u8; 4]) -> f32 {
+    row.iter().filter(|&&c| c == 0).count() as f32
+}
+
+fn monotonicity_row(row: [u8; 4]) -> f32 {
+    let mut left = 0;
+    let mut right = 0;
+
+    for (&current, &next) in row.iter().zip(row.iter().skip(1)) {
+        if current > next {
+            left += i32::from(current).pow(4) - i32::from(next).pow(4);
+        } else if next > current {
+            right += i32::from(next).pow(4) - i32::from(current).pow(4);
+        }
+    }
+
+    -cmp::min(left, right) as f32
+}
+
+fn adjacent_row(row: [u8; 4]) -> f32 {
     let mut adjacent_count = 0;
     let mut y = 0;
 
@@ -57,66 +74,9 @@ fn adjacent_row(row: [u8; 4]) -> u8 {
         }
     }
 
-    adjacent_count
-}
-
-fn sum(board: &Board) -> f32 {
-    -board
-        .unpack_log()
-        .iter()
-        .flatten()
-        .map(|v| (*v as f32).powf(3.5))
-        .sum::<f32>()
+    adjacent_count as f32
 }
 
 fn sum_row(row: [u8; 4]) -> f32 {
-    -row.iter().map(|v| (*v as f32).powf(3.5)).sum::<f32>()
-}
-
-fn monotonicity(board: &Board) -> i32 {
-    monotonicity_rows(board) + monotonicity_rows(&board.transpose())
-}
-
-fn monotonicity_rows(board: &Board) -> i32 {
-    board
-        .unpack_log()
-        .iter()
-        .map(|&row| monotonicity_row(row))
-        .sum()
-}
-
-fn monotonicity_row(row: [u8; 4]) -> i32 {
-    let mut left = 0;
-    let mut right = 0;
-
-    for (&current, &next) in row.iter().zip(row.iter().skip(1)) {
-        if current > next {
-            left += (current as i32).pow(4) - (next as i32).pow(4);
-        } else if next > current {
-            right += (next as i32).pow(4) - (current as i32).pow(4);
-        }
-    }
-
-    -cmp::min(left, right)
-}
-
-fn smoothness(board: &Board) -> i32 {
-    let grid = board.unpack_log();
-
-    let mut smoothness = 0;
-
-    for cell_y in 0..4 {
-        for cell_x in 0..4 {
-            if let Some(neighbor_x) = ((cell_x + 1)..4).filter(|&x| grid[x][cell_y] != 0).nth(0) {
-                smoothness += smoothness
-                    - i32::abs(grid[cell_x][cell_y] as i32 - grid[neighbor_x][cell_y] as i32);
-            }
-            if let Some(neighbor_y) = ((cell_y + 1)..4).filter(|&y| grid[cell_x][y] != 0).nth(0) {
-                smoothness += smoothness
-                    - i32::abs(grid[cell_x][cell_y] as i32 - grid[cell_x][neighbor_y] as i32);
-            }
-        }
-    }
-
-    smoothness
+    -row.iter().map(|v| f32::from(*v).powf(3.5)).sum::<f32>()
 }

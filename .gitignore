@@ -1,4 +1,4 @@
 target
-Cargo.lock
+ai2048_lib/Cargo.lock
 .idea/
 .vscode/
