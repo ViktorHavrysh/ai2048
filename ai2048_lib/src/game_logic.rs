@@ -1,5 +1,4 @@
-//! `Board` represents the board state in a 2048 game.
-
+//! 2048 game logic is implemented here.
 use lazy_static::lazy_static;
 use rand::{self, Rng};
 use std::{fmt, u16};
@@ -61,15 +60,18 @@ impl Row {
 
     pub(crate) fn unpack(self) -> [u8; 4] {
         let row = self.0;
-        let col0 = ((row & 0b1111_0000_0000_0000) >> 12) as u8;
-        let col1 = ((row & 0b0000_1111_0000_0000) >> 8) as u8;
-        let col2 = ((row & 0b0000_0000_1111_0000) >> 4) as u8;
-        let col3 = (row & 0b0000_0000_0000_1111) as u8;
-        [col0, col1, col2, col3]
+        let cell0 = ((row & 0b1111_0000_0000_0000) >> 12) as u8;
+        let cell1 = ((row & 0b0000_1111_0000_0000) >> 8) as u8;
+        let cell2 = ((row & 0b0000_0000_1111_0000) >> 4) as u8;
+        let cell3 = (row & 0b0000_0000_0000_1111) as u8;
+        [cell0, cell1, cell2, cell3]
     }
 
     fn reverse(self) -> Self {
-        Row((self.0 >> 12) | ((self.0 >> 4) & 0x00F0) | ((self.0 << 4) & 0x0F00) | (self.0 << 12))
+        Row((self.0 >> 12)
+            | ((self.0 >> 4) & 0b0000_0000_1111_0000)
+            | ((self.0 << 4) & 0b0000_1111_0000_0000)
+            | (self.0 << 12))
     }
 }
 
@@ -78,28 +80,19 @@ struct Column(u64);
 
 impl Column {
     fn from_row(row: Row) -> Self {
-        let mut col = Column::default();
-        col.0 = (u64::from(row.0)
+        const COLUMN_MASK: u64 = 0x000F_000F_000F_000F;
+        let col = (u64::from(row.0)
             | u64::from(row.0) << 12
             | u64::from(row.0) << 24
             | u64::from(row.0) << 36)
-            & 0x000F_000F_000F_000f;
-        col
+            & COLUMN_MASK;
+        Column(col)
     }
 }
 
-/// `Board` saves its state as a 4x4 array of `u8` values.
-///
-/// To cram the value of a cell into into one byte of memory, `Board` uses a logarithmic
-/// representation of the value displayed to the player. That is, `2` becomes `1`,
-/// `4` becomes `2`, `8` becomes `3`, etc. The maximum cell value theoretically achievable in a
-/// standard game of 2048 is `65,536`, and that is represented by the value `16`, so a byte is
-/// more than enough storage for a single cell. `0` stays a `0`.
-///
 /// `Board`, in general, encodes all the rules of the game: it can generate new states
 /// given a move a player makes, or all possible states following the computer spawning a random
-/// tile. Unsurprisingly, in order to write an AI for a game, the AI needs an emulation of the
-/// game itself.
+/// tile.
 #[derive(Eq, PartialEq, Hash, Copy, Clone, Default)]
 pub struct Board(u64);
 
@@ -174,7 +167,7 @@ impl Board {
         result
     }
 
-    pub(crate) fn from_log(grid: [[u8; 4]; 4]) -> Option<Board> {
+    fn from_log(grid: [[u8; 4]; 4]) -> Option<Board> {
         let mut rows = [Row::default(); 4];
         for (x, &row) in grid.iter().enumerate() {
             rows[x] = Row::pack(row)?;
@@ -182,7 +175,7 @@ impl Board {
         Some(Board::from_rows(rows))
     }
 
-    pub(crate) fn unpack_log(self) -> [[u8; 4]; 4] {
+    fn unpack_log(self) -> [[u8; 4]; 4] {
         let mut result = [[0; 4]; 4];
         for (x, row) in self.rows().iter().enumerate() {
             result[x] = row.unpack();
@@ -190,7 +183,7 @@ impl Board {
         result
     }
 
-    pub(crate) fn rows(&self) -> [Row; 4] {
+    pub(crate) fn rows(self) -> [Row; 4] {
         let row1 = Row(((self.0 & 0xFFFF_0000_0000_0000) >> 48) as u16);
         let row2 = Row(((self.0 & 0x0000_FFFF_0000_0000) >> 32) as u16);
         let row3 = Row(((self.0 & 0x0000_0000_FFFF_0000) >> 16) as u16);
@@ -198,7 +191,7 @@ impl Board {
         [row1, row2, row3, row4]
     }
 
-    pub(crate) fn from_rows(rows: [Row; 4]) -> Self {
+    fn from_rows(rows: [Row; 4]) -> Self {
         let mut board = Board::default();
         board.0 |= u64::from(rows[0].0) << 48;
         board.0 |= u64::from(rows[1].0) << 32;
@@ -216,7 +209,7 @@ impl Board {
         board
     }
 
-    pub fn is_terminal(self) -> bool {
+    pub fn game_over(self) -> bool {
         MOVES.iter().find(|&&m| self.make_move(m) != self).is_none()
     }
 
@@ -241,21 +234,15 @@ impl Board {
         Board::from_log(board).unwrap()
     }
 
-    /// Returns all possible `Board`s that can result from the computer spawning a `2` in a random
-    /// empty cell.
-
-    pub fn ai_moves_with2(self) -> impl Iterator<Item = Board> {
+    pub(crate) fn ai_moves_with2(self) -> impl Iterator<Item = Board> {
         AiMoves::new(self, 1)
     }
 
-    /// Returns all possible `Board`s that can result from the computer spawning a `4` in a random
-    /// empty cell.
-
-    pub fn ai_moves_with4(self) -> impl Iterator<Item = Board> {
+    pub(crate) fn ai_moves_with4(self) -> impl Iterator<Item = Board> {
         AiMoves::new(self, 2)
     }
 
-    pub fn player_moves(self) -> impl Iterator<Item = (Move, Board)> {
+    pub(crate) fn player_moves(self) -> impl Iterator<Item = (Move, Board)> {
         MOVES.iter().filter_map(move |&m| {
             let new_board = self.make_move(m);
             if new_board == self {
@@ -266,22 +253,20 @@ impl Board {
         })
     }
 
-    /// Gets a transposed copy of the `Board`.
-
-    pub fn transpose(self) -> Board {
+    pub(crate) fn transpose(self) -> Board {
         let x = self.0;
-        let a1 = x & 0xF0F00F0FF0F00F0F;
-        let a2 = x & 0x0000F0F00000F0F0;
-        let a3 = x & 0x0F0F00000F0F0000;
+        let a1 = x & 0xF0F0_0F0F_F0F0_0F0F;
+        let a2 = x & 0x0000_F0F0_0000_F0F0;
+        let a3 = x & 0x0F0F_0000_0F0F_0000;
         let a = a1 | (a2 << 12) | (a3 >> 12);
-        let b1 = a & 0xFF00FF0000FF00FF;
-        let b2 = a & 0x00FF00FF00000000;
-        let b3 = a & 0x00000000FF00FF00;
+        let b1 = a & 0xFF00_FF00_00FF_00FF;
+        let b2 = a & 0x00FF_00FF_0000_0000;
+        let b3 = a & 0x0000_0000_FF00_FF00;
         let ret = b1 | (b2 >> 24) | (b3 << 24);
         Board(ret)
     }
 
-    pub fn count_empty(self) -> usize {
+    pub(crate) fn count_empty(self) -> usize {
         let mut x = self.0;
         x |= (x >> 2) & 0x3333333333333333;
         x |= x >> 1;
@@ -298,7 +283,6 @@ impl Board {
     }
 
     /// Returns a `Board` that would result from making a certain `Move` in the current state.
-
     pub fn make_move(self, mv: Move) -> Board {
         match mv {
             Move::Left => self.move_left(),
@@ -310,38 +294,55 @@ impl Board {
 
     fn move_left(self) -> Board {
         let rows = self.rows();
-        let row0 = CACHE_LEFT[rows[0].0 as usize];
-        let row1 = CACHE_LEFT[rows[1].0 as usize];
-        let row2 = CACHE_LEFT[rows[2].0 as usize];
-        let row3 = CACHE_LEFT[rows[3].0 as usize];
+        let row0 = lookup_left(rows[0]);
+        let row1 = lookup_left(rows[1]);
+        let row2 = lookup_left(rows[2]);
+        let row3 = lookup_left(rows[3]);
         Board::from_rows([row0, row1, row2, row3])
     }
 
     fn move_right(self) -> Board {
         let rows = self.rows();
-        let row0 = CACHE_RIGHT[rows[0].0 as usize];
-        let row1 = CACHE_RIGHT[rows[1].0 as usize];
-        let row2 = CACHE_RIGHT[rows[2].0 as usize];
-        let row3 = CACHE_RIGHT[rows[3].0 as usize];
+        let row0 = lookup_right(rows[0]);
+        let row1 = lookup_right(rows[1]);
+        let row2 = lookup_right(rows[2]);
+        let row3 = lookup_right(rows[3]);
         Board::from_rows([row0, row1, row2, row3])
     }
 
     fn move_up(self) -> Board {
         let rows = self.transpose().rows();
-        let col0 = CACHE_UP[rows[0].0 as usize];
-        let col1 = CACHE_UP[rows[1].0 as usize];
-        let col2 = CACHE_UP[rows[2].0 as usize];
-        let col3 = CACHE_UP[rows[3].0 as usize];
+        let col0 = lookup_up(rows[0]);
+        let col1 = lookup_up(rows[1]);
+        let col2 = lookup_up(rows[2]);
+        let col3 = lookup_up(rows[3]);
         Board::from_columns([col0, col1, col2, col3])
     }
 
     fn move_down(self) -> Board {
         let rows = self.transpose().rows();
-        let col0 = CACHE_DOWN[rows[0].0 as usize];
-        let col1 = CACHE_DOWN[rows[1].0 as usize];
-        let col2 = CACHE_DOWN[rows[2].0 as usize];
-        let col3 = CACHE_DOWN[rows[3].0 as usize];
+        let col0 = lookup_down(rows[0]);
+        let col1 = lookup_down(rows[1]);
+        let col2 = lookup_down(rows[2]);
+        let col3 = lookup_down(rows[3]);
         Board::from_columns([col0, col1, col2, col3])
+    }
+
+    pub(crate) fn count_distinct_cells(self) -> usize {
+        let mut board = self.0;
+        let mut bitset = 0u16;
+        while board != 0 {
+            bitset |= 1 << (board & 0xF);
+            board >>= 4;
+        }
+        bitset >>= 1;
+        let mut count = 0;
+        while bitset != 0 {
+            bitset &= bitset - 1;
+            count += 1;
+        }
+
+        count
     }
 }
 
@@ -372,9 +373,8 @@ impl Iterator for AiMoves {
             }
             let mask = 0b1111u64 << (self.index * 4);
             if (self.board.0 & mask) == 0 {
-                return Some(Board(
-                    self.board.0 | u64::from(self.val) << (self.index * 4),
-                ));
+                let board = Board(self.board.0 | u64::from(self.val) << (self.index * 4));
+                return Some(board);
             }
         }
     }
@@ -414,6 +414,19 @@ fn move_row_left(row: Row) -> Row {
     }
 
     Row::pack(to_row).unwrap_or_default()
+}
+
+fn lookup_left(row: Row) -> Row {
+    CACHE_LEFT[row.0 as usize]
+}
+fn lookup_right(row: Row) -> Row {
+    CACHE_RIGHT[row.0 as usize]
+}
+fn lookup_up(row: Row) -> Column {
+    CACHE_UP[row.0 as usize]
+}
+fn lookup_down(row: Row) -> Column {
+    CACHE_DOWN[row.0 as usize]
 }
 
 lazy_static! {
@@ -657,8 +670,8 @@ mod tests {
         let normal_board =
             Board::from_human([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap();
 
-        assert!(terminal_board.is_terminal());
-        assert!(!normal_board.is_terminal());
+        assert!(terminal_board.game_over());
+        assert!(!normal_board.game_over());
     }
 
     #[test]

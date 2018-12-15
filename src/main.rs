@@ -8,7 +8,6 @@ use std::fmt::{self, Write};
 use std::sync::mpsc;
 
 const MIN_PROBABILITY: f32 = 0.0001;
-const SEARCH_DEPTH: u8 = 6;
 
 #[derive(Debug)]
 enum Error {
@@ -64,7 +63,7 @@ fn main() -> Result<(), Error> {
     });
 
     let compute_loop = pool.spawn_fn(move || {
-        let searcher = Searcher::new(SEARCH_DEPTH, MIN_PROBABILITY);
+        let searcher = Searcher::new(MIN_PROBABILITY);
         let mut board = Board::default().add_random_tile().add_random_tile();
         let start_overall = Utc::now();
         let mut moves = 0;
@@ -108,7 +107,13 @@ fn build_display(
 
     writeln!(&mut s, "Total moves:  {:>10}\n", moves)?;
 
-    writeln!(&mut s, "Cache size:   {:>10}\n", result.stats.cache_size)?;
+    writeln!(&mut s, "Cache size:   {:>10}", result.stats.cache_size)?;
+    writeln!(&mut s, "Cache hits:   {:>10}", result.stats.cache_hits)?;
+    writeln!(
+        &mut s,
+        "Cache ratio:  {:>10.4}\n",
+        result.stats.cache_hits as f64 / result.stats.cache_size as f64
+    )?;
 
     for mv in &MOVES {
         write!(&mut s, "{:>6}: ", mv)?;
@@ -125,7 +130,7 @@ fn build_display(
 
     writeln!(&mut s)?;
 
-    writeln!(&mut s, "Depth: {}", SEARCH_DEPTH)?;
+    writeln!(&mut s, "Depth: {}", result.stats.depth)?;
     writeln!(&mut s, "Cutoff probability: {}\n", MIN_PROBABILITY)?;
 
     writeln!(

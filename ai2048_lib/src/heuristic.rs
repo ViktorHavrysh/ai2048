@@ -1,9 +1,7 @@
 use crate::game_logic::{Board, Row};
-use std::cmp;
-use std::i32;
-use std::u16;
+use std::{cmp, i32, u16};
 
-pub fn eval(board: Board) -> f32 {
+pub(crate) fn eval(board: Board) -> f32 {
     board
         .rows()
         .iter()
@@ -12,17 +10,11 @@ pub fn eval(board: Board) -> f32 {
         .sum()
 }
 
-const NOT_LOST: f32 = 1_600_000f32;
-const MONOTONICITY_STRENGTH: f32 = 47.0;
-const EMPTY_STRENGTH: f32 = 270.0;
-const ADJACENT_STRENGTH: f32 = 700.0;
-const SUM_STRENGTH: f32 = 11.0;
-
 fn eval_row(row: Row) -> f32 {
     CACHE[row.0 as usize]
 }
 
-// Pre-cache heuristic for every possible row with values that can fit a nybble
+// Pre-cache heuristic for every possible row with values that can fit a nibble
 lazy_static! {
     static ref CACHE: [f32; u16::MAX as usize] = {
         let mut cache = [0f32; u16::MAX as usize];
@@ -32,6 +24,12 @@ lazy_static! {
         cache
     };
 }
+
+const NOT_LOST: f32 = 1_600_000f32;
+const MONOTONICITY_STRENGTH: f32 = 47.0;
+const EMPTY_STRENGTH: f32 = 270.0;
+const ADJACENT_STRENGTH: f32 = 700.0;
+const SUM_STRENGTH: f32 = 11.0;
 
 fn eval_row_nocache(row: Row) -> f32 {
     let row = row.unpack();
