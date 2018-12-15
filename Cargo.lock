@@ -1,15 +1,15 @@
 [[package]]
-name = "ai2048_bin"
+name = "ai2048-bin"
 version = "0.1.0"
 dependencies = [
- "ai2048_lib 0.1.0",
+ "ai2048-lib 0.1.0",
  "chrono 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures-cpupool 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
-name = "ai2048_lib"
+name = "ai2048-lib"
 version = "0.1.0"
 dependencies = [
  "fnv 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -1,8 +1,8 @@
 [workspace]
 
 members = [
-    "ai2048_bin",
-    "ai2048_lib",
+    "ai2048-bin",
+    "ai2048-lib",
 ]
 
 [profile]
