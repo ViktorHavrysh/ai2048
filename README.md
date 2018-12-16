@@ -18,10 +18,8 @@ After all the prerequisites are installed:
 
 ```bash
 # needed because wasm-pack has a bug when working with cargo workspaces
-mkdir target && ln -s target www/ai2048-wasm/target
-cd www
-npm install
-npm run start
+chmod +x build.sh
+./build.sh
 ```
 
 ## Acknowledgements
