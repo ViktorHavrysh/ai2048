@@ -1,4 +1,4 @@
-use ai2048_lib::game_logic::{self, Board};
+use ai2048_lib::game_logic;
 use ai2048_lib::searcher::Searcher;
 use cfg_if::cfg_if;
 use wasm_bindgen::prelude::*;
@@ -27,6 +27,11 @@ cfg_if! {
 }
 
 #[wasm_bindgen]
+pub fn init() {
+    set_panic_hook();
+}
+
+#[wasm_bindgen]
 #[repr(u8)]
 #[derive(Debug)]
 pub enum Move {
@@ -38,16 +43,24 @@ pub enum Move {
 }
 
 #[wasm_bindgen]
-pub fn evaluate_position(board: Box<[u32]>) -> u8 {
-    let row0 = [board[0], board[4], board[8], board[12]];
-    let row1 = [board[1], board[5], board[9], board[13]];
-    let row2 = [board[2], board[6], board[10], board[14]];
-    let row3 = [board[3], board[7], board[11], board[15]];
-    let board = [row0, row1, row2, row3];
-    let board = Board::from_human(board).unwrap();
+pub fn evaluate_position(grid: Box<[u32]>) -> Move {
+    let grid = transform_grid(&grid);
     let searcher = Searcher::new(0.0001);
-    let result = searcher.search(board);
-    let mv = match result.best_move {
+    let result = searcher.search(grid);
+    transform_move(result.best_move)
+}
+
+fn transform_grid(grid: &[u32]) -> game_logic::Grid {
+    let row0 = [grid[0], grid[4], grid[8], grid[12]];
+    let row1 = [grid[1], grid[5], grid[9], grid[13]];
+    let row2 = [grid[2], grid[6], grid[10], grid[14]];
+    let row3 = [grid[3], grid[7], grid[11], grid[15]];
+    let grid = [row0, row1, row2, row3];
+    game_logic::Grid::from_human(grid).unwrap()
+}
+
+fn transform_move(mv: Option<(game_logic::Move, f32)>) -> Move {
+    match mv {
         Some((game_logic::Move::Up, _)) => Move::Up,
         Some((game_logic::Move::Down, _)) => Move::Down,
         Some((game_logic::Move::Left, _)) => Move::Left,
@@ -56,13 +69,5 @@ pub fn evaluate_position(board: Box<[u32]>) -> u8 {
             console::log_1(&"game over!".into());
             Move::None
         }
-    };
-
-    mv as u8
-}
-
-// Called by our JS entry point to run the example.
-#[wasm_bindgen]
-pub fn init() {
-    set_panic_hook();
+    }
 }

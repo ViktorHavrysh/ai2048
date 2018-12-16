@@ -48,23 +48,23 @@ impl fmt::Debug for Row {
 impl Row {
     pub(crate) fn pack(row: [u8; 4]) -> Option<Row> {
         let mut result = 0;
-        for &cell in &row {
-            if cell > 0b1111 {
+        for &tile in &row {
+            if tile > 0b1111 {
                 return None;
             }
             result <<= 4;
-            result += u16::from(cell);
+            result += u16::from(tile);
         }
         Some(Row(result))
     }
 
     pub(crate) fn unpack(self) -> [u8; 4] {
         let row = self.0;
-        let cell0 = ((row & 0b1111_0000_0000_0000) >> 12) as u8;
-        let cell1 = ((row & 0b0000_1111_0000_0000) >> 8) as u8;
-        let cell2 = ((row & 0b0000_0000_1111_0000) >> 4) as u8;
-        let cell3 = (row & 0b0000_0000_0000_1111) as u8;
-        [cell0, cell1, cell2, cell3]
+        let tile0 = ((row & 0b1111_0000_0000_0000) >> 12) as u8;
+        let tile1 = ((row & 0b0000_1111_0000_0000) >> 8) as u8;
+        let tile2 = ((row & 0b0000_0000_1111_0000) >> 4) as u8;
+        let tile3 = (row & 0b0000_0000_0000_1111) as u8;
+        [tile0, tile1, tile2, tile3]
     }
 
     fn reverse(self) -> Self {
@@ -90,17 +90,17 @@ impl Column {
     }
 }
 
-/// `Board`, in general, encodes all the rules of the game: it can generate new states
+/// `Grid`, in general, encodes all the rules of the game: it can generate new states
 /// given a move a player makes, or all possible states following the computer spawning a random
 /// tile.
 #[derive(Eq, PartialEq, Hash, Copy, Clone, Default)]
-pub struct Board(u64);
+pub struct Grid(u64);
 
-impl fmt::Display for Board {
+impl fmt::Display for Grid {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for row in self.unpack_human().iter() {
-            for &cell in row {
-                write!(f, "{number:>width$}", number = cell, width = 6)?;
+            for &tile in row {
+                write!(f, "{number:>width$}", number = tile, width = 6)?;
             }
             writeln!(f)?;
         }
@@ -109,7 +109,7 @@ impl fmt::Display for Board {
     }
 }
 
-impl fmt::Debug for Board {
+impl fmt::Debug for Grid {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for row in self.rows().iter() {
             write!(f, "{:?} ", row)?;
@@ -135,44 +135,44 @@ fn to_log(n: u32) -> Option<u8> {
     }
 }
 
-impl Board {
-    /// Creates a new `Board` from an array of human-looking numbers. If a tile fails to be
+impl Grid {
+    /// Creates a new `Grid` from an array of human-looking numbers. If a tile fails to be
     /// a power of 2, or is larger than 32768, returns `None`.
-    pub fn from_human(grid: [[u32; 4]; 4]) -> Option<Board> {
+    pub fn from_human(grid: [[u32; 4]; 4]) -> Option<Grid> {
         let mut rows = [Row::default(); 4];
         for (x, &row) in grid.iter().enumerate() {
             let mut new_row = [0u8; 4];
-            for (y, &cell) in row.iter().enumerate() {
-                let log = to_log(cell)?;
+            for (y, &tile) in row.iter().enumerate() {
+                let log = to_log(tile)?;
                 new_row[y] = log;
             }
 
             rows[x] = Row::pack(new_row)?;
         }
-        Some(Board::from_rows(rows))
+        Some(Grid::from_rows(rows))
     }
 
-    /// Unpacks a human-readable representation from `Board`'s internal representation
+    /// Unpacks a human-readable representation from `Grid`'s internal representation
     pub fn unpack_human(self) -> [[u32; 4]; 4] {
         let mut result = [[0; 4]; 4];
-        let board_u8 = self.unpack_log();
-        for (x, row) in board_u8.iter().enumerate() {
-            for (y, &cell) in row.iter().enumerate() {
-                result[x][y] = match cell {
+        let grid_u8 = self.unpack_log();
+        for (x, row) in grid_u8.iter().enumerate() {
+            for (y, &tile) in row.iter().enumerate() {
+                result[x][y] = match tile {
                     0 => 0,
-                    _ => 1 << cell,
+                    _ => 1 << tile,
                 };
             }
         }
         result
     }
 
-    fn from_log(grid: [[u8; 4]; 4]) -> Option<Board> {
+    fn from_log(grid: [[u8; 4]; 4]) -> Option<Grid> {
         let mut rows = [Row::default(); 4];
         for (x, &row) in grid.iter().enumerate() {
             rows[x] = Row::pack(row)?;
         }
-        Some(Board::from_rows(rows))
+        Some(Grid::from_rows(rows))
     }
 
     fn unpack_log(self) -> [[u8; 4]; 4] {
@@ -192,37 +192,37 @@ impl Board {
     }
 
     fn from_rows(rows: [Row; 4]) -> Self {
-        let mut board = Board::default();
-        board.0 |= u64::from(rows[0].0) << 48;
-        board.0 |= u64::from(rows[1].0) << 32;
-        board.0 |= u64::from(rows[2].0) << 16;
-        board.0 |= u64::from(rows[3].0);
-        board
+        let mut grid = Grid::default();
+        grid.0 |= u64::from(rows[0].0) << 48;
+        grid.0 |= u64::from(rows[1].0) << 32;
+        grid.0 |= u64::from(rows[2].0) << 16;
+        grid.0 |= u64::from(rows[3].0);
+        grid
     }
 
     fn from_columns(columns: [Column; 4]) -> Self {
-        let mut board = Board::default();
-        board.0 |= columns[0].0 << 12;
-        board.0 |= columns[1].0 << 8;
-        board.0 |= columns[2].0 << 4;
-        board.0 |= columns[3].0;
-        board
+        let mut grid = Grid::default();
+        grid.0 |= columns[0].0 << 12;
+        grid.0 |= columns[1].0 << 8;
+        grid.0 |= columns[2].0 << 4;
+        grid.0 |= columns[3].0;
+        grid
     }
 
     pub fn game_over(self) -> bool {
         MOVES.iter().find(|&&m| self.make_move(m) != self).is_none()
     }
 
-    /// Creates a new `Board` with a random tile (10% of times a `2`, 90% of times a `4`) added to a
-    /// random empty cell on the board.
-    pub fn add_random_tile(self) -> Board {
+    /// Creates a new `Grid` with a random tile (10% of times a `2`, 90% of times a `4`) added to a
+    /// random empty tile on the grid.
+    pub fn add_random_tile(self) -> Grid {
         let mut rng = rand::thread_rng();
 
-        let mut board = self.unpack_log();
-        let empty_cell_count = board.iter().flatten().filter(|v| **v == 0).count();
-        let position = rng.gen_range(0, empty_cell_count);
+        let mut grid = self.unpack_log();
+        let empty_tile_count = grid.iter().flatten().filter(|v| **v == 0).count();
+        let position = rng.gen_range(0, empty_tile_count);
 
-        let value = board
+        let value = grid
             .iter_mut()
             .flatten()
             .filter(|v| **v == 0)
@@ -231,29 +231,29 @@ impl Board {
 
         *value = if rng.gen_bool(0.1) { 2 } else { 1 };
 
-        Board::from_log(board).unwrap()
+        Grid::from_log(grid).unwrap()
     }
 
-    pub(crate) fn ai_moves_with2(self) -> impl Iterator<Item = Board> {
+    pub(crate) fn ai_moves_with2(self) -> impl Iterator<Item = Grid> {
         AiMoves::new(self, 1)
     }
 
-    pub(crate) fn ai_moves_with4(self) -> impl Iterator<Item = Board> {
+    pub(crate) fn ai_moves_with4(self) -> impl Iterator<Item = Grid> {
         AiMoves::new(self, 2)
     }
 
-    pub(crate) fn player_moves(self) -> impl Iterator<Item = (Move, Board)> {
+    pub(crate) fn player_moves(self) -> impl Iterator<Item = (Move, Grid)> {
         MOVES.iter().filter_map(move |&m| {
-            let new_board = self.make_move(m);
-            if new_board == self {
+            let new_grid = self.make_move(m);
+            if new_grid == self {
                 None
             } else {
-                Some((m, new_board))
+                Some((m, new_grid))
             }
         })
     }
 
-    pub(crate) fn transpose(self) -> Board {
+    pub(crate) fn transpose(self) -> Grid {
         let x = self.0;
         let a1 = x & 0xF0F0_0F0F_F0F0_0F0F;
         let a2 = x & 0x0000_F0F0_0000_F0F0;
@@ -263,7 +263,7 @@ impl Board {
         let b2 = a & 0x00FF_00FF_0000_0000;
         let b3 = a & 0x0000_0000_FF00_FF00;
         let ret = b1 | (b2 >> 24) | (b3 << 24);
-        Board(ret)
+        Grid(ret)
     }
 
     pub(crate) fn count_empty(self) -> usize {
@@ -282,8 +282,8 @@ impl Board {
         return (x & 0xf) as usize;
     }
 
-    /// Returns a `Board` that would result from making a certain `Move` in the current state.
-    pub fn make_move(self, mv: Move) -> Board {
+    /// Returns a `Grid` that would result from making a certain `Move` in the current state.
+    pub fn make_move(self, mv: Move) -> Grid {
         match mv {
             Move::Left => self.move_left(),
             Move::Right => self.move_right(),
@@ -292,48 +292,48 @@ impl Board {
         }
     }
 
-    fn move_left(self) -> Board {
+    fn move_left(self) -> Grid {
         let rows = self.rows();
         let row0 = lookup_left(rows[0]);
         let row1 = lookup_left(rows[1]);
         let row2 = lookup_left(rows[2]);
         let row3 = lookup_left(rows[3]);
-        Board::from_rows([row0, row1, row2, row3])
+        Grid::from_rows([row0, row1, row2, row3])
     }
 
-    fn move_right(self) -> Board {
+    fn move_right(self) -> Grid {
         let rows = self.rows();
         let row0 = lookup_right(rows[0]);
         let row1 = lookup_right(rows[1]);
         let row2 = lookup_right(rows[2]);
         let row3 = lookup_right(rows[3]);
-        Board::from_rows([row0, row1, row2, row3])
+        Grid::from_rows([row0, row1, row2, row3])
     }
 
-    fn move_up(self) -> Board {
+    fn move_up(self) -> Grid {
         let rows = self.transpose().rows();
         let col0 = lookup_up(rows[0]);
         let col1 = lookup_up(rows[1]);
         let col2 = lookup_up(rows[2]);
         let col3 = lookup_up(rows[3]);
-        Board::from_columns([col0, col1, col2, col3])
+        Grid::from_columns([col0, col1, col2, col3])
     }
 
-    fn move_down(self) -> Board {
+    fn move_down(self) -> Grid {
         let rows = self.transpose().rows();
         let col0 = lookup_down(rows[0]);
         let col1 = lookup_down(rows[1]);
         let col2 = lookup_down(rows[2]);
         let col3 = lookup_down(rows[3]);
-        Board::from_columns([col0, col1, col2, col3])
+        Grid::from_columns([col0, col1, col2, col3])
     }
 
-    pub(crate) fn count_distinct_cells(self) -> usize {
-        let mut board = self.0;
+    pub(crate) fn count_distinct_tiles(self) -> usize {
+        let mut grid = self.0;
         let mut bitset = 0u16;
-        while board != 0 {
-            bitset |= 1 << (board & 0xF);
-            board >>= 4;
+        while grid != 0 {
+            bitset |= 1 << (grid & 0xF);
+            grid >>= 4;
         }
         bitset >>= 1;
         let mut count = 0;
@@ -347,15 +347,15 @@ impl Board {
 }
 
 struct AiMoves {
-    board: Board,
+    grid: Grid,
     index: i8,
     val: u8,
 }
 
 impl AiMoves {
-    fn new(board: Board, new_value: u8) -> AiMoves {
+    fn new(grid: Grid, new_value: u8) -> AiMoves {
         AiMoves {
-            board,
+            grid,
             index: 16,
             val: new_value,
         }
@@ -363,18 +363,18 @@ impl AiMoves {
 }
 
 impl Iterator for AiMoves {
-    type Item = Board;
+    type Item = Grid;
 
-    fn next(&mut self) -> Option<Board> {
+    fn next(&mut self) -> Option<Grid> {
         loop {
             self.index -= 1;
             if self.index < 0 {
                 return None;
             }
             let mask = 0b1111u64 << (self.index * 4);
-            if (self.board.0 & mask) == 0 {
-                let board = Board(self.board.0 | u64::from(self.val) << (self.index * 4));
-                return Some(board);
+            if (self.grid.0 & mask) == 0 {
+                let grid = Grid(self.grid.0 | u64::from(self.val) << (self.index * 4));
+                return Some(grid);
             }
         }
     }
@@ -388,22 +388,22 @@ fn move_row_left(row: Row) -> Row {
     let mut last = 0;
     let mut last_index = 0;
 
-    for &cell in from_row.iter() {
-        if cell == 0 {
+    for &tile in from_row.iter() {
+        if tile == 0 {
             continue;
         }
 
         if last == 0 {
-            last = cell;
+            last = tile;
             continue;
         }
 
-        if cell == last {
+        if tile == last {
             to_row[last_index as usize] = last + 1;
             last = 0;
         } else {
             to_row[last_index as usize] = last;
-            last = cell;
+            last = tile;
         }
 
         last_index += 1;
@@ -465,17 +465,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn can_create_empty_board() {
+    fn can_create_empty_grid() {
         let expected =
-            Board::from_human([[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]).unwrap();
+            Grid::from_human([[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]).unwrap();
 
-        let actual = Board::default();
+        let actual = Grid::default();
 
         assert_eq!(expected, actual);
     }
 
     #[test]
-    fn can_create_board_from_human_input() {
+    fn can_create_grid_from_human_input() {
         let human = [
             [0, 2, 4, 8],
             [16, 32, 64, 128],
@@ -483,7 +483,7 @@ mod tests {
             [4096, 8192, 16384, 32768],
         ];
 
-        let actual = Board::from_human(human);
+        let actual = Grid::from_human(human);
 
         assert!(actual.is_some());
         assert_eq!(human, actual.unwrap().unpack_human());
@@ -492,7 +492,7 @@ mod tests {
     #[test]
     fn can_return_none_on_invalid_input() {
         let result =
-            Board::from_human([[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12, 13, 14, 15]]);
+            Grid::from_human([[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12, 13, 14, 15]]);
 
         assert!(result.is_none());
     }
@@ -500,12 +500,12 @@ mod tests {
     #[test]
     fn can_add_random_tile() {
         for _ in 0..1000 {
-            let mut board = Board::default();
+            let mut grid = Grid::default();
             for _ in 0..8 {
-                board = board.add_random_tile();
+                grid = grid.add_random_tile();
             }
 
-            let count = board
+            let count = grid
                 .unpack_log()
                 .iter()
                 .flatten()
@@ -518,7 +518,7 @@ mod tests {
 
     #[test]
     fn can_to_string() {
-        let board = Board::from_human([
+        let grid = Grid::from_human([
             [0, 2, 4, 8],
             [16, 32, 64, 128],
             [256, 512, 1024, 2048],
@@ -532,112 +532,111 @@ mod tests {
         expected.push_str("   256   512  1024  2048\n");
         expected.push_str("  4096  8192 16384 32768\n");
 
-        let actual = board.to_string();
+        let actual = grid.to_string();
 
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn can_make_move_left() {
-        let board =
-            Board::from_human([[2, 2, 4, 4], [0, 2, 2, 0], [0, 2, 2, 2], [2, 0, 0, 2]]).unwrap();
+        let grid =
+            Grid::from_human([[2, 2, 4, 4], [0, 2, 2, 0], [0, 2, 2, 2], [2, 0, 0, 2]]).unwrap();
         let expected =
-            Board::from_human([[4, 8, 0, 0], [4, 0, 0, 0], [4, 2, 0, 0], [4, 0, 0, 0]]).unwrap();
+            Grid::from_human([[4, 8, 0, 0], [4, 0, 0, 0], [4, 2, 0, 0], [4, 0, 0, 0]]).unwrap();
 
-        let actual = board.make_move(Move::Left);
+        let actual = grid.make_move(Move::Left);
 
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn can_make_move_right() {
-        let board =
-            Board::from_human([[2, 2, 4, 4], [0, 2, 2, 0], [0, 2, 2, 2], [2, 0, 0, 2]]).unwrap();
+        let grid =
+            Grid::from_human([[2, 2, 4, 4], [0, 2, 2, 0], [0, 2, 2, 2], [2, 0, 0, 2]]).unwrap();
         let expected =
-            Board::from_human([[0, 0, 4, 8], [0, 0, 0, 4], [0, 0, 2, 4], [0, 0, 0, 4]]).unwrap();
+            Grid::from_human([[0, 0, 4, 8], [0, 0, 0, 4], [0, 0, 2, 4], [0, 0, 0, 4]]).unwrap();
 
-        let actual = board.make_move(Move::Right);
+        let actual = grid.make_move(Move::Right);
 
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn can_make_move_up() {
-        let board =
-            Board::from_human([[2, 2, 4, 4], [0, 2, 2, 0], [0, 2, 2, 2], [2, 0, 0, 2]]).unwrap();
+        let grid =
+            Grid::from_human([[2, 2, 4, 4], [0, 2, 2, 0], [0, 2, 2, 2], [2, 0, 0, 2]]).unwrap();
         let expected =
-            Board::from_human([[4, 4, 4, 4], [0, 2, 4, 4], [0, 0, 0, 0], [0, 0, 0, 0]]).unwrap();
+            Grid::from_human([[4, 4, 4, 4], [0, 2, 4, 4], [0, 0, 0, 0], [0, 0, 0, 0]]).unwrap();
 
-        let actual = board.make_move(Move::Up);
+        let actual = grid.make_move(Move::Up);
 
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn can_make_move_down() {
-        let board =
-            Board::from_human([[2, 2, 4, 4], [0, 2, 2, 0], [0, 2, 2, 2], [2, 0, 0, 2]]).unwrap();
+        let grid =
+            Grid::from_human([[2, 2, 4, 4], [0, 2, 2, 0], [0, 2, 2, 2], [2, 0, 0, 2]]).unwrap();
         let expected =
-            Board::from_human([[0, 0, 0, 0], [0, 0, 0, 0], [0, 2, 4, 4], [4, 4, 4, 4]]).unwrap();
+            Grid::from_human([[0, 0, 0, 0], [0, 0, 0, 0], [0, 2, 4, 4], [4, 4, 4, 4]]).unwrap();
 
-        let actual = board.make_move(Move::Down);
-
-        assert_eq!(expected, actual);
-    }
-
-    #[test]
-    fn can_possible_boards_with2() {
-        let board =
-            Board::from_human([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap();
-
-        let expected = vec![
-            Board::from_human([[2, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap(),
-            Board::from_human([[0, 8, 8, 8], [8, 8, 2, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap(),
-            Board::from_human([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 2], [8, 0, 8, 8]]).unwrap(),
-            Board::from_human([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 2, 8, 8]]).unwrap(),
-        ];
-
-        let actual = board.ai_moves_with2().collect::<Vec<_>>();
+        let actual = grid.make_move(Move::Down);
 
         assert_eq!(expected, actual);
     }
 
     #[test]
-    fn can_possible_boards_with4() {
-        let board =
-            Board::from_human([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap();
+    fn can_possible_grids_with2() {
+        let grid =
+            Grid::from_human([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap();
 
         let expected = vec![
-            Board::from_human([[4, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap(),
-            Board::from_human([[0, 8, 8, 8], [8, 8, 4, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap(),
-            Board::from_human([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 4], [8, 0, 8, 8]]).unwrap(),
-            Board::from_human([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 4, 8, 8]]).unwrap(),
+            Grid::from_human([[2, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap(),
+            Grid::from_human([[0, 8, 8, 8], [8, 8, 2, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap(),
+            Grid::from_human([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 2], [8, 0, 8, 8]]).unwrap(),
+            Grid::from_human([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 2, 8, 8]]).unwrap(),
         ];
 
-        let actual = board.ai_moves_with4().collect::<Vec<_>>();
+        let actual = grid.ai_moves_with2().collect::<Vec<_>>();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn can_possible_grids_with4() {
+        let grid =
+            Grid::from_human([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap();
+
+        let expected = vec![
+            Grid::from_human([[4, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap(),
+            Grid::from_human([[0, 8, 8, 8], [8, 8, 4, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap(),
+            Grid::from_human([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 4], [8, 0, 8, 8]]).unwrap(),
+            Grid::from_human([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 4, 8, 8]]).unwrap(),
+        ];
+
+        let actual = grid.ai_moves_with4().collect::<Vec<_>>();
 
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn can_make_player_moves() {
-        let board =
-            Board::from_human([[0, 0, 0, 2], [0, 2, 0, 2], [4, 0, 0, 2], [0, 0, 0, 2]]).unwrap();
+        let grid =
+            Grid::from_human([[0, 0, 0, 2], [0, 2, 0, 2], [4, 0, 0, 2], [0, 0, 0, 2]]).unwrap();
 
-        let mut player_moves = board.player_moves();
+        let mut player_moves = grid.player_moves();
 
         assert_eq!(
             Some((
                 Move::Left,
-                Board::from_human([[2, 0, 0, 0], [4, 0, 0, 0], [4, 2, 0, 0], [2, 0, 0, 0]])
-                    .unwrap()
+                Grid::from_human([[2, 0, 0, 0], [4, 0, 0, 0], [4, 2, 0, 0], [2, 0, 0, 0]]).unwrap()
             )),
             player_moves.next()
         );
         assert_eq!(
             Some((
                 Move::Right,
-                Board::from_human([[0, 0, 0, 2], [0, 0, 0, 4], [0, 0, 4, 2], [0, 0, 0, 2],])
+                Grid::from_human([[0, 0, 0, 2], [0, 0, 0, 4], [0, 0, 4, 2], [0, 0, 0, 2],])
                     .unwrap()
             )),
             player_moves.next()
@@ -645,7 +644,7 @@ mod tests {
         assert_eq!(
             Some((
                 Move::Up,
-                Board::from_human([[4, 2, 0, 4], [0, 0, 0, 4], [0, 0, 0, 0], [0, 0, 0, 0],])
+                Grid::from_human([[4, 2, 0, 4], [0, 0, 0, 4], [0, 0, 0, 0], [0, 0, 0, 0],])
                     .unwrap()
             )),
             player_moves.next()
@@ -653,7 +652,7 @@ mod tests {
         assert_eq!(
             Some((
                 Move::Down,
-                Board::from_human([[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 4], [4, 2, 0, 4],])
+                Grid::from_human([[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 4], [4, 2, 0, 4],])
                     .unwrap()
             )),
             player_moves.next()
@@ -663,39 +662,39 @@ mod tests {
 
     #[test]
     fn can_detect_terminal_state() {
-        let terminal_board =
-            Board::from_human([[4, 16, 8, 4], [8, 128, 32, 2], [2, 32, 16, 8], [4, 2, 4, 2]])
+        let terminal_grid =
+            Grid::from_human([[4, 16, 8, 4], [8, 128, 32, 2], [2, 32, 16, 8], [4, 2, 4, 2]])
                 .unwrap();
-        let normal_board =
-            Board::from_human([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap();
+        let normal_grid =
+            Grid::from_human([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap();
 
-        assert!(terminal_board.game_over());
-        assert!(!normal_board.game_over());
+        assert!(terminal_grid.game_over());
+        assert!(!normal_grid.game_over());
     }
 
     #[test]
     fn can_transpose() {
-        let board = Board::from_human([
+        let grid = Grid::from_human([
             [1, 2, 4, 8],
             [16, 32, 64, 128],
             [256, 512, 1024, 2048],
             [4096, 8192, 16384, 32768],
         ])
         .unwrap();
-        let expected = Board::from_human([
+        let expected = Grid::from_human([
             [1, 16, 256, 4096],
             [2, 32, 512, 8192],
             [4, 64, 1024, 16384],
             [8, 128, 2048, 32768],
         ])
         .unwrap();
-        let transposed = board.transpose();
+        let transposed = grid.transpose();
         assert_eq!(transposed, expected);
     }
 
     #[test]
     fn can_to_rows_from_rows() {
-        let board = Board::from_human([
+        let grid = Grid::from_human([
             [1, 2, 4, 8],
             [16, 32, 64, 128],
             [256, 512, 1024, 2048],
@@ -703,22 +702,21 @@ mod tests {
         ])
         .unwrap();
 
-        let roundtrip = Board::from_rows(board.rows());
+        let roundtrip = Grid::from_rows(grid.rows());
 
-        assert_eq!(roundtrip, board);
+        assert_eq!(roundtrip, grid);
     }
 
     #[test]
-    fn can_make_board_from_columns() {
+    fn can_make_grid_from_columns() {
         let col0 = Column::from_row(Row::pack([0, 4, 8, 12]).unwrap());
         let col1 = Column::from_row(Row::pack([1, 5, 9, 13]).unwrap());
         let col2 = Column::from_row(Row::pack([2, 6, 10, 14]).unwrap());
         let col3 = Column::from_row(Row::pack([3, 7, 11, 15]).unwrap());
-        let board = Board::from_columns([col0, col1, col2, col3]);
+        let grid = Grid::from_columns([col0, col1, col2, col3]);
         let expected =
-            Board::from_log([[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12, 13, 14, 15]])
-                .unwrap();
+            Grid::from_log([[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12, 13, 14, 15]]).unwrap();
 
-        assert_eq!(board, expected);
+        assert_eq!(grid, expected);
     }
 }

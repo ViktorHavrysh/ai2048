@@ -1,11 +1,10 @@
-use crate::game_logic::{Board, Row};
+use crate::game_logic::{Grid, Row};
 use std::{cmp, i32, u16};
 
-pub(crate) fn eval(board: Board) -> f32 {
-    board
-        .rows()
+pub(crate) fn eval(grid: Grid) -> f32 {
+    grid.rows()
         .iter()
-        .chain(board.transpose().rows().iter())
+        .chain(grid.transpose().rows().iter())
         .map(|&r| eval_row(r))
         .sum()
 }
@@ -34,7 +33,7 @@ const SUM_STRENGTH: f32 = 11.0;
 fn eval_row_nocache(row: Row) -> f32 {
     let row = row.unpack();
 
-    let empty = empty_cell_count_row(row) * EMPTY_STRENGTH;
+    let empty = empty_tile_count_row(row) * EMPTY_STRENGTH;
     let monotonicity = monotonicity_row(row) * MONOTONICITY_STRENGTH;
     let adjacent = adjacent_row(row) * ADJACENT_STRENGTH;
     let sum = sum_row(row) * SUM_STRENGTH;
@@ -42,8 +41,8 @@ fn eval_row_nocache(row: Row) -> f32 {
     NOT_LOST + monotonicity + empty + adjacent + sum
 }
 
-fn empty_cell_count_row(row: [u8; 4]) -> f32 {
-    row.iter().filter(|&&c| c == 0).count() as f32
+fn empty_tile_count_row(row: [u8; 4]) -> f32 {
+    bytecount::count(&row, 0) as f32
 }
 
 fn monotonicity_row(row: [u8; 4]) -> f32 {

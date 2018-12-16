@@ -36,7 +36,7 @@ export class GameManager {
       return;
     }
 
-    let mv = this.ai.evaluate_position(this.grid.board());
+    let mv = this.ai.evaluate_position(this.grid.for_ai());
     this.move(mv);
     setTimeout(() => this.run_loop(), 100);
   }
