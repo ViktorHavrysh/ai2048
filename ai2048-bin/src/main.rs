@@ -141,7 +141,7 @@ fn build_display(
     writeln!(
         &mut s,
         "Time taken on average: {:>8} ms",
-        overall.num_milliseconds() / moves as i64
+        overall.num_milliseconds() / i64::from(moves)
     )?;
     writeln!(
         &mut s,

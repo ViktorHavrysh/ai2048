@@ -1,3 +1,5 @@
+#![allow(clippy::needless_pass_by_value)]
+
 use ai2048_lib::game_logic;
 use ai2048_lib::searcher::Searcher;
 use cfg_if::cfg_if;

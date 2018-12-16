@@ -268,9 +268,9 @@ impl Grid {
 
     pub(crate) fn count_empty(self) -> usize {
         let mut x = self.0;
-        x |= (x >> 2) & 0x3333333333333333;
+        x |= (x >> 2) & 0x3333_3333_3333_3333;
         x |= x >> 1;
-        x = (!x) & 0x1111111111111111;
+        x = (!x) & 0x1111_1111_1111_1111;
         // At this point each nibble is:
         //  0 if the original nibble was non-zero
         //  1 if the original nibble was zero
@@ -279,7 +279,7 @@ impl Grid {
         x += x >> 16;
         x += x >> 8;
         x += x >> 4; // this can overflow to the next nibble if there were 16 empty positions
-        return (x & 0xf) as usize;
+        (x & 0xf) as usize
     }
 
     /// Returns a `Grid` that would result from making a certain `Move` in the current state.
