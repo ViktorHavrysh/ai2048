@@ -16,10 +16,10 @@ $tile-color: #eee4da;
 $tile-gold-color: #edc22e;
 $tile-gold-glow-color: lighten($tile-gold-color, 15%);
 
-$game-container-margin-top: 40px;
+$game-container-margin-top: 20px;
 $game-container-background: #bbada0;
 
-$transition-speed: 100ms;
+$transition-speed: 50ms;
 
 html, body {
   margin: 0;
@@ -40,7 +40,7 @@ body {
 }
 
 h1.title {
-  font-size: 80px;
+  font-size: 70px;
   font-weight: bold;
   margin: 0;
   display: block;
@@ -101,7 +101,7 @@ h1.title {
     font-weight: bold;
     color: rgba($text-color, .9);
     z-index: 100;
-    @include animation(move-up 600ms ease-in);
+    @include animation(move-up 300ms ease-in);
     @include animation-fill-mode(both);
   }
 }
@@ -112,6 +112,39 @@ h1.title {
 
 .best-container:after {
   content: "Best";
+}
+
+.strength-container {
+  float: right;
+  text-align: right;
+  $height: 25px;
+  position: relative;
+  background: $game-container-background;
+  padding: 15px 40px;
+  margin: 0px 10px 0px 10px;
+  font-size: $height;
+  height: $height;
+  line-height: $height + 22px;
+  font-weight: bold;
+  border-radius: 3px;
+  color: white;
+  text-align: center;
+
+  &:after {
+    position: absolute;
+    width: 100%;
+    top: 10px;
+    left: 0;
+    text-transform: uppercase;
+    font-size: 13px;
+    line-height: 13px;
+    text-align: center;
+    color: $tile-color;
+  }
+}
+
+.strength-container:after {
+  content: "Strength";
 }
 
 p {
@@ -427,7 +460,7 @@ hr {
 }
 
 .tile-new .tile-inner {
-  @include animation(appear 200ms ease $transition-speed);
+  @include animation(appear 100ms ease $transition-speed);
   @include animation-fill-mode(backwards);
 }
 
@@ -447,7 +480,7 @@ hr {
 
 .tile-merged .tile-inner {
   z-index: 20;
-  @include animation(pop 200ms ease $transition-speed);
+  @include animation(pop 100ms ease $transition-speed);
   @include animation-fill-mode(backwards);
 }
 
@@ -455,10 +488,9 @@ hr {
   @include clearfix;
 }
 
-.game-intro {
-  float: left;
-  line-height: 42px;
-  margin-bottom: 0;
+.below-game {
+  @include clearfix;
+  padding-top: 20px;
 }
 
 .restart-button {
@@ -468,8 +500,31 @@ hr {
   float: right;
 }
 
+.run-button {
+  @include button;
+  display: block;
+  text-align: center;
+  float: left;
+}
+
+.minus-button {
+  @include button;
+  display: block;
+  text-align: center;
+  float: right;
+  margin: 2px;
+}
+
+.plus-button {
+  @include button;
+  display: block;
+  text-align: center;
+  float: right;
+  margin: 2px;
+}
+
 .game-explanation {
-  margin-top: 50px;
+  margin-top: 20px;
 }
 
 @include smaller($mobile-threshold) {
@@ -500,7 +555,7 @@ hr {
     margin: 0 auto;
   }
 
-  .score-container, .best-container {
+  .score-container, .best-container, .strength-container {
     margin-top: 0;
     padding: 15px 10px;
     min-width: 40px;

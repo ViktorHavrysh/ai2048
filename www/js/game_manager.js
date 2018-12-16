@@ -1,19 +1,27 @@
-import { Grid } from './grid.js';
+import { InputManager } from './input_manager.js';
+import { HTMLActuator as Actuator } from './html_actuator.js';
+import { LocalStorageManager as StorageManager } from './local_storage_manager.js';
+import { Ai } from './ai.js'; import { Grid } from './grid.js';
 import { Tile } from './tile.js';
 
 export class GameManager {
-  constructor(size, InputManager, Actuator, StorageManager, Ai) {
+  constructor(size) {
     this.size = size; // Size of the grid
     this.inputManager = new InputManager;
     this.storageManager = new StorageManager;
     this.actuator = new Actuator;
-    this.ai = new Ai;
+    this.ai = new Ai(this.inputManager);
     this.startTiles = 2;
     this.inputManager.on("move", this.move.bind(this));
     this.inputManager.on("restart", this.restart.bind(this));
     this.inputManager.on("keepPlaying", this.keepPlaying.bind(this));
     this.inputManager.on("run", this.run.bind(this));
+    this.ai.on("update_strength", this.update_strength.bind(this));
     this.setup();
+  }
+  update_strength() {
+    let strengthElement = document.getElementsByClassName("strength-container")[0];
+    strengthElement.innerHTML = this.ai.strength();
   }
   // Restart the game
   restart() {
@@ -29,7 +37,14 @@ export class GameManager {
   }
   run() {
     this.ai_on = !this.ai_on;
-    this.run_loop()
+    let run_button = document.getElementsByClassName("run-button")[0];
+    if (this.ai_on) {
+      run_button.innerHTML = "Stop AI";
+    } else {
+      run_button.innerHTML = "Run AI";
+    }
+
+    this.run_loop();
   }
   run_loop() {
     if (!this.ai_on) {
@@ -65,6 +80,7 @@ export class GameManager {
       // Add the initial tiles
       this.addStartTiles();
     }
+    this.update_strength();
     // Update the actuator
     this.actuate();
   }

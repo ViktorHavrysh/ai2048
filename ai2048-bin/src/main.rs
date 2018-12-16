@@ -8,6 +8,7 @@ use std::fmt::{self, Write};
 use std::sync::mpsc;
 
 const MIN_PROBABILITY: f32 = 0.0001;
+const MAX_DEPTH: u8 = 8;
 
 #[derive(Debug)]
 enum Error {
@@ -63,7 +64,7 @@ fn main() -> Result<(), Error> {
     });
 
     let compute_loop = pool.spawn_fn(move || {
-        let searcher = Searcher::new(MIN_PROBABILITY);
+        let searcher = Searcher::new(MIN_PROBABILITY, MAX_DEPTH);
         let mut grid = Grid::default().add_random_tile().add_random_tile();
         let start_overall = Utc::now();
         let mut moves = 0;

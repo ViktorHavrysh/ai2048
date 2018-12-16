@@ -45,9 +45,9 @@ pub enum Move {
 }
 
 #[wasm_bindgen]
-pub fn evaluate_position(grid: Box<[u32]>) -> Move {
+pub fn evaluate_position(grid: Box<[u32]>, min_prob: f32, max_depth: u8) -> Move {
     let grid = transform_grid(&grid);
-    let searcher = Searcher::new(0.0001);
+    let searcher = Searcher::new(min_prob, max_depth);
     let result = searcher.search(grid);
     transform_move(result.best_move)
 }

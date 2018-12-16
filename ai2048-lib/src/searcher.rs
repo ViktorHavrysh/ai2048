@@ -44,6 +44,7 @@ struct SearchState {
 /// Searches for the best move at the current grid state
 pub struct Searcher {
     min_probability: f32,
+    max_depth: u8,
 }
 
 const PROBABILITY_OF2: f32 = 0.9;
@@ -51,14 +52,20 @@ const PROBABILITY_OF4: f32 = 0.1;
 
 impl Searcher {
     /// Create a new searcher
-    pub fn new(min_probability: f32) -> Searcher {
-        Searcher { min_probability }
+    pub fn new(min_probability: f32, max_depth: u8) -> Searcher {
+        Searcher {
+            min_probability,
+            max_depth,
+        }
     }
 
     /// Perform a search for the best move
     pub fn search(&self, grid: Grid) -> SearchResult {
         let mut state = SearchState::default();
-        let depth = std::cmp::max(3, (grid.count_distinct_tiles() as i8) - 2);
+        let depth = std::cmp::min(
+            self.max_depth as i8,
+            std::cmp::max(3, (grid.count_distinct_tiles() as i8) - 2),
+        );
         let mut move_evaluations = grid
             .player_moves()
             .map(|(m, b)| {

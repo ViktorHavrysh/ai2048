@@ -62,8 +62,10 @@ export class InputManager {
     });
     // Respond to button presses
     this.bindButtonPress(".retry-button", this.restart);
-    this.bindButtonPress("#restart", this.restart);
-    this.bindButtonPress("#run", this.run);
+    this.bindButtonPress(".restart-button", this.restart);
+    this.bindButtonPress(".run-button", this.run);
+    this.bindButtonPress(".plus-button", this.plus);
+    this.bindButtonPress(".minus-button", this.minus);
     this.bindButtonPress(".keep-playing-button", this.keepPlaying);
     // Respond to swipe events
     var touchStartClientX, touchStartClientY;
@@ -117,6 +119,14 @@ export class InputManager {
   run(event) {
     event.preventDefault();
     this.emit("run");
+  }
+  plus(event) {
+    event.preventDefault();
+    this.emit("plus");
+  }
+  minus(event) {
+    event.preventDefault();
+    this.emit("minus");
   }
   keepPlaying(event) {
     event.preventDefault();
