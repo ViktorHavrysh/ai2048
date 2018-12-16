@@ -1,4 +1,5 @@
 use crate::game_logic::{Grid, Row};
+use lazy_static::lazy_static;
 use std::{cmp, i32, u16};
 
 pub(crate) fn eval(grid: Grid) -> f32 {
@@ -9,8 +10,11 @@ pub(crate) fn eval(grid: Grid) -> f32 {
         .sum()
 }
 
+// Safety: this is safe because the cache is populated for every possible u16 value.
 fn eval_row(row: Row) -> f32 {
-    unsafe { *CACHE.get_unchecked(row.0 as usize) }
+    // Make sure row.0 is still u16
+    let row: u16 = row.0;
+    unsafe { *CACHE.get_unchecked(row as usize) }
 }
 
 // Pre-cache heuristic for every possible row with values that can fit a nibble

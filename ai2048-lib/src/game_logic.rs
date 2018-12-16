@@ -48,7 +48,7 @@ impl fmt::Debug for Row {
 
 impl Row {
     // Tries to pack four bytes into four nibbles.
-    // If a byte doesn't fit a nibble, return the index of this byte as Err.
+    // If a byte doesn't fit a nibble, returns the index of this byte in `Err`.
     pub(crate) fn pack(row: [u8; 4]) -> Result<Row, usize> {
         let mut result = 0;
         for (index, &tile) in row.iter().enumerate() {
@@ -82,6 +82,12 @@ impl Row {
 struct Column(u64);
 
 impl Column {
+    // 0 2 4 8
+    // becomes
+    // 0
+    // 2
+    // 4
+    // 8
     fn from_row(row: Row) -> Self {
         const COLUMN_MASK: u64 = 0x000F_000F_000F_000F;
         let col = (u64::from(row.0)
@@ -93,9 +99,7 @@ impl Column {
     }
 }
 
-/// `Grid`, in general, encodes all the rules of the game: it can generate new states
-/// given a move a player makes, or all possible states following the computer spawning a random
-/// tile.
+/// `Grid` is the game state. Limitation: can encode tiles of up to 32768.
 #[derive(Eq, PartialEq, Hash, Copy, Clone, Default)]
 pub struct Grid(u64);
 
@@ -217,7 +221,7 @@ impl Grid {
         MOVES.iter().find(|&&m| self.make_move(m) != self).is_none()
     }
 
-    /// Creates a new `Grid` with a random tile (10% of times a `2`, 90% of times a `4`) added to a
+    /// Creates a new `Grid` with a random tile (90% of times a `2`, 10% of times a `4`) added to a
     /// random empty tile on the grid.
     pub fn add_random_tile(self) -> Grid {
         let mut rng = rand::thread_rng();
@@ -258,6 +262,7 @@ impl Grid {
     }
 
     pub(crate) fn transpose(self) -> Grid {
+        // Black magic to transpose a grid quickly.
         let x = self.0;
         let a1 = x & 0xF0F0_0F0F_F0F0_0F0F;
         let a2 = x & 0x0000_F0F0_0000_F0F0;
@@ -287,6 +292,7 @@ impl Grid {
     }
 
     /// Returns a `Grid` that would result from making a certain `Move` in the current state.
+    /// Limitation: if two 32768 tiles would be merged as a result of the move, the resulting tile becomes a 32768 instead.
     pub fn make_move(self, mv: Move) -> Grid {
         match mv {
             Move::Left => self.move_left(),
@@ -344,7 +350,7 @@ impl Grid {
 
 struct AiMoves {
     grid: Grid,
-    index: i8,
+    index: u8,
     val: u8,
 }
 
@@ -363,10 +369,10 @@ impl Iterator for AiMoves {
 
     fn next(&mut self) -> Option<Grid> {
         loop {
-            self.index -= 1;
-            if self.index < 0 {
+            if self.index == 0 {
                 return None;
             }
+            self.index -= 1;
             let mask = 0b1111u64 << (self.index * 4);
             if (self.grid.0 & mask) == 0 {
                 let grid = Grid(self.grid.0 | u64::from(self.val) << (self.index * 4));
@@ -417,17 +423,26 @@ fn move_row_left(row: Row) -> Row {
     })
 }
 
+// Safety: these are safe because caches are populated for every possible u16 value
 fn lookup_left(row: Row) -> Row {
-    unsafe { *CACHE_LEFT.get_unchecked(row.0 as usize) }
+    // Make sure row.0 is still u16
+    let row: u16 = row.0;
+    unsafe { *CACHE_LEFT.get_unchecked(row as usize) }
 }
 fn lookup_right(row: Row) -> Row {
-    unsafe { *CACHE_RIGHT.get_unchecked(row.0 as usize) }
+    // Make sure row.0 is still u16
+    let row: u16 = row.0;
+    unsafe { *CACHE_RIGHT.get_unchecked(row as usize) }
 }
 fn lookup_up(row: Row) -> Column {
-    unsafe { *CACHE_UP.get_unchecked(row.0 as usize) }
+    // Make sure row.0 is still u16
+    let row: u16 = row.0;
+    unsafe { *CACHE_UP.get_unchecked(row as usize) }
 }
 fn lookup_down(row: Row) -> Column {
-    unsafe { *CACHE_DOWN.get_unchecked(row.0 as usize) }
+    // Make sure row.0 is still u16
+    let row: u16 = row.0;
+    unsafe { *CACHE_DOWN.get_unchecked(row as usize) }
 }
 
 lazy_static! {

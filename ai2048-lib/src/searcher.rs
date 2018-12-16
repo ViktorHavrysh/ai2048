@@ -1,4 +1,4 @@
-//! New implementation of searcher, not using SearchTree
+//! Searcher looks for the best move given a game position
 
 use crate::game_logic::{Grid, Move};
 use crate::heuristic;
