@@ -55,6 +55,7 @@ impl Searcher {
         Searcher { min_probability }
     }
 
+    /// Perform a search for the best move
     pub fn search(&self, grid: Grid) -> SearchResult {
         let mut state = SearchState::default();
         let depth = std::cmp::max(3, (grid.count_distinct_tiles() as i8) - 2);

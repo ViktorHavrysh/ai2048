@@ -1,6 +1,7 @@
 //! 2048 game logic is implemented here.
 use lazy_static::lazy_static;
 use rand::{self, Rng};
+use std::collections::HashSet;
 use std::{fmt, u16};
 
 /// Represents a move.
@@ -46,16 +47,18 @@ impl fmt::Debug for Row {
 }
 
 impl Row {
-    pub(crate) fn pack(row: [u8; 4]) -> Option<Row> {
+    // Tries to pack four bytes into four nibbles.
+    // If a byte doesn't fit a nibble, return the index of this byte as Err.
+    pub(crate) fn pack(row: [u8; 4]) -> Result<Row, usize> {
         let mut result = 0;
-        for &tile in &row {
+        for (index, &tile) in row.iter().enumerate() {
             if tile > 0b1111 {
-                return None;
+                return Err(index);
             }
             result <<= 4;
             result += u16::from(tile);
         }
-        Some(Row(result))
+        Ok(Row(result))
     }
 
     pub(crate) fn unpack(self) -> [u8; 4] {
@@ -147,7 +150,7 @@ impl Grid {
                 new_row[y] = log;
             }
 
-            rows[x] = Row::pack(new_row)?;
+            rows[x] = Row::pack(new_row).ok()?;
         }
         Some(Grid::from_rows(rows))
     }
@@ -170,7 +173,7 @@ impl Grid {
     fn from_log(grid: [[u8; 4]; 4]) -> Option<Grid> {
         let mut rows = [Row::default(); 4];
         for (x, &row) in grid.iter().enumerate() {
-            rows[x] = Row::pack(row)?;
+            rows[x] = Row::pack(row).ok()?;
         }
         Some(Grid::from_rows(rows))
     }
@@ -209,6 +212,7 @@ impl Grid {
         grid
     }
 
+    /// Find out if the game is lost in the current state
     pub fn game_over(self) -> bool {
         MOVES.iter().find(|&&m| self.make_move(m) != self).is_none()
     }
@@ -329,20 +333,12 @@ impl Grid {
     }
 
     pub(crate) fn count_distinct_tiles(self) -> usize {
-        let mut grid = self.0;
-        let mut bitset = 0u16;
-        while grid != 0 {
-            bitset |= 1 << (grid & 0xF);
-            grid >>= 4;
-        }
-        bitset >>= 1;
-        let mut count = 0;
-        while bitset != 0 {
-            bitset &= bitset - 1;
-            count += 1;
-        }
-
-        count
+        self.unpack_log()
+            .iter()
+            .flatten()
+            .filter(|&&x| x != 0)
+            .collect::<HashSet<_>>()
+            .len()
     }
 }
 
@@ -413,7 +409,12 @@ fn move_row_left(row: Row) -> Row {
         to_row[last_index as usize] = last;
     }
 
-    Row::pack(to_row).unwrap_or_default()
+    Row::pack(to_row).unwrap_or_else(|index| {
+        // There is a 65536 tile which does not fit a nibble
+        // Merge into a 32768 instead
+        to_row[index] = 15;
+        Row::pack(to_row).unwrap()
+    })
 }
 
 fn lookup_left(row: Row) -> Row {
