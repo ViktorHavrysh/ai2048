@@ -1,15 +1,13 @@
 import { Grid } from './grid.js';
 import { Tile } from './tile.js';
 
-const ai2048 = import("../ai2048-wasm/pkg");
-ai2048.then(m => m.init());
-
 export class GameManager {
-  constructor(size, InputManager, Actuator, StorageManager) {
+  constructor(size, InputManager, Actuator, StorageManager, Ai) {
     this.size = size; // Size of the grid
     this.inputManager = new InputManager;
     this.storageManager = new StorageManager;
     this.actuator = new Actuator;
+    this.ai = new Ai;
     this.startTiles = 2;
     this.inputManager.on("move", this.move.bind(this));
     this.inputManager.on("restart", this.restart.bind(this));
@@ -34,24 +32,13 @@ export class GameManager {
     this.run_loop()
   }
   run_loop() {
-    if (!this.ai_on)
+    if (!this.ai_on) {
       return;
+    }
 
-    let b = [];
-    this.grid.cells.forEach(row => row.forEach(tile => {
-      if (tile == null) {
-        b.push(0);
-      } else {
-        b.push(tile.value);
-      }
-    }));
-    let board = new Uint32Array(b);
-    ai2048.then(m => {
-      let mv = m.evaluate_position(board);
-      if (mv == 4 || !this.ai_on) return;
-      this.move(mv);
-      setTimeout(() => this.run_loop(), 100);
-    });
+    let mv = this.ai.evaluate_position(this.grid.board());
+    this.move(mv);
+    setTimeout(() => this.run_loop(), 100);
   }
   // Return true if the game is lost, or has won and the user hasn't kept playing
   isGameTerminated() {

@@ -94,6 +94,18 @@ export class Grid {
       cells: cellState
     };
   }
+  board() {
+    let b = [];
+    this.cells.forEach(row => row.forEach(tile => {
+      if (tile == null) {
+        b.push(0);
+      } else {
+        b.push(tile.value);
+      }
+    }));
+    let board = new Uint32Array(b);
+    return board;
+  }
 }
 
 
