@@ -1,4 +1,4 @@
-export class KeyboardInputManager {
+export class InputManager {
   constructor() {
     this.events = {};
     if (window.navigator.msPointerEnabled) {

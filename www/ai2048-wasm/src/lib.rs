@@ -45,25 +45,24 @@ pub fn evaluate_position(board: Box<[u32]>) -> u8 {
     let row3 = [board[3], board[7], board[11], board[15]];
     let board = [row0, row1, row2, row3];
     let board = Board::from_human(board).unwrap();
-    console::log_1(&format!("{:?}", board).into());
-    console::log_1(&format!("{}", board).into());
     let searcher = Searcher::new(0.0001);
     let result = searcher.search(board);
-    console::log_1(&format!("{:?}", result).into());
     let mv = match result.best_move {
         Some((game_logic::Move::Up, _)) => Move::Up,
         Some((game_logic::Move::Down, _)) => Move::Down,
         Some((game_logic::Move::Left, _)) => Move::Left,
         Some((game_logic::Move::Right, _)) => Move::Right,
-        None => Move::None,
+        None => {
+            console::log_1(&"game over!".into());
+            Move::None
+        }
     };
-    console::log_1(&format!("{:?}", mv).into());
 
     mv as u8
 }
 
 // Called by our JS entry point to run the example.
 #[wasm_bindgen]
-pub fn run() {
+pub fn init() {
     set_panic_hook();
 }

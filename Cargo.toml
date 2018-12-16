@@ -8,6 +8,9 @@ members = [
 
 [profile]
 
+[profile.dev]
+opt-level = "s"
+
 [profile.release]
 lto = true
 codegen-units = 1

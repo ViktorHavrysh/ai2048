@@ -2,7 +2,7 @@ import { Grid } from './grid.js';
 import { Tile } from './tile.js';
 
 const ai2048 = import("../ai2048-wasm/pkg");
-ai2048.then(m => m.run());
+ai2048.then(m => m.init());
 
 export class GameManager {
   constructor(size, InputManager, Actuator, StorageManager) {
