@@ -1,4 +1,8 @@
 target
-ai2048_lib/Cargo.lock
 .idea/
 .vscode/
+www/dist
+www/node_modules
+www/ai2048-wasm/bin
+www/ai2048-wasm/pkg
+www/ai2048-wasm/wasm-pack.log

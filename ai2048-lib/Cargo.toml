@@ -1,12 +1,13 @@
 [package]
 authors = ["Victor Gavrish <victor.gavrish@gmail.com>"]
 license = "LGPL"
-name = "ai2048_lib"
+name = "ai2048-lib"
 version = "0.1.0"
 edition = "2018"
 
 [dependencies]
 hashbrown = "0.1"
-lazy_static = "0.2"
+lazy_static = "1.2"
 rand = "0.5"
 fnv = "1.0"
+bytecount = "0.4"

@@ -1,4 +1,4 @@
-use ai2048_lib::game_logic::{Board, MOVES};
+use ai2048_lib::game_logic::{Grid, MOVES};
 use ai2048_lib::searcher::{SearchResult, Searcher};
 use chrono::prelude::*;
 use futures::Future;
@@ -64,13 +64,13 @@ fn main() -> Result<(), Error> {
 
     let compute_loop = pool.spawn_fn(move || {
         let searcher = Searcher::new(MIN_PROBABILITY);
-        let mut board = Board::default().add_random_tile().add_random_tile();
+        let mut grid = Grid::default().add_random_tile().add_random_tile();
         let start_overall = Utc::now();
         let mut moves = 0;
         loop {
             moves += 1;
             let start_one = Utc::now();
-            let result = searcher.search(board);
+            let result = searcher.search(grid);
             let end = Utc::now();
             tx.send(Signal::Display(
                 result.clone(),
@@ -80,7 +80,7 @@ fn main() -> Result<(), Error> {
             ))?;
 
             if let Some((mv, _)) = result.best_move {
-                board = board.make_move(mv).add_random_tile();
+                grid = grid.make_move(mv).add_random_tile();
             } else {
                 tx.send(Signal::Stop)?;
                 let res: Result<(), Error> = Ok(());
@@ -103,7 +103,7 @@ fn build_display(
     let mut s = String::new();
     write!(&mut s, "{}[2J", 27 as char)?; // clear screen
 
-    writeln!(&mut s, "{}", result.root_board)?;
+    writeln!(&mut s, "{}", result.root_grid)?;
 
     writeln!(&mut s, "Total moves:  {:>10}\n", moves)?;
 
@@ -141,7 +141,7 @@ fn build_display(
     writeln!(
         &mut s,
         "Time taken on average: {:>8} ms",
-        overall.num_milliseconds() / moves as i64
+        overall.num_milliseconds() / i64::from(moves)
     )?;
     writeln!(
         &mut s,

@@ -1,15 +1,35 @@
 # ai2048
 
-This crate provides an implementation of an 2048 AI.
+This repository contains a modified 2048 game
 
-The `board` module contains 2048 game logic.
+Unlike the original, this version adds an AI written in Rust and compiled into WASM.
 
-The `agent` module contains an AI player.
+The repository also contains a commandline runner for the AI, mostly for debugging and benchmarking purposes.
 
-The `heuristic` module contains various heuristics that the AI player can use to evaluate board positions and try to maximize. It also contains the `Heuristic` trait that can be used to implemnt your own heuristic.
+## Building
 
-The `SearchResult` and `SearchStatistics` types are containers for the results of the AI player's evaluation of a position and some interesting statistics.
+You'll need [Rust](https://www.rust-lang.org/) in order to build the AI. Get it [here](https://rustup.rs/).
 
-# Example use:
+To compile it to WASM, you'll need [wasm-pack](https://github.com/rustwasm/wasm-pack). Installation instructions [here](https://rustwasm.github.io/wasm-pack/installer).
 
-See the main.rs file :)
+Finally, to build the website, you'll need [NPM](https://www.npmjs.com/).
+
+After all the prerequisites are installed:
+
+```bash
+# needed because wasm-pack has a bug when working with cargo workspaces
+mkdir target && ln -s target www/ai2048-wasm/target
+cd www
+npm install
+npm run start
+```
+
+## Acknowledgements
+
+The original is written by Gabriele Cirulli. You can find it [here](https://github.com/gabrielecirulli/2048).
+
+The AI uses techniques and heuristics inspired by this AI implementation:
+
+https://github.com/nneonneo/2048-ai
+
+This is a very good AI written in C++.
