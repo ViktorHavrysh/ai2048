@@ -37,14 +37,16 @@ export class GameManager {
   }
   run() {
     this.ai_on = !this.ai_on;
+    this.setRunButton();
+    this.run_loop();
+  }
+  setRunButton() {
     let run_button = document.getElementsByClassName("run-button")[0];
     if (this.ai_on) {
       run_button.innerHTML = "Stop AI";
     } else {
       run_button.innerHTML = "Run AI";
     }
-
-    this.run_loop();
   }
   run_loop() {
     if (!this.ai_on) {
@@ -80,6 +82,7 @@ export class GameManager {
       // Add the initial tiles
       this.addStartTiles();
     }
+    this.setRunButton();
     this.update_strength();
     // Update the actuator
     this.actuate();
@@ -190,6 +193,7 @@ export class GameManager {
       this.addRandomTile();
       if (!this.movesAvailable()) {
         this.over = true; // Game over!
+        this.ai_on = false;
       }
       this.actuate();
     }
