@@ -17,9 +17,7 @@ Finally, to build the website, you'll need [NPM](https://www.npmjs.com/).
 After all the prerequisites are installed:
 
 ```bash
-# needed because wasm-pack has a bug when working with cargo workspaces
-chmod +x build.sh
-./build.sh
+chmod +x build.sh && ./build.sh
 ```
 
 ## Acknowledgements
