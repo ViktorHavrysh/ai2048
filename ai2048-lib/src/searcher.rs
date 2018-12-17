@@ -18,7 +18,7 @@ pub struct SearchResult {
     pub move_evaluations: HashMap<Move, f32>,
     /// The best move, if one exists. Can be `None` if the player has no available
     /// moves, that is, in a game over state.
-    pub best_move: Option<(Move, f32)>,
+    pub best_move: Option<Move>,
     /// Some search statistics
     pub stats: SearchStats,
 }
@@ -76,7 +76,7 @@ impl Searcher {
 
         move_evaluations.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
 
-        let best_move = move_evaluations.iter().cloned().next();
+        let best_move = move_evaluations.iter().cloned().next().map(|(mv, _)| mv);
 
         let move_evaluations = move_evaluations.into_iter().collect();
 

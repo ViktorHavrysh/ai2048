@@ -80,7 +80,7 @@ fn main() -> Result<(), Error> {
                 end - start_overall,
             ))?;
 
-            if let Some((mv, _)) = result.best_move {
+            if let Some(mv) = result.best_move {
                 grid = grid.make_move(mv).add_random_tile();
             } else {
                 tx.send(Signal::Stop)?;
@@ -122,11 +122,6 @@ fn build_display(
             Some(eval) => writeln!(&mut s, "{eval:>16.*}", 0, eval = eval)?,
             None => writeln!(&mut s, "{:>16}", "illegal")?,
         }
-    }
-
-    if let Some((_, eval)) = result.best_move {
-        writeln!(&mut s)?;
-        writeln!(&mut s, "  Best: {eval:>16.*}", 0, eval = eval)?;
     }
 
     writeln!(&mut s)?;

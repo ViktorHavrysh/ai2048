@@ -6,10 +6,6 @@ const WasmPackPlugin = require("@wasm-tool/wasm-pack-plugin");
 
 module.exports = {
   entry: "./js/index.js",
-  output: {
-    path: dist,
-    filename: "bundle.js"
-  },
   devServer: {
     contentBase: dist,
   },
@@ -49,5 +45,9 @@ module.exports = {
         }]
       }
     ]
+  },
+  output: {
+    path: dist,
+    filename: "bundle.js"
   }
 };
