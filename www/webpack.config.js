@@ -1,11 +1,11 @@
 const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
-
 const dist = path.resolve(__dirname, "dist");
 const WasmPackPlugin = require("@wasm-tool/wasm-pack-plugin");
 
 module.exports = {
-  entry: "./js/index.js",
+  entry: "./js/index.ts",
+  devtool: 'inline-source-map',
   devServer: {
     contentBase: dist,
   },
@@ -15,7 +15,8 @@ module.exports = {
     }),
 
     new WasmPackPlugin({
-      crateDirectory: path.resolve(__dirname, "ai2048-wasm")
+      crateDirectory: path.resolve(__dirname, "ai2048-wasm"),
+      withTypeScript: true
     }),
   ],
   module: {
@@ -43,6 +44,15 @@ module.exports = {
             outputPath: '/'
           }
         }]
+      },
+      {
+        test: /\.tsx?$/,
+        use: 'ts-loader',
+        exclude: /node_modules/
+      },
+      {
+        test: /\.wasm$/,
+        type: "webassembly/experimental"
       }
     ]
   },

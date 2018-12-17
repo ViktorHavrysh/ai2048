@@ -1,16 +1,13 @@
-import { InputManager } from './input_manager.js';
-import { HTMLActuator as Actuator } from './html_actuator.js';
-import { LocalStorageManager as StorageManager } from './local_storage_manager.js';
-import { Ai } from './ai.js'; import { Grid } from './grid.js';
+import { Grid } from './grid.js';
 import { Tile } from './tile.js';
 
 export class GameManager {
-  constructor(size) {
+  constructor(size, inputManager, storageManager, actuator, ai) {
     this.size = size; // Size of the grid
-    this.inputManager = new InputManager;
-    this.storageManager = new StorageManager;
-    this.actuator = new Actuator;
-    this.ai = new Ai(this.inputManager);
+    this.inputManager = inputManager;
+    this.storageManager = storageManager;
+    this.actuator = actuator;
+    this.ai = ai;
     this.startTiles = 2;
     this.inputManager.on("move", this.move.bind(this));
     this.inputManager.on("restart", this.restart.bind(this));
