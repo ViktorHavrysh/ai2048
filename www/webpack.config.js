@@ -4,7 +4,8 @@ const dist = path.resolve(__dirname, "dist");
 const WasmPackPlugin = require("@wasm-tool/wasm-pack-plugin");
 
 module.exports = {
-  entry: "./ts/index.ts",
+  mode: "production",
+  entry: "./src/main.ts",
   devtool: "inline-source-map",
   devServer: {
     contentBase: dist
@@ -21,46 +22,30 @@ module.exports = {
   ],
   module: {
     rules: [
+      { test: /\.worker\.ts/, loader: "worker-loader" },
+      { test: /\.ts$/, use: "ts-loader" },
+      { test: /\.wasm$/, type: "webassembly/experimental" },
       {
         test: /\.(s*)css$/,
         use: ["style-loader", "css-loader", "sass-loader"]
       },
+      { test: /\.ico$/, use: ["file-loader"] },
       {
         test: /\.(woff(2)?|ttf|eot|svg)(\?v=\d+\.\d+\.\d+)?$/,
         use: [
           {
             loader: "file-loader",
             options: {
-              name: "[name].[ext]",
               outputPath: "fonts/"
             }
           }
         ]
-      },
-      {
-        test: /\.ico$/,
-        use: [
-          {
-            loader: "file-loader",
-            options: {
-              name: "[name].[ext]",
-              outputPath: "/"
-            }
-          }
-        ]
-      },
-      {
-        test: /\.tsx?$/,
-        use: "ts-loader"
-      },
-      {
-        test: /\.wasm$/,
-        type: "webassembly/experimental"
       }
     ]
   },
   resolve: {
-    extensions: [".ts", ".js", ".sass", ".wasm", ".ico"]
+    extensions: [".ts", ".js", ".sass", ".wasm", ".ico"],
+    modules: ["node_modules"]
   },
   output: {
     path: dist,

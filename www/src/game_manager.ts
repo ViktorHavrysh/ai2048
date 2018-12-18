@@ -38,6 +38,7 @@ export class GameManager {
     this.actuator = actuator;
     this.ai = ai;
     this.eventManager.on("move", this.move.bind(this));
+    this.eventManager.on("aiMove", this.move.bind(this));
     this.eventManager.on("restart", this.restart.bind(this));
     this.eventManager.on("keepPlaying", this.continuePlaying.bind(this));
     this.eventManager.on("run", this.toggleAi.bind(this));
@@ -61,12 +62,9 @@ export class GameManager {
       this.runLoop();
     }
   }
-  private runLoop() {
+  private runLoop(): void {
     if (!this.aiIsOn) return;
-    const mv = this.ai.evaluatePosition(this.grid!.forAi());
-    if (!this.aiIsOn) return;
-    this.move(mv);
-    setTimeout(() => this.runLoop(), 100);
+    this.ai.evaluatePosition(this.grid!.forAi());
   }
   // Return true if the game is lost, or has won and the user hasn't kept playing
   private isGameTerminated(): boolean {

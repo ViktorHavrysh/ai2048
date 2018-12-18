@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "es6",
     "module": "esNext",
-    "lib": ["dom", "es2015"],
+    "lib": ["dom", "es2015", "webworker", "scripthost"],
     "strict": true,
     "esModuleInterop": true,
     "outDir": "./dist/",
@@ -12,6 +12,5 @@
     "sourceMap": true,
     "allowJs": true,
     "strictNullChecks": true
-  },
-  "include": ["ts/**/*.ts"]
+  }
 }

@@ -1,30 +1,26 @@
 import EventManager from "./event_manager";
-
-const ai2048 = import("../ai2048-wasm/pkg");
-ai2048.then(m => {
-  m.init();
-});
+import MessageForAi from "./ai_itnterop";
+import AiWorker from "./ai.worker";
 
 export default class Ai {
+  private readonly aiWorker: Worker;
   private readonly eventManager: EventManager;
   private readonly minProb: number;
   private maxDepth: number;
-  private evaluate_position:
-    | ((grid: Uint32Array, minProb: number, maxDepth: number) => number)
-    | null = null;
-
   public constructor(
     eventManager: EventManager,
     minProb: number,
     maxDepth: number
   ) {
+    this.aiWorker = new AiWorker("ai");
     this.eventManager = eventManager;
     this.minProb = minProb;
     this.maxDepth = maxDepth;
     this.eventManager.on("plus", this.plus.bind(this));
     this.eventManager.on("minus", this.minus.bind(this));
-    const self = this;
-    ai2048.then(m => (self.evaluate_position = m.evaluate_position));
+    this.aiWorker.addEventListener("message", ev =>
+      this.eventManager.emit("aiMove", ev.data)
+    );
   }
   private plus() {
     if (this.maxDepth < 10) {
@@ -41,7 +37,12 @@ export default class Ai {
   public strength(): number {
     return this.maxDepth;
   }
-  public evaluatePosition(grid: Uint32Array): number {
-    return this.evaluate_position!(grid, this.minProb, this.maxDepth);
+  public evaluatePosition(grid: Uint32Array): void {
+    let message: MessageForAi = {
+      grid: grid,
+      minProb: this.minProb,
+      maxDepth: this.maxDepth
+    };
+    this.aiWorker.postMessage(message);
   }
 }
