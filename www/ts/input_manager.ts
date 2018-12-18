@@ -1,11 +1,12 @@
 import { Direction } from "./direction";
+import EventManager from "./event_manager";
 
 export default class InputManager {
-  private readonly events: { [index: string]: ((data: any) => void)[] } = {};
+  private readonly eventManager: EventManager;
   private readonly eventTouchstart: string;
   private readonly eventTouchmove: string;
   private readonly eventTouchend: string;
-  private readonly map: { [index: number]: Direction | undefined } = {
+  private readonly map: { [index: number]: Direction } = {
     38: Direction.Up,
     39: Direction.Right,
     40: Direction.Down,
@@ -19,7 +20,8 @@ export default class InputManager {
     83: Direction.Down,
     65: Direction.Left // A
   };
-  public constructor() {
+  public constructor(eventManager: EventManager) {
+    this.eventManager = eventManager;
     if (window.navigator.msPointerEnabled) {
       //Internet Explorer 10 style
       this.eventTouchstart = "MSPointerDown";
@@ -30,23 +32,8 @@ export default class InputManager {
       this.eventTouchmove = "touchmove";
       this.eventTouchend = "touchend";
     }
-    this.listen();
   }
-  public on(event: string, callback: (data: any) => void): void {
-    if (!this.events[event]) {
-      this.events[event] = [];
-    }
-    this.events[event].push(callback);
-  }
-  private emit(event: string, data?: any): void {
-    const callbacks = this.events[event];
-    if (callbacks) {
-      for (const callback of callbacks) {
-        callback(data);
-      }
-    }
-  }
-  private listen(): void {
+  public listen(): void {
     const self = this;
     // Respond to direction keys
     document.addEventListener("keydown", event => {
@@ -56,7 +43,7 @@ export default class InputManager {
       if (!modifiers) {
         if (mapped) {
           event.preventDefault();
-          self.emit("move", mapped);
+          self.eventManager.emit("move", mapped);
         }
       }
       // R key restarts the game
@@ -119,29 +106,29 @@ export default class InputManager {
         } else {
           direction = dy > 0 ? Direction.Down : Direction.Up;
         }
-        self.emit("move", direction);
+        self.eventManager.emit("move", direction);
       }
     });
   }
   private restart(event: Event) {
     event.preventDefault();
-    this.emit("restart");
+    this.eventManager.emit("restart");
   }
   private run(event: Event) {
     event.preventDefault();
-    this.emit("run");
+    this.eventManager.emit("run");
   }
   private plus(event: Event) {
     event.preventDefault();
-    this.emit("plus");
+    this.eventManager.emit("plus");
   }
   private minus(event: Event) {
     event.preventDefault();
-    this.emit("minus");
+    this.eventManager.emit("minus");
   }
   private keepPlaying(event: Event) {
     event.preventDefault();
-    this.emit("keepPlaying");
+    this.eventManager.emit("keepPlaying");
   }
   private bindButtonPress(selector: string, fn: (event: Event) => void) {
     var button = document.querySelector(selector)!;

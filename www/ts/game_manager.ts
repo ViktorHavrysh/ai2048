@@ -1,12 +1,12 @@
 import { Grid } from "./grid";
 import { Tile } from "./tile";
-import InputManager from "./input_manager";
 import StorageManager from "./local_storage_manager";
 import { HTMLActuator as Actuator } from "./html_actuator";
 import Ai from "./ai";
 import GameState from "./game_state";
 import { Direction } from "./direction";
 import Position from "./position";
+import EventManager from "./event_manager";
 
 interface Vector {
   x: number;
@@ -15,7 +15,7 @@ interface Vector {
 
 export class GameManager {
   private readonly size: number = 4;
-  private readonly inputManager: InputManager;
+  private readonly eventManager: EventManager;
   private readonly storageManager: StorageManager;
   private readonly actuator: Actuator;
   private readonly ai: Ai;
@@ -28,26 +28,19 @@ export class GameManager {
   private score: number = 0;
 
   public constructor(
-    inputManager: InputManager,
+    eventManager: EventManager,
     storageManager: StorageManager,
     actuator: Actuator,
     ai: Ai
   ) {
-    this.inputManager = inputManager;
+    this.eventManager = eventManager;
     this.storageManager = storageManager;
     this.actuator = actuator;
     this.ai = ai;
-    this.inputManager.on("move", this.move.bind(this));
-    this.inputManager.on("restart", this.restart.bind(this));
-    this.inputManager.on("keepPlaying", this.continuePlaying.bind(this));
-    this.inputManager.on("run", this.run.bind(this));
-    this.ai.on("update_strength", this.update_strength.bind(this));
-  }
-  private update_strength(): void {
-    const strengthElement = document.getElementsByClassName(
-      "strength-container"
-    )[0];
-    strengthElement.innerHTML = this.ai.strength().toString();
+    this.eventManager.on("move", this.move.bind(this));
+    this.eventManager.on("restart", this.restart.bind(this));
+    this.eventManager.on("keepPlaying", this.continuePlaying.bind(this));
+    this.eventManager.on("run", this.toggleAi.bind(this));
   }
   // Restart the game
   private restart(): void {
@@ -61,17 +54,11 @@ export class GameManager {
     this.keepPlaying = true;
     this.actuator.continueGame(); // Clear the game won/lost message
   }
-  private run(): void {
+  private toggleAi(): void {
     this.aiIsOn = !this.aiIsOn;
-    this.setRunButton();
-    this.runLoop();
-  }
-  private setRunButton() {
-    const runButton = document.getElementsByClassName("run-button")[0];
+    this.eventManager.emit("aiStatusChanged", this.aiIsOn);
     if (this.aiIsOn) {
-      runButton.innerHTML = "Stop AI";
-    } else {
-      runButton.innerHTML = "Run AI";
+      this.runLoop();
     }
   }
   private runLoop() {
@@ -105,8 +92,6 @@ export class GameManager {
       // Add the initial tiles
       this.addStartTiles();
     }
-    this.setRunButton();
-    this.update_strength();
     // Update the actuator
     this.actuate();
   }
@@ -140,7 +125,9 @@ export class GameManager {
       over: this.over,
       won: this.won,
       bestScore: this.storageManager.getBestScore(),
-      terminated: this.isGameTerminated()
+      terminated: this.isGameTerminated(),
+      strength: this.ai.strength(),
+      aiIsOn: () => this.aiIsOn
     });
   }
   // Represent the current game as an object

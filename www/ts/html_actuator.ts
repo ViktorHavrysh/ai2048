@@ -1,6 +1,7 @@
 import { Tile } from "./tile";
 import { Grid } from "./grid";
 import Position from "./position";
+import EventManager from "./event_manager";
 
 export interface ActuatorMetadata {
   score: number;
@@ -8,22 +9,26 @@ export interface ActuatorMetadata {
   won: boolean;
   bestScore: number;
   terminated: boolean;
+  strength: number;
+  aiIsOn: () => boolean;
 }
 
 export class HTMLActuator {
-  private readonly tileContainer: Element = document.querySelector(
-    ".tile-container"
+  private readonly eventManager: EventManager;
+  private readonly tileContainer = document.querySelector(".tile-container")!;
+  private readonly scoreContainer = document.querySelector(".score-container")!;
+  private readonly bestContainer = document.querySelector(".best-container")!;
+  private readonly strengthContainer = document.querySelector(
+    ".strength-container"
   )!;
-  private readonly scoreContainer: Element = document.querySelector(
-    ".score-container"
-  )!;
-  private readonly bestContainer: Element = document.querySelector(
-    ".best-container"
-  )!;
-  private readonly messageContainer: Element = document.querySelector(
-    ".game-message"
-  )!;
+  private readonly runButton = document.querySelector(".run-button")!;
+  private readonly messageContainer = document.querySelector(".game-message")!;
   private score: number = 0;
+  public constructor(eventManager: EventManager) {
+    this.eventManager = eventManager;
+    this.eventManager.on("update_strength", this.updateStrength.bind(this));
+    this.eventManager.on("aiStatusChanged", this.updateRunButton.bind(this));
+  }
   public actuate(grid: Grid, metadata: ActuatorMetadata): void {
     const self = this;
     window.requestAnimationFrame(() => {
@@ -37,6 +42,8 @@ export class HTMLActuator {
       }
       self.updateScore(metadata.score);
       self.updateBestScore(metadata.bestScore);
+      self.updateStrength(metadata.strength);
+      self.updateRunButton(metadata.aiIsOn());
       if (metadata.terminated) {
         if (metadata.over) {
           self.message(false); // You lose
@@ -113,6 +120,16 @@ export class HTMLActuator {
   }
   private updateBestScore(bestScore: number): void {
     this.bestContainer.textContent = bestScore.toString();
+  }
+  private updateStrength(strength: number): void {
+    this.strengthContainer.textContent = strength.toString();
+  }
+  private updateRunButton(aiIsOn: boolean): void {
+    if (aiIsOn) {
+      this.runButton.textContent = "Stop AI";
+    } else {
+      this.runButton.textContent = "Run AI";
+    }
   }
   private message(won: boolean): void {
     const type = won ? "game-won" : "game-over";
