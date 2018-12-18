@@ -1,19 +1,17 @@
 {
-    "compilerOptions": {
-        "target": "es6",
-        "module": "esNext",
-        "lib": [
-            "dom",
-            "es2015"
-        ],
-        "strict": true,
-        "esModuleInterop": true,
-        "outDir": "./dist/",
-        "noImplicitAny": true,
-        "removeComments": true,
-        "preserveConstEnums": true,
-        "sourceMap": true,
-        "allowJs": true,
-        "strictNullChecks": true
-    }
+  "compilerOptions": {
+    "target": "es6",
+    "module": "esNext",
+    "lib": ["dom", "es2015"],
+    "strict": true,
+    "esModuleInterop": true,
+    "outDir": "./dist/",
+    "noImplicitAny": true,
+    "removeComments": true,
+    "preserveConstEnums": true,
+    "sourceMap": true,
+    "allowJs": true,
+    "strictNullChecks": true
+  },
+  "include": ["ts/**/*.ts"]
 }
