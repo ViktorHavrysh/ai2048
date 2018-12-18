@@ -9,14 +9,14 @@ import Ai from "./ai";
 import EventManager from "./event_manager";
 
 const minProb = 0.0001;
-const maxDepth = 6;
+const initialStrength = 8;
 
 function init() {
   const eventManager = new EventManager();
   const inputManager = new InputManager(eventManager);
   const storageManager = new StorageManager();
-  const actuator = new Actuator(eventManager);
-  const ai = new Ai(eventManager, minProb, maxDepth);
+  const ai = new Ai(eventManager, minProb, initialStrength);
+  const actuator = new Actuator(eventManager, () => ai.isOn());
   const gameManager = new GameManager(
     eventManager,
     storageManager,

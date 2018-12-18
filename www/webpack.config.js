@@ -3,9 +3,8 @@ const HtmlWebpackPlugin = require("html-webpack-plugin");
 const dist = path.resolve(__dirname, "dist");
 const WasmPackPlugin = require("@wasm-tool/wasm-pack-plugin");
 
-module.exports = {
-  mode: "production",
-  entry: "./src/main.ts",
+const browserConfig = {
+  entry: "./browser/main.ts",
   devtool: "inline-source-map",
   devServer: {
     contentBase: dist
@@ -13,23 +12,27 @@ module.exports = {
   plugins: [
     new HtmlWebpackPlugin({
       template: "index.html"
-    }),
-
-    new WasmPackPlugin({
-      crateDirectory: path.resolve(__dirname, "./ai2048-wasm"),
-      withTypeScript: true
     })
   ],
   module: {
     rules: [
-      { test: /\.worker\.ts/, loader: "worker-loader" },
       { test: /\.ts$/, use: "ts-loader" },
-      { test: /\.wasm$/, type: "webassembly/experimental" },
       {
         test: /\.(s*)css$/,
         use: ["style-loader", "css-loader", "sass-loader"]
       },
-      { test: /\.ico$/, use: ["file-loader"] },
+      {
+        test: /\.ico$/,
+        use: [
+          {
+            loader: "file-loader",
+            options: {
+              name: "[name].[ext]",
+              outputPath: "/"
+            }
+          }
+        ]
+      },
       {
         test: /\.(woff(2)?|ttf|eot|svg)(\?v=\d+\.\d+\.\d+)?$/,
         use: [
@@ -44,11 +47,31 @@ module.exports = {
     ]
   },
   resolve: {
-    extensions: [".ts", ".js", ".sass", ".wasm", ".ico"],
+    extensions: [".ts", ".js", ".sass", ".ico"],
     modules: ["node_modules"]
   },
   output: {
     path: dist,
-    filename: "bundle.js"
+    filename: "app.js"
   }
 };
+
+const workerConfig = {
+  entry: "./worker/worker.js",
+  target: "webworker",
+  plugins: [
+    new WasmPackPlugin({
+      crateDirectory: path.resolve(__dirname, "../ai2048-wasm"),
+      withTypeScript: true
+    })
+  ],
+  resolve: {
+    extensions: [".js", ".wasm"]
+  },
+  output: {
+    path: dist,
+    filename: "worker.js"
+  }
+};
+
+module.exports = [browserConfig, workerConfig];

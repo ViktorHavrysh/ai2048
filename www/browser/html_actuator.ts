@@ -10,7 +10,6 @@ export interface ActuatorMetadata {
   bestScore: number;
   terminated: boolean;
   strength: number;
-  aiIsOn: () => boolean;
 }
 
 export class HTMLActuator {
@@ -23,34 +22,38 @@ export class HTMLActuator {
   )!;
   private readonly runButton = document.querySelector(".run-button")!;
   private readonly messageContainer = document.querySelector(".game-message")!;
+  private readonly aiIsOn: () => boolean;
   private score: number = 0;
-  public constructor(eventManager: EventManager) {
+  public constructor(eventManager: EventManager, aiIsOn: () => boolean) {
     this.eventManager = eventManager;
+    this.aiIsOn = aiIsOn;
     this.eventManager.on("update_strength", this.updateStrength.bind(this));
-    this.eventManager.on("aiStatusChanged", this.updateRunButton.bind(this));
   }
-  public actuate(grid: Grid, metadata: ActuatorMetadata): void {
+  public actuate(grid: Grid, metadata: ActuatorMetadata): Promise<void> {
     const self = this;
-    window.requestAnimationFrame(() => {
-      self.clearContainer(self.tileContainer);
-      for (const column of grid.cells) {
-        for (const cell of column) {
-          if (cell) {
-            self.addTile(cell);
+    return new Promise((resolve, _reject) => {
+      window.requestAnimationFrame(() => {
+        self.clearContainer(self.tileContainer);
+        for (const column of grid.cells) {
+          for (const cell of column) {
+            if (cell) {
+              self.addTile(cell);
+            }
           }
         }
-      }
-      self.updateScore(metadata.score);
-      self.updateBestScore(metadata.bestScore);
-      self.updateStrength(metadata.strength);
-      self.updateRunButton(metadata.aiIsOn());
-      if (metadata.terminated) {
-        if (metadata.over) {
-          self.message(false); // You lose
-        } else if (metadata.won) {
-          self.message(true); // You win!
+        self.updateScore(metadata.score);
+        self.updateBestScore(metadata.bestScore);
+        self.updateStrength(metadata.strength);
+        self.updateRunButton();
+        if (metadata.terminated) {
+          if (metadata.over) {
+            self.message(false); // You lose
+          } else if (metadata.won) {
+            self.message(true); // You win!
+          }
         }
-      }
+        resolve();
+      });
     });
   }
   // Continues the game (both restart and keep playing)
@@ -124,11 +127,11 @@ export class HTMLActuator {
   private updateStrength(strength: number): void {
     this.strengthContainer.textContent = strength.toString();
   }
-  private updateRunButton(aiIsOn: boolean): void {
-    if (aiIsOn) {
-      this.runButton.textContent = "Stop AI";
-    } else {
+  public updateRunButton(): void {
+    if (!this.aiIsOn()) {
       this.runButton.textContent = "Run AI";
+    } else {
+      this.runButton.textContent = "Stop AI";
     }
   }
   private message(won: boolean): void {

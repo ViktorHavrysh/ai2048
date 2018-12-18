@@ -15,7 +15,7 @@ crate-type = ["cdylib"]
 cfg-if = "0.1.5"
 wasm-bindgen = "0.2.25"
 console_error_panic_hook = "0.1.5"
-ai2048-lib = { path = "../../ai2048-lib" }
+ai2048-lib = { path = "../ai2048-lib" }
 wee_alloc = { version = "0.4.2", optional = true }
 web-sys = { version = "0.3", features = ["console"] }
 

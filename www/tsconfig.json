@@ -5,6 +5,7 @@
     "lib": ["dom", "es2015", "webworker", "scripthost"],
     "strict": true,
     "esModuleInterop": true,
+    "baseUrl": "./browser/",
     "outDir": "./dist/",
     "noImplicitAny": true,
     "removeComments": true,
@@ -12,5 +13,6 @@
     "sourceMap": true,
     "allowJs": true,
     "strictNullChecks": true
-  }
+  },
+  "include": ["./browser/**/*.ts"]
 }

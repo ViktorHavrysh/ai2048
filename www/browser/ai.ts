@@ -1,25 +1,31 @@
 import EventManager from "./event_manager";
-import MessageForAi from "./ai_itnterop";
-import AiWorker from "./ai.worker";
+
+interface MessageForAi {
+  grid: Uint32Array;
+  minProb: number;
+  maxDepth: number;
+}
 
 export default class Ai {
   private readonly aiWorker: Worker;
   private readonly eventManager: EventManager;
   private readonly minProb: number;
   private maxDepth: number;
+  private aiIsOn: boolean = false;
   public constructor(
     eventManager: EventManager,
     minProb: number,
     maxDepth: number
   ) {
-    this.aiWorker = new AiWorker("ai");
+    this.aiWorker = new Worker("./worker.js");
     this.eventManager = eventManager;
     this.minProb = minProb;
     this.maxDepth = maxDepth;
     this.eventManager.on("plus", this.plus.bind(this));
     this.eventManager.on("minus", this.minus.bind(this));
+    this.eventManager.on("moved", this.decideMove.bind(this));
     this.aiWorker.addEventListener("message", ev =>
-      this.eventManager.emit("aiMove", ev.data)
+      this.eventManager.emit("move", ev.data)
     );
   }
   private plus() {
@@ -34,15 +40,27 @@ export default class Ai {
       this.eventManager.emit("update_strength", this.maxDepth);
     }
   }
+  public run(grid: Uint32Array): void {
+    this.aiIsOn = true;
+    this.decideMove(grid);
+  }
+  public stop(): void {
+    this.aiIsOn = false;
+  }
+  public isOn(): boolean {
+    return this.aiIsOn;
+  }
   public strength(): number {
     return this.maxDepth;
   }
-  public evaluatePosition(grid: Uint32Array): void {
-    let message: MessageForAi = {
-      grid: grid,
-      minProb: this.minProb,
-      maxDepth: this.maxDepth
-    };
-    this.aiWorker.postMessage(message);
+  public decideMove(grid: Uint32Array) {
+    if (this.aiIsOn) {
+      let message: MessageForAi = {
+        grid: grid,
+        minProb: this.minProb,
+        maxDepth: this.maxDepth
+      };
+      this.aiWorker.postMessage(message);
+    }
   }
 }
