@@ -1,11 +1,10 @@
 [package]
-authors = ["The RustWasm Developers"]
+authors = ["Victor Gavrish <victor.gavrish@gmail.com>"]
 categories = ["wasm"]
-description = "My super awesome Rust, WebAssembly, and Webpack project!"
-license = "Apache-2.0/MIT"
+description = "2048 AI in wasm"
+license = "LGPL"
 name = "ai2048-wasm"
-readme = "./README.md"
-repository = "https://github.com/rustwasm/rust-webpack-template"
+repository = "https://github.com/VictorGavrish/ai2048"
 version = "0.1.0"
 edition = "2018"
 
