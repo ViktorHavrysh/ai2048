@@ -6,7 +6,7 @@ export default class InputManager {
   private readonly eventTouchstart: string;
   private readonly eventTouchmove: string;
   private readonly eventTouchend: string;
-  private readonly map: { [index: number]: Direction } = {
+  private readonly keyMap: { [index: number]: Direction } = {
     38: Direction.Up,
     39: Direction.Right,
     40: Direction.Down,
@@ -38,7 +38,7 @@ export default class InputManager {
     document.addEventListener("keydown", event => {
       const modifiers =
         event.altKey || event.ctrlKey || event.metaKey || event.shiftKey;
-      const mapped = this.map[event.which];
+      const mapped = this.keyMap[event.which];
       if (!modifiers) {
         if (mapped) {
           event.preventDefault();

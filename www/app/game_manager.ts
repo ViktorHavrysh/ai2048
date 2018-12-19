@@ -26,6 +26,13 @@ export default class GameManager {
   private score = 0;
   private aiIsRunning = false;
 
+  private readonly directionMap = new Map<Direction, Vector>([
+    [Direction.Up, { x: 0, y: -1 }],
+    [Direction.Right, { x: 1, y: 0 }],
+    [Direction.Down, { x: 0, y: 1 }],
+    [Direction.Left, { x: -1, y: 0 }]
+  ]);
+
   public constructor(
     storageManager: StorageManager,
     actuator: Actuator,
@@ -60,22 +67,29 @@ export default class GameManager {
         const position: Position = { x: x, y: y };
         const tile = this.grid.tileAtPosition(position);
         if (tile) {
-          const positions = this.findFarthestPosition(position, vector);
-          const next = this.grid.tileAtPosition(positions.next);
+          const { farthest, next } = this.findFarthestPosition(
+            position,
+            vector
+          );
+          const nextTile = this.grid.tileAtPosition(next);
           // Only one merger per row traversal?
-          if (next && next.value === tile.value && !next.mergedFrom) {
-            const merged = new Tile(positions.next, tile.value * 2);
-            merged.mergedFrom = [tile, next];
+          if (
+            nextTile &&
+            nextTile.value === tile.value &&
+            !nextTile.mergedFrom
+          ) {
+            const merged = new Tile(next, tile.value * 2);
+            merged.mergedFrom = [tile, nextTile];
             this.grid.insertTile(merged);
             this.grid.removeTileAtPosition(tile);
             // Converge the two tiles' positions
-            tile.updatePosition(positions.next);
+            tile.updatePosition(next);
             // Update the score
             this.score += merged.value;
-            // The mighty 65536 tile
+            // The mythical 65536 tile
             if (merged.value === 65536) this.won = true;
           } else {
-            this.moveTile(tile, positions.farthest);
+            this.moveTile(tile, farthest);
           }
           if (!this.positionsEqual(position, tile)) {
             moved = true; // The tile moved from its original cell!
@@ -128,7 +142,7 @@ export default class GameManager {
     this.keepPlaying = previousState.keepPlaying;
     this.ai.setStrength(previousState.aiStrength);
   }
-  private clearState() {
+  private clearState(): void {
     this.grid = new Grid();
     this.score = 0;
     this.over = false;
@@ -156,8 +170,8 @@ export default class GameManager {
       strength: this.ai.strength(),
       aiIsOn: () => this.aiIsRunning
     });
-    const to = timeout(100);
     if (this.aiIsRunning) {
+      const to = timeout(100);
       const direction = await this.ai.chooseDirection(this.grid.forAi());
       await to; // make sure moves are at least 100 milliseconds
       this.move(direction);
@@ -210,13 +224,7 @@ export default class GameManager {
   }
   // Get the vector representing the chosen direction
   private getVector(direction: Direction): Vector {
-    const map = new Map<Direction, Vector>([
-      [Direction.Up, { x: 0, y: -1 }],
-      [Direction.Right, { x: 1, y: 0 }],
-      [Direction.Down, { x: 0, y: 1 }],
-      [Direction.Left, { x: -1, y: 0 }]
-    ]);
-    return map.get(direction)!;
+    return this.directionMap.get(direction)!;
   }
   // Build a list of positions to traverse in the right order
   private buildTraversals(vector: Vector): { x: number[]; y: number[] } {
@@ -231,18 +239,21 @@ export default class GameManager {
     return traversals;
   }
   private findFarthestPosition(
-    cell: Position,
+    position: Position,
     vector: Vector
   ): { farthest: Position; next: Position } {
     let previous;
     // Progress towards the vector direction until an obstacle is found
     do {
-      previous = cell;
-      cell = { x: previous.x + vector.x, y: previous.y + vector.y };
-    } while (this.grid.withinBounds(cell) && this.grid.tileAvailable(cell));
+      previous = position;
+      position = { x: previous.x + vector.x, y: previous.y + vector.y };
+    } while (
+      this.grid.withinBounds(position) &&
+      this.grid.tileAvailable(position)
+    );
     return {
       farthest: previous,
-      next: cell // Used to check if a merge is required
+      next: position // Used to check if a merge is required
     };
   }
   private movesAvailable(): boolean {
@@ -267,7 +278,7 @@ export default class GameManager {
     }
     return false;
   }
-  private positionsEqual(first: Vector, second: Vector): boolean {
+  private positionsEqual(first: Position, second: Position): boolean {
     return first.x === second.x && first.y === second.y;
   }
 }

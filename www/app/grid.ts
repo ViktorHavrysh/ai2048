@@ -116,12 +116,12 @@ export class Grid {
     return tiles;
   }
   private availablePositions(): Position[] {
-    const cells: Position[] = [];
+    const positions: Position[] = [];
     this.eachTile((x, y, tile) => {
       if (!tile) {
-        cells.push({ x: x, y: y });
+        positions.push({ x: x, y: y });
       }
     });
-    return cells;
+    return positions;
   }
 }
