@@ -1,5 +1,5 @@
-import "../style/main.scss";
-import "../favicon.ico";
+import "./style/main.scss";
+import "./favicon.ico";
 
 import InputManager from "./input_manager";
 import StorageManager from "./local_storage_manager";

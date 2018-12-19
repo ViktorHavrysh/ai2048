@@ -128,7 +128,7 @@ export class HTMLActuator {
   }
   public updateRunButton(aiIsOn: boolean): void {
     if (!aiIsOn) {
-      this.runButton.textContent = "Run AI";
+      this.runButton.textContent = "Start AI";
     } else {
       this.runButton.textContent = "Stop AI";
     }

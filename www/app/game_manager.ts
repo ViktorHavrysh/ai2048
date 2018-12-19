@@ -7,6 +7,7 @@ import GameState from "./game_state";
 import { Direction } from "./direction";
 import Position from "./position";
 import EventManager from "./event_manager";
+import timeout from "./timeout";
 
 interface Vector {
   x: number;
@@ -114,31 +115,6 @@ export class GameManager {
       this.grid!.insertTile(tile);
     }
   }
-  // Sends the updated grid to the actuator
-  private async actuate(): Promise<void> {
-    if (this.storageManager.getBestScore() < this.score) {
-      this.storageManager.setBestScore(this.score);
-    }
-    // Clear the state when the game is over (game over only, not win)
-    if (this.over) {
-      this.storageManager.clearGameState();
-    } else {
-      this.storageManager.setGameState(this.serialize());
-    }
-    await this.actuator.actuate(this.grid!, {
-      score: this.score,
-      over: this.over,
-      won: this.won,
-      bestScore: this.storageManager.getBestScore(),
-      terminated: this.isGameTerminated(),
-      strength: this.ai.strength(),
-      aiIsOn: () => this.aiIsRunning
-    });
-    if (this.aiIsRunning) {
-      let direction = await this.ai.chooseDirection(this.grid!.forAi());
-      this.move(direction);
-    }
-  }
   // Represent the current game as an object
   private serialize(): GameState {
     return {
@@ -211,6 +187,33 @@ export class GameManager {
         this.aiIsRunning = false;
       }
       this.actuate();
+    }
+  }
+  // Sends the updated grid to the actuator
+  private async actuate(): Promise<void> {
+    if (this.storageManager.getBestScore() < this.score) {
+      this.storageManager.setBestScore(this.score);
+    }
+    // Clear the state when the game is over (game over only, not win)
+    if (this.over) {
+      this.storageManager.clearGameState();
+    } else {
+      this.storageManager.setGameState(this.serialize());
+    }
+    await this.actuator.actuate(this.grid!, {
+      score: this.score,
+      over: this.over,
+      won: this.won,
+      bestScore: this.storageManager.getBestScore(),
+      terminated: this.isGameTerminated(),
+      strength: this.ai.strength(),
+      aiIsOn: () => this.aiIsRunning
+    });
+    const to = timeout(100);
+    if (this.aiIsRunning) {
+      let direction = await this.ai.chooseDirection(this.grid!.forAi());
+      await to; // make sure moves are at least 100 milliseconds
+      this.move(direction);
     }
   }
   // Get the vector representing the chosen direction
