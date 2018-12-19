@@ -77,7 +77,7 @@ export default class InputManager {
       }
       event.preventDefault();
     });
-    gameContainer.addEventListener(this.eventTouchmove, event => {
+    gameContainer.addEventListener(this.eventTouchmove, (event: Event) => {
       event.preventDefault();
     });
     gameContainer.addEventListener(this.eventTouchend, (event: any) => {

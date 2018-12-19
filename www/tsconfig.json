@@ -1,17 +1,18 @@
 {
   "compilerOptions": {
     "target": "es6",
-    "module": "esNext",
-    "lib": ["dom", "es2015"],
+    "module": "es6",
     "strict": true,
     "esModuleInterop": true,
+    "baseUrl": "./app/",
     "outDir": "./dist/",
     "noImplicitAny": true,
     "removeComments": true,
     "preserveConstEnums": true,
     "sourceMap": true,
     "allowJs": true,
-    "strictNullChecks": true
+    "strictNullChecks": true,
+    "moduleResolution": "node"
   },
-  "include": ["ts/**/*.ts"]
+  "include": ["./app/**/*.ts"]
 }

@@ -498,12 +498,12 @@ hr {
         font-size: 15px;
     }
     body {
-        margin: 20px 0;
-        padding: 0 20px;
+        margin: 10px 0;
+        padding: 0 10px;
     }
     h1.title {
-        font-size: 27px;
-        margin-top: 15px;
+        font-size: 25px;
+        margin-top: 10px;
     }
     .container {
         width: $field-width;
@@ -546,5 +546,11 @@ hr {
         .lower {
             margin-top: 30px !important;
         }
+    }
+    .game-explanation {
+        display: none;
+    }
+    .below-game {
+        padding-top: 10px;
     }
 }

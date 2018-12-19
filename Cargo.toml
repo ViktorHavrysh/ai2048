@@ -3,7 +3,7 @@
 members = [
     "ai2048-bin",
     "ai2048-lib",
-    "www/ai2048-wasm"
+    "ai2048-wasm",
 ]
 
 [profile]

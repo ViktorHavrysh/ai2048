@@ -26,31 +26,33 @@ export class HTMLActuator {
   private score: number = 0;
   public constructor(eventManager: EventManager) {
     this.eventManager = eventManager;
-    this.eventManager.on("update_strength", this.updateStrength.bind(this));
-    this.eventManager.on("aiStatusChanged", this.updateRunButton.bind(this));
+    this.eventManager.on("updateStrength", this.updateStrength.bind(this));
   }
-  public actuate(grid: Grid, metadata: ActuatorMetadata): void {
+  public actuate(grid: Grid, metadata: ActuatorMetadata): Promise<void> {
     const self = this;
-    window.requestAnimationFrame(() => {
-      self.clearContainer(self.tileContainer);
-      for (const column of grid.cells) {
-        for (const cell of column) {
-          if (cell) {
-            self.addTile(cell);
+    return new Promise((resolve, _reject) => {
+      window.requestAnimationFrame(() => {
+        self.clearContainer(self.tileContainer);
+        for (const column of grid.cells) {
+          for (const cell of column) {
+            if (cell) {
+              self.addTile(cell);
+            }
           }
         }
-      }
-      self.updateScore(metadata.score);
-      self.updateBestScore(metadata.bestScore);
-      self.updateStrength(metadata.strength);
-      self.updateRunButton(metadata.aiIsOn());
-      if (metadata.terminated) {
-        if (metadata.over) {
-          self.message(false); // You lose
-        } else if (metadata.won) {
-          self.message(true); // You win!
+        self.updateScore(metadata.score);
+        self.updateBestScore(metadata.bestScore);
+        self.updateStrength(metadata.strength);
+        self.updateRunButton(metadata.aiIsOn());
+        if (metadata.terminated) {
+          if (metadata.over) {
+            self.message(false); // You lose
+          } else if (metadata.won) {
+            self.message(true); // You win!
+          }
         }
-      }
+        resolve();
+      });
     });
   }
   // Continues the game (both restart and keep playing)
@@ -124,11 +126,11 @@ export class HTMLActuator {
   private updateStrength(strength: number): void {
     this.strengthContainer.textContent = strength.toString();
   }
-  private updateRunButton(aiIsOn: boolean): void {
-    if (aiIsOn) {
-      this.runButton.textContent = "Stop AI";
+  public updateRunButton(aiIsOn: boolean): void {
+    if (!aiIsOn) {
+      this.runButton.textContent = "Start AI";
     } else {
-      this.runButton.textContent = "Run AI";
+      this.runButton.textContent = "Stop AI";
     }
   }
   private message(won: boolean): void {
