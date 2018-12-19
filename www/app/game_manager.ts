@@ -25,6 +25,7 @@ export class GameManager {
   private over: boolean = false;
   private won: boolean = false;
   private score: number = 0;
+  private aiIsRunning: boolean = false;
 
   public constructor(
     eventManager: EventManager,
@@ -41,7 +42,19 @@ export class GameManager {
     this.eventManager.on("restart", this.restart.bind(this));
     this.eventManager.on("keepPlaying", this.continuePlaying.bind(this));
     this.eventManager.on("run", this.toggleAi.bind(this));
+    this.eventManager.on("plus", this.plus.bind(this));
+    this.eventManager.on("minus", this.minus.bind(this));
+    this.eventManager.on("moved", this.onMoved.bind(this));
   }
+  private plus(): void {
+    const strength = this.ai.increaseStrength();
+    this.eventManager.emit("updateStrength", strength);
+  }
+  private minus(): void {
+    const strength = this.ai.decreaseStrength();
+    this.eventManager.emit("updateStrength", strength);
+  }
+  private onMoved(): void {}
   // Restart the game
   private restart(): void {
     this.storageManager.clearGameState();
@@ -54,11 +67,10 @@ export class GameManager {
     this.actuator.continueGame(); // Clear the game won/lost message
   }
   private toggleAi(): void {
-    if (this.ai.isOn()) {
-      this.ai.stop();
-      this.actuator.updateRunButton();
-    } else {
-      this.ai.run(this.grid!.forAi());
+    this.aiIsRunning = !this.aiIsRunning;
+    this.actuator.updateRunButton(this.aiIsRunning);
+    if (this.aiIsRunning) {
+      this.ai.chooseDirection(this.grid!.forAi()).then(d => this.move(d));
     }
   }
   // Return true if the game is lost, or has won and the user hasn't kept playing
@@ -81,7 +93,7 @@ export class GameManager {
       this.over = false;
       this.won = false;
       this.keepPlaying = false;
-      this.ai.stop();
+      this.aiIsRunning = false;
       // Add the initial tiles
       this.addStartTiles();
     }
@@ -103,7 +115,7 @@ export class GameManager {
     }
   }
   // Sends the updated grid to the actuator
-  private actuate(): void {
+  private async actuate(): Promise<void> {
     if (this.storageManager.getBestScore() < this.score) {
       this.storageManager.setBestScore(this.score);
     }
@@ -113,16 +125,19 @@ export class GameManager {
     } else {
       this.storageManager.setGameState(this.serialize());
     }
-    this.actuator
-      .actuate(this.grid!, {
-        score: this.score,
-        over: this.over,
-        won: this.won,
-        bestScore: this.storageManager.getBestScore(),
-        terminated: this.isGameTerminated(),
-        strength: this.ai.strength()
-      })
-      .then(() => this.ai.decideMove(this.grid!.forAi()));
+    await this.actuator.actuate(this.grid!, {
+      score: this.score,
+      over: this.over,
+      won: this.won,
+      bestScore: this.storageManager.getBestScore(),
+      terminated: this.isGameTerminated(),
+      strength: this.ai.strength(),
+      aiIsOn: () => this.aiIsRunning
+    });
+    if (this.aiIsRunning) {
+      let direction = await this.ai.chooseDirection(this.grid!.forAi());
+      this.move(direction);
+    }
   }
   // Represent the current game as an object
   private serialize(): GameState {
@@ -193,7 +208,7 @@ export class GameManager {
       this.addRandomTile();
       if (!this.movesAvailable()) {
         this.over = true; // Game over!
-        this.ai.stop();
+        this.aiIsRunning = false;
       }
       this.actuate();
     }

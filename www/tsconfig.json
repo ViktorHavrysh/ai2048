@@ -1,18 +1,18 @@
 {
   "compilerOptions": {
     "target": "es6",
-    "module": "esNext",
-    "lib": ["dom", "es2015", "webworker", "scripthost"],
+    "module": "es6",
     "strict": true,
     "esModuleInterop": true,
-    "baseUrl": "./browser/",
+    "baseUrl": "./app/",
     "outDir": "./dist/",
     "noImplicitAny": true,
     "removeComments": true,
     "preserveConstEnums": true,
     "sourceMap": true,
     "allowJs": true,
-    "strictNullChecks": true
+    "strictNullChecks": true,
+    "moduleResolution": "node"
   },
-  "include": ["./browser/**/*.ts"]
+  "include": ["./app/**/*.ts"]
 }

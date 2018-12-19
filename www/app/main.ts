@@ -16,7 +16,7 @@ function init() {
   const inputManager = new InputManager(eventManager);
   const storageManager = new StorageManager();
   const ai = new Ai(eventManager, minProb, initialStrength);
-  const actuator = new Actuator(eventManager, () => ai.isOn());
+  const actuator = new Actuator(eventManager);
   const gameManager = new GameManager(
     eventManager,
     storageManager,

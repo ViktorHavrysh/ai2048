@@ -10,6 +10,7 @@ export interface ActuatorMetadata {
   bestScore: number;
   terminated: boolean;
   strength: number;
+  aiIsOn: () => boolean;
 }
 
 export class HTMLActuator {
@@ -22,12 +23,10 @@ export class HTMLActuator {
   )!;
   private readonly runButton = document.querySelector(".run-button")!;
   private readonly messageContainer = document.querySelector(".game-message")!;
-  private readonly aiIsOn: () => boolean;
   private score: number = 0;
-  public constructor(eventManager: EventManager, aiIsOn: () => boolean) {
+  public constructor(eventManager: EventManager) {
     this.eventManager = eventManager;
-    this.aiIsOn = aiIsOn;
-    this.eventManager.on("update_strength", this.updateStrength.bind(this));
+    this.eventManager.on("updateStrength", this.updateStrength.bind(this));
   }
   public actuate(grid: Grid, metadata: ActuatorMetadata): Promise<void> {
     const self = this;
@@ -44,7 +43,7 @@ export class HTMLActuator {
         self.updateScore(metadata.score);
         self.updateBestScore(metadata.bestScore);
         self.updateStrength(metadata.strength);
-        self.updateRunButton();
+        self.updateRunButton(metadata.aiIsOn());
         if (metadata.terminated) {
           if (metadata.over) {
             self.message(false); // You lose
@@ -127,8 +126,8 @@ export class HTMLActuator {
   private updateStrength(strength: number): void {
     this.strengthContainer.textContent = strength.toString();
   }
-  public updateRunButton(): void {
-    if (!this.aiIsOn()) {
+  public updateRunButton(aiIsOn: boolean): void {
+    if (!aiIsOn) {
       this.runButton.textContent = "Run AI";
     } else {
       this.runButton.textContent = "Stop AI";
