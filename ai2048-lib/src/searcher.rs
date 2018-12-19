@@ -1,12 +1,11 @@
 //! Searcher looks for the best move given a game position
 
+use crate::cache::Cache;
 use crate::game_logic::{Grid, Move};
 use crate::heuristic;
 use std::f32;
 
 use std::collections::HashMap;
-type Cache<K, V> = hashbrown::HashMap<K, V, fnv::FnvBuildHasher>;
-// type Cache<K, V> = HashMap<K, V, fnv::FnvBuildHasher>;
 
 /// Return a number of interesting statistics together with a recommendation for the best move.
 #[derive(Clone, Debug)]
@@ -36,7 +35,6 @@ pub struct SearchStats {
 
 #[derive(Clone, Debug, Default)]
 struct SearchState {
-    stats: SearchStats,
     cache: Cache<Grid, (f32, f32)>,
     hits: usize,
 }
@@ -143,7 +141,7 @@ impl Searcher {
 
         let sum_with4 = grid
             .ai_moves_with4()
-            .map(|b| self.player_move_eval(b, prob4, depth - 2, state))
+            .map(|b| self.player_move_eval(b, prob4, depth - 1, state))
             .sum::<f32>();
         let avg_with4 = sum_with4 / count;
 
