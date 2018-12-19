@@ -1,11 +1,11 @@
-import "./style/main.scss";
 import "./favicon.ico";
+import "./style/main.scss";
 
+import Ai from "./ai";
+import GameManager from "./game_manager";
+import { HTMLActuator as Actuator } from "./html_actuator";
 import InputManager from "./input_manager";
 import StorageManager from "./local_storage_manager";
-import { HTMLActuator as Actuator } from "./html_actuator";
-import GameManager from "./game_manager";
-import Ai from "./ai";
 
 const minProb = 0.0001;
 const initialStrength = 8;

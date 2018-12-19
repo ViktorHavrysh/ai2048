@@ -1,5 +1,5 @@
-import { Direction } from "./direction";
 import PromiseWorker from "promise-worker";
+import { Direction } from "./direction";
 
 interface MessageForAi {
   grid: Uint32Array;
@@ -35,7 +35,7 @@ export default class Ai {
     this.maxDepth = strength;
   }
   public async chooseDirection(grid: Uint32Array): Promise<Direction> {
-    let message: MessageForAi = {
+    const message: MessageForAi = {
       grid: grid,
       minProb: this.minProb,
       maxDepth: this.maxDepth

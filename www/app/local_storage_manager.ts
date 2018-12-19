@@ -12,18 +12,18 @@ export default class LocalStorageManager {
     this.storage.setItem(this.bestScoreKey, score.toString());
   }
   // Game state getters/setters and clearing
-  getGameState(): GameState | null {
+  public getGameState(): GameState | null {
     const stateJSON = this.storage.getItem(this.gameStateKey);
     if (!stateJSON) return null;
     const store = JSON.parse(stateJSON);
     if (!store.version || store.version !== version) return null;
     return store.state;
   }
-  setGameState(gameState: GameState): void {
+  public setGameState(gameState: GameState): void {
     const store = { version: version, state: gameState };
     this.storage.setItem(this.gameStateKey, JSON.stringify(store));
   }
-  clearGameState(): void {
+  public clearGameState(): void {
     this.storage.removeItem(this.gameStateKey);
   }
 }

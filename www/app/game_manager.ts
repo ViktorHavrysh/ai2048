@@ -1,11 +1,11 @@
-import { Grid } from "./grid";
-import { Tile } from "./tile";
-import StorageManager from "./local_storage_manager";
-import { HTMLActuator as Actuator } from "./html_actuator";
 import Ai from "./ai";
-import { GameState } from "./game_state";
 import { Direction } from "./direction";
+import { GameState } from "./game_state";
+import { Grid } from "./grid";
+import { HTMLActuator as Actuator } from "./html_actuator";
+import StorageManager from "./local_storage_manager";
 import Position from "./position";
+import { Tile } from "./tile";
 import timeout from "./timeout";
 
 interface Vector {
@@ -19,12 +19,12 @@ export default class GameManager {
   private readonly actuator: Actuator;
   private readonly ai: Ai;
   private readonly startTiles: number = 2;
-  private keepPlaying: boolean = false;
+  private keepPlaying = false;
   private grid: Grid = new Grid();
-  private over: boolean = false;
-  private won: boolean = false;
-  private score: number = 0;
-  private aiIsRunning: boolean = false;
+  private over = false;
+  private won = false;
+  private score = 0;
+  private aiIsRunning = false;
 
   public constructor(
     storageManager: StorageManager,
@@ -46,26 +46,9 @@ export default class GameManager {
     }
     this.actuate();
   }
-  private loadState(previousState: GameState) {
-    this.grid = new Grid(previousState.grid);
-    this.score = previousState.score;
-    this.over = previousState.over;
-    this.won = previousState.won;
-    this.keepPlaying = previousState.keepPlaying;
-    this.ai.setStrength(previousState.aiStrength);
-  }
-  private clearState() {
-    this.grid = new Grid();
-    this.score = 0;
-    this.over = false;
-    this.won = false;
-    this.keepPlaying = false;
-    this.aiIsRunning = false;
-  }
   // Move tiles on the grid in the specified direction
   public move(direction: Direction): void {
     if (this.isGameTerminated()) return; // Don't do anything if the game's over
-    const self = this;
     const vector = this.getVector(direction);
     const traversals = this.buildTraversals(vector);
     let moved = false;
@@ -75,26 +58,26 @@ export default class GameManager {
     for (const x of traversals.x) {
       for (const y of traversals.y) {
         const position: Position = { x: x, y: y };
-        const tile = self.grid.tileAtPosition(position);
+        const tile = this.grid.tileAtPosition(position);
         if (tile) {
-          const positions = self.findFarthestPosition(position, vector);
-          const next = self.grid.tileAtPosition(positions.next);
+          const positions = this.findFarthestPosition(position, vector);
+          const next = this.grid.tileAtPosition(positions.next);
           // Only one merger per row traversal?
           if (next && next.value === tile.value && !next.mergedFrom) {
             const merged = new Tile(positions.next, tile.value * 2);
             merged.mergedFrom = [tile, next];
-            self.grid.insertTile(merged);
-            self.grid.removeTileAtPosition(tile);
+            this.grid.insertTile(merged);
+            this.grid.removeTileAtPosition(tile);
             // Converge the two tiles' positions
             tile.updatePosition(positions.next);
             // Update the score
-            self.score += merged.value;
+            this.score += merged.value;
             // The mighty 65536 tile
-            if (merged.value === 65536) self.won = true;
+            if (merged.value === 65536) this.won = true;
           } else {
-            self.moveTile(tile, positions.farthest);
+            this.moveTile(tile, positions.farthest);
           }
-          if (!self.positionsEqual(position, tile)) {
+          if (!this.positionsEqual(position, tile)) {
             moved = true; // The tile moved from its original cell!
           }
         }
@@ -107,33 +90,6 @@ export default class GameManager {
         this.aiIsRunning = false;
       }
       this.actuate();
-    }
-  }
-  // Sends the updated grid to the actuator
-  private async actuate(): Promise<void> {
-    if (this.storageManager.getBestScore() < this.score) {
-      this.storageManager.setBestScore(this.score);
-    }
-    // Clear the state when the game is over (game over only, not win)
-    if (this.over) {
-      this.storageManager.clearGameState();
-    } else {
-      this.storageManager.setGameState(this.serialize());
-    }
-    await this.actuator.actuate(this.grid, {
-      score: this.score,
-      over: this.over,
-      won: this.won,
-      bestScore: this.storageManager.getBestScore(),
-      terminated: this.isGameTerminated(),
-      strength: this.ai.strength(),
-      aiIsOn: () => this.aiIsRunning
-    });
-    const to = timeout(100);
-    if (this.aiIsRunning) {
-      let direction = await this.ai.chooseDirection(this.grid.forAi());
-      await to; // make sure moves are at least 100 milliseconds
-      this.move(direction);
     }
   }
   public plus(): void {
@@ -162,6 +118,49 @@ export default class GameManager {
     this.actuator.updateRunButton(this.aiIsRunning);
     if (this.aiIsRunning) {
       this.ai.chooseDirection(this.grid.forAi()).then(d => this.move(d));
+    }
+  }
+  private loadState(previousState: GameState) {
+    this.grid = new Grid(previousState.grid);
+    this.score = previousState.score;
+    this.over = previousState.over;
+    this.won = previousState.won;
+    this.keepPlaying = previousState.keepPlaying;
+    this.ai.setStrength(previousState.aiStrength);
+  }
+  private clearState() {
+    this.grid = new Grid();
+    this.score = 0;
+    this.over = false;
+    this.won = false;
+    this.keepPlaying = false;
+    this.aiIsRunning = false;
+  }
+  // Sends the updated grid to the actuator
+  private async actuate(): Promise<void> {
+    if (this.storageManager.getBestScore() < this.score) {
+      this.storageManager.setBestScore(this.score);
+    }
+    // Clear the state when the game is over (game over only, not win)
+    if (this.over) {
+      this.storageManager.clearGameState();
+    } else {
+      this.storageManager.setGameState(this.serialize());
+    }
+    await this.actuator.actuate(this.grid, {
+      score: this.score,
+      over: this.over,
+      won: this.won,
+      bestScore: this.storageManager.getBestScore(),
+      terminated: this.isGameTerminated(),
+      strength: this.ai.strength(),
+      aiIsOn: () => this.aiIsRunning
+    });
+    const to = timeout(100);
+    if (this.aiIsRunning) {
+      const direction = await this.ai.chooseDirection(this.grid.forAi());
+      await to; // make sure moves are at least 100 milliseconds
+      this.move(direction);
     }
   }
   // Return true if the game is lost, or has won and the user hasn't kept playing
@@ -211,7 +210,7 @@ export default class GameManager {
   }
   // Get the vector representing the chosen direction
   private getVector(direction: Direction): Vector {
-    let map = new Map<Direction, Vector>([
+    const map = new Map<Direction, Vector>([
       [Direction.Up, { x: 0, y: -1 }],
       [Direction.Right, { x: 1, y: 0 }],
       [Direction.Down, { x: 0, y: 1 }],
@@ -251,15 +250,14 @@ export default class GameManager {
   }
   // Check for available matches between tiles (more expensive check)
   private tileMatchesAvailable(): boolean {
-    const self = this;
     for (let x = 0; x < this.size; x++) {
       for (let y = 0; y < this.size; y++) {
         const tile = this.grid.tileAtPosition({ x: x, y: y });
         if (tile) {
           for (let direction = 0; direction < 4; direction++) {
-            const vector = self.getVector(direction);
+            const vector = this.getVector(direction);
             const cell = { x: x + vector.x, y: y + vector.y };
-            const other = self.grid.tileAtPosition(cell);
+            const other = this.grid.tileAtPosition(cell);
             if (other && other.value === tile.value) {
               return true; // These two tiles can be merged
             }

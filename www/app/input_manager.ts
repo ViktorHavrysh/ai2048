@@ -1,5 +1,5 @@
-import { Direction } from "./direction";
 import GameManager from "game_manager";
+import { Direction } from "./direction";
 
 export default class InputManager {
   private readonly gameManager: GameManager;
@@ -23,7 +23,7 @@ export default class InputManager {
   public constructor(gameManager: GameManager) {
     this.gameManager = gameManager;
     if (window.navigator.msPointerEnabled) {
-      //Internet Explorer 10 style
+      // Internet Explorer 10 style
       this.eventTouchstart = "MSPointerDown";
       this.eventTouchmove = "MSPointerMove";
       this.eventTouchend = "MSPointerUp";
@@ -34,7 +34,6 @@ export default class InputManager {
     }
   }
   public listen(): void {
-    const self = this;
     // Respond to direction keys
     document.addEventListener("keydown", event => {
       const modifiers =
@@ -43,12 +42,12 @@ export default class InputManager {
       if (!modifiers) {
         if (mapped) {
           event.preventDefault();
-          self.gameManager.move(mapped);
+          this.gameManager.move(mapped);
         }
       }
       // R key restarts the game
       if (!modifiers && event.which === 82) {
-        self.restart.call(self, event);
+        this.restart(event);
       }
     });
     // Respond to button presses
@@ -106,7 +105,7 @@ export default class InputManager {
         } else {
           direction = dy > 0 ? Direction.Down : Direction.Up;
         }
-        self.gameManager.move(direction);
+        this.gameManager.move(direction);
       }
     });
   }
@@ -131,7 +130,7 @@ export default class InputManager {
     this.gameManager.continuePlaying();
   }
   private bindButtonPress(selector: string, fn: (event: Event) => void) {
-    var button = document.querySelector(selector)!;
+    const button = document.querySelector(selector)!;
     button.addEventListener("click", fn.bind(this));
     button.addEventListener(this.eventTouchend, fn.bind(this));
   }

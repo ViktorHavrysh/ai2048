@@ -1,6 +1,6 @@
-import { Tile } from "./tile";
 import { Grid } from "./grid";
 import Position from "./position";
+import { Tile } from "./tile";
 
 export interface ActuatorMetadata {
   score: number;
@@ -9,7 +9,7 @@ export interface ActuatorMetadata {
   bestScore: number;
   terminated: boolean;
   strength: number;
-  aiIsOn: () => boolean;
+  aiIsOn(): boolean;
 }
 
 export class HTMLActuator {
@@ -21,28 +21,27 @@ export class HTMLActuator {
   )!;
   private readonly runButton = document.querySelector(".run-button")!;
   private readonly messageContainer = document.querySelector(".game-message")!;
-  private score: number = 0;
+  private score = 0;
   public actuate(grid: Grid, metadata: ActuatorMetadata): Promise<void> {
-    const self = this;
     return new Promise((resolve, _reject) => {
       window.requestAnimationFrame(() => {
-        self.clearContainer(self.tileContainer);
+        this.clearContainer(this.tileContainer);
         for (const column of grid.tiles) {
           for (const cell of column) {
             if (cell) {
-              self.addTile(cell);
+              this.addTile(cell);
             }
           }
         }
-        self.updateScore(metadata.score);
-        self.updateBestScore(metadata.bestScore);
-        self.updateStrength(metadata.strength);
-        self.updateRunButton(metadata.aiIsOn());
+        this.updateScore(metadata.score);
+        this.updateBestScore(metadata.bestScore);
+        this.updateStrength(metadata.strength);
+        this.updateRunButton(metadata.aiIsOn());
         if (metadata.terminated) {
           if (metadata.over) {
-            self.message(false); // You lose
+            this.message(false); // You lose
           } else if (metadata.won) {
-            self.message(true); // You win!
+            this.message(true); // You win!
           }
         }
         resolve();
@@ -53,13 +52,22 @@ export class HTMLActuator {
   public continueGame(): void {
     this.clearMessage();
   }
+  public updateStrength(strength: number): void {
+    this.strengthContainer.textContent = strength.toString();
+  }
+  public updateRunButton(aiIsOn: boolean): void {
+    if (!aiIsOn) {
+      this.runButton.textContent = "Start AI";
+    } else {
+      this.runButton.textContent = "Stop AI";
+    }
+  }
   private clearContainer(container: Element): void {
     while (container.firstChild) {
       container.removeChild(container.firstChild);
     }
   }
   private addTile(tile: Tile): void {
-    const self = this;
     const wrapper = document.createElement("div");
     const inner = document.createElement("div");
     const position = tile.previousPosition || { x: tile.x, y: tile.y };
@@ -73,15 +81,15 @@ export class HTMLActuator {
     if (tile.previousPosition) {
       // Make sure that the tile gets rendered in the previous position first
       window.requestAnimationFrame(() => {
-        classes[2] = self.positionClass({ x: tile.x, y: tile.y });
-        self.applyClasses(wrapper, classes); // Update the position
+        classes[2] = this.positionClass({ x: tile.x, y: tile.y });
+        this.applyClasses(wrapper, classes); // Update the position
       });
     } else if (tile.mergedFrom) {
       classes.push("tile-merged");
       this.applyClasses(wrapper, classes);
       // Render the tiles that merged
       for (const merged of tile.mergedFrom) {
-        self.addTile(merged);
+        this.addTile(merged);
       }
     } else {
       classes.push("tile-new");
@@ -116,16 +124,6 @@ export class HTMLActuator {
   }
   private updateBestScore(bestScore: number): void {
     this.bestContainer.textContent = bestScore.toString();
-  }
-  public updateStrength(strength: number): void {
-    this.strengthContainer.textContent = strength.toString();
-  }
-  public updateRunButton(aiIsOn: boolean): void {
-    if (!aiIsOn) {
-      this.runButton.textContent = "Start AI";
-    } else {
-      this.runButton.textContent = "Stop AI";
-    }
   }
   private message(won: boolean): void {
     const type = won ? "game-won" : "game-over";
