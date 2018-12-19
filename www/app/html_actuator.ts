@@ -1,7 +1,6 @@
 import { Tile } from "./tile";
 import { Grid } from "./grid";
 import Position from "./position";
-import EventManager from "./event_manager";
 
 export interface ActuatorMetadata {
   score: number;
@@ -14,7 +13,6 @@ export interface ActuatorMetadata {
 }
 
 export class HTMLActuator {
-  private readonly eventManager: EventManager;
   private readonly tileContainer = document.querySelector(".tile-container")!;
   private readonly scoreContainer = document.querySelector(".score-container")!;
   private readonly bestContainer = document.querySelector(".best-container")!;
@@ -24,16 +22,12 @@ export class HTMLActuator {
   private readonly runButton = document.querySelector(".run-button")!;
   private readonly messageContainer = document.querySelector(".game-message")!;
   private score: number = 0;
-  public constructor(eventManager: EventManager) {
-    this.eventManager = eventManager;
-    this.eventManager.on("updateStrength", this.updateStrength.bind(this));
-  }
   public actuate(grid: Grid, metadata: ActuatorMetadata): Promise<void> {
     const self = this;
     return new Promise((resolve, _reject) => {
       window.requestAnimationFrame(() => {
         self.clearContainer(self.tileContainer);
-        for (const column of grid.cells) {
+        for (const column of grid.tiles) {
           for (const cell of column) {
             if (cell) {
               self.addTile(cell);
@@ -123,7 +117,7 @@ export class HTMLActuator {
   private updateBestScore(bestScore: number): void {
     this.bestContainer.textContent = bestScore.toString();
   }
-  private updateStrength(strength: number): void {
+  public updateStrength(strength: number): void {
     this.strengthContainer.textContent = strength.toString();
   }
   public updateRunButton(aiIsOn: boolean): void {

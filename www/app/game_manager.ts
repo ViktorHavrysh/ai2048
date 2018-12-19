@@ -3,10 +3,9 @@ import { Tile } from "./tile";
 import StorageManager from "./local_storage_manager";
 import { HTMLActuator as Actuator } from "./html_actuator";
 import Ai from "./ai";
-import GameState from "./game_state";
+import { GameState } from "./game_state";
 import { Direction } from "./direction";
 import Position from "./position";
-import EventManager from "./event_manager";
 import timeout from "./timeout";
 
 interface Vector {
@@ -14,138 +13,59 @@ interface Vector {
   y: number;
 }
 
-export class GameManager {
+export default class GameManager {
   private readonly size: number = 4;
-  private readonly eventManager: EventManager;
   private readonly storageManager: StorageManager;
   private readonly actuator: Actuator;
   private readonly ai: Ai;
   private readonly startTiles: number = 2;
   private keepPlaying: boolean = false;
-  private grid: Grid | null = null;
+  private grid: Grid = new Grid();
   private over: boolean = false;
   private won: boolean = false;
   private score: number = 0;
   private aiIsRunning: boolean = false;
 
   public constructor(
-    eventManager: EventManager,
     storageManager: StorageManager,
     actuator: Actuator,
     ai: Ai
   ) {
-    this.eventManager = eventManager;
     this.storageManager = storageManager;
     this.actuator = actuator;
     this.ai = ai;
-    this.eventManager.on("move", this.move.bind(this));
-    this.eventManager.on("aiMove", this.move.bind(this));
-    this.eventManager.on("restart", this.restart.bind(this));
-    this.eventManager.on("keepPlaying", this.continuePlaying.bind(this));
-    this.eventManager.on("run", this.toggleAi.bind(this));
-    this.eventManager.on("plus", this.plus.bind(this));
-    this.eventManager.on("minus", this.minus.bind(this));
-    this.eventManager.on("moved", this.onMoved.bind(this));
-  }
-  private plus(): void {
-    const strength = this.ai.increaseStrength();
-    this.eventManager.emit("updateStrength", strength);
-  }
-  private minus(): void {
-    const strength = this.ai.decreaseStrength();
-    this.eventManager.emit("updateStrength", strength);
-  }
-  private onMoved(): void {}
-  // Restart the game
-  private restart(): void {
-    this.storageManager.clearGameState();
-    this.actuator.continueGame(); // Clear the game won/lost message
-    this.setup();
-  }
-  // Keep playing after winning (allows going over 2048)
-  private continuePlaying(): void {
-    this.keepPlaying = true;
-    this.actuator.continueGame(); // Clear the game won/lost message
-  }
-  private toggleAi(): void {
-    this.aiIsRunning = !this.aiIsRunning;
-    this.actuator.updateRunButton(this.aiIsRunning);
-    if (this.aiIsRunning) {
-      this.ai.chooseDirection(this.grid!.forAi()).then(d => this.move(d));
-    }
-  }
-  // Return true if the game is lost, or has won and the user hasn't kept playing
-  private isGameTerminated(): boolean {
-    return this.over || (this.won && !this.keepPlaying);
   }
   // Set up the game
   public setup(): void {
     const previousState = this.storageManager.getGameState();
-    // Reload the game from a previous game if present
     if (previousState) {
-      this.grid = new Grid(previousState.grid); // Reload grid
-      this.score = previousState.score;
-      this.over = previousState.over;
-      this.won = previousState.won;
-      this.keepPlaying = previousState.keepPlaying;
+      this.loadState(previousState);
     } else {
-      this.grid = new Grid();
-      this.score = 0;
-      this.over = false;
-      this.won = false;
-      this.keepPlaying = false;
-      this.aiIsRunning = false;
-      // Add the initial tiles
+      this.clearState();
       this.addStartTiles();
     }
-    // Update the actuator
     this.actuate();
   }
-  // Set up the initial tiles to start the game with
-  private addStartTiles(): void {
-    for (let i = 0; i < this.startTiles; i++) {
-      this.addRandomTile();
-    }
+  private loadState(previousState: GameState) {
+    this.grid = new Grid(previousState.grid);
+    this.score = previousState.score;
+    this.over = previousState.over;
+    this.won = previousState.won;
+    this.keepPlaying = previousState.keepPlaying;
+    this.ai.setStrength(previousState.aiStrength);
   }
-  // Adds a tile in a random position
-  private addRandomTile(): void {
-    if (this.grid!.cellsAvailable()) {
-      const value = Math.random() < 0.9 ? 2 : 4;
-      const tile = new Tile(this.grid!.randomAvailableCell()!, value);
-      this.grid!.insertTile(tile);
-    }
-  }
-  // Represent the current game as an object
-  private serialize(): GameState {
-    return {
-      grid: this.grid!.serialize(),
-      score: this.score,
-      over: this.over,
-      won: this.won,
-      keepPlaying: this.keepPlaying
-    };
-  }
-  // Save all tile positions and remove merger info
-  private prepareTiles(): void {
-    this.grid!.eachCell((_x, _y, tile) => {
-      if (tile) {
-        tile.mergedFrom = null;
-        tile.savePosition();
-      }
-    });
-  }
-  // Move a tile and its representation
-  private moveTile(tile: Tile, cell: Position): void {
-    const cells: any = this.grid!.cells;
-    cells[tile.x][tile.y] = null;
-    cells[cell.x][cell.y] = tile;
-    tile.updatePosition(cell);
+  private clearState() {
+    this.grid = new Grid();
+    this.score = 0;
+    this.over = false;
+    this.won = false;
+    this.keepPlaying = false;
+    this.aiIsRunning = false;
   }
   // Move tiles on the grid in the specified direction
-  private move(direction: Direction): void {
-    // 0: up, 1: right, 2: down, 3: left
-    const self = this;
+  public move(direction: Direction): void {
     if (this.isGameTerminated()) return; // Don't do anything if the game's over
+    const self = this;
     const vector = this.getVector(direction);
     const traversals = this.buildTraversals(vector);
     let moved = false;
@@ -154,17 +74,17 @@ export class GameManager {
     // Traverse the grid in the right direction and move tiles
     for (const x of traversals.x) {
       for (const y of traversals.y) {
-        const cell: Position = { x: x, y: y };
-        const tile = self.grid!.cellContent(cell);
+        const position: Position = { x: x, y: y };
+        const tile = self.grid.tileAtPosition(position);
         if (tile) {
-          const positions = self.findFarthestPosition(cell, vector);
-          const next = self.grid!.cellContent(positions.next);
+          const positions = self.findFarthestPosition(position, vector);
+          const next = self.grid.tileAtPosition(positions.next);
           // Only one merger per row traversal?
           if (next && next.value === tile.value && !next.mergedFrom) {
             const merged = new Tile(positions.next, tile.value * 2);
             merged.mergedFrom = [tile, next];
-            self.grid!.insertTile(merged);
-            self.grid!.removeTile(tile);
+            self.grid.insertTile(merged);
+            self.grid.removeTileAtPosition(tile);
             // Converge the two tiles' positions
             tile.updatePosition(positions.next);
             // Update the score
@@ -174,7 +94,7 @@ export class GameManager {
           } else {
             self.moveTile(tile, positions.farthest);
           }
-          if (!self.positionsEqual(cell, tile)) {
+          if (!self.positionsEqual(position, tile)) {
             moved = true; // The tile moved from its original cell!
           }
         }
@@ -200,7 +120,7 @@ export class GameManager {
     } else {
       this.storageManager.setGameState(this.serialize());
     }
-    await this.actuator.actuate(this.grid!, {
+    await this.actuator.actuate(this.grid, {
       score: this.score,
       over: this.over,
       won: this.won,
@@ -211,10 +131,83 @@ export class GameManager {
     });
     const to = timeout(100);
     if (this.aiIsRunning) {
-      let direction = await this.ai.chooseDirection(this.grid!.forAi());
+      let direction = await this.ai.chooseDirection(this.grid.forAi());
       await to; // make sure moves are at least 100 milliseconds
       this.move(direction);
     }
+  }
+  public plus(): void {
+    const strength = this.ai.increaseStrength();
+    this.storageManager.setGameState(this.serialize());
+    this.actuator.updateStrength(strength);
+  }
+  public minus(): void {
+    const strength = this.ai.decreaseStrength();
+    this.storageManager.setGameState(this.serialize());
+    this.actuator.updateStrength(strength);
+  }
+  // Restart the game
+  public restart(): void {
+    this.storageManager.clearGameState();
+    this.actuator.continueGame(); // Clear the game won/lost message
+    this.setup();
+  }
+  // Keep playing after winning (allows going over 2048)
+  public continuePlaying(): void {
+    this.keepPlaying = true;
+    this.actuator.continueGame(); // Clear the game won/lost message
+  }
+  public toggleAi(): void {
+    this.aiIsRunning = !this.aiIsRunning;
+    this.actuator.updateRunButton(this.aiIsRunning);
+    if (this.aiIsRunning) {
+      this.ai.chooseDirection(this.grid.forAi()).then(d => this.move(d));
+    }
+  }
+  // Return true if the game is lost, or has won and the user hasn't kept playing
+  private isGameTerminated(): boolean {
+    return this.over || (this.won && !this.keepPlaying);
+  }
+  // Set up the initial tiles to start the game with
+  private addStartTiles(): void {
+    for (let i = 0; i < this.startTiles; i++) {
+      this.addRandomTile();
+    }
+  }
+  // Adds a tile in a random position
+  private addRandomTile(): void {
+    if (this.grid.tilesAvailable()) {
+      const value = Math.random() < 0.9 ? 2 : 4;
+      const tile = new Tile(this.grid.randomAvailablePosition()!, value);
+      this.grid.insertTile(tile);
+    }
+  }
+  // Represent the current game as an object
+  private serialize(): GameState {
+    return {
+      grid: this.grid.serialize(),
+      score: this.score,
+      over: this.over,
+      won: this.won,
+      keepPlaying: this.keepPlaying,
+      aiStrength: this.ai.strength()
+    };
+  }
+  // Save all tile positions and remove merger info
+  private prepareTiles(): void {
+    this.grid.eachTile((_x, _y, tile) => {
+      if (tile) {
+        tile.mergedFrom = null;
+        tile.savePosition();
+      }
+    });
+  }
+  // Move a tile and its representation
+  private moveTile(tile: Tile, cell: Position): void {
+    const cells: any = this.grid.tiles;
+    cells[tile.x][tile.y] = null;
+    cells[cell.x][cell.y] = tile;
+    tile.updatePosition(cell);
   }
   // Get the vector representing the chosen direction
   private getVector(direction: Direction): Vector {
@@ -247,26 +240,26 @@ export class GameManager {
     do {
       previous = cell;
       cell = { x: previous.x + vector.x, y: previous.y + vector.y };
-    } while (this.grid!.withinBounds(cell) && this.grid!.cellAvailable(cell));
+    } while (this.grid.withinBounds(cell) && this.grid.tileAvailable(cell));
     return {
       farthest: previous,
       next: cell // Used to check if a merge is required
     };
   }
   private movesAvailable(): boolean {
-    return this.grid!.cellsAvailable() || this.tileMatchesAvailable();
+    return this.grid.tilesAvailable() || this.tileMatchesAvailable();
   }
   // Check for available matches between tiles (more expensive check)
   private tileMatchesAvailable(): boolean {
     const self = this;
     for (let x = 0; x < this.size; x++) {
       for (let y = 0; y < this.size; y++) {
-        const tile = this.grid!.cellContent({ x: x, y: y });
+        const tile = this.grid.tileAtPosition({ x: x, y: y });
         if (tile) {
           for (let direction = 0; direction < 4; direction++) {
             const vector = self.getVector(direction);
             const cell = { x: x + vector.x, y: y + vector.y };
-            const other = self.grid!.cellContent(cell);
+            const other = self.grid.tileAtPosition(cell);
             if (other && other.value === tile.value) {
               return true; // These two tiles can be merged
             }

@@ -1,8 +1,8 @@
 import { Direction } from "./direction";
-import EventManager from "./event_manager";
+import GameManager from "game_manager";
 
 export default class InputManager {
-  private readonly eventManager: EventManager;
+  private readonly gameManager: GameManager;
   private readonly eventTouchstart: string;
   private readonly eventTouchmove: string;
   private readonly eventTouchend: string;
@@ -20,8 +20,8 @@ export default class InputManager {
     83: Direction.Down,
     65: Direction.Left // A
   };
-  public constructor(eventManager: EventManager) {
-    this.eventManager = eventManager;
+  public constructor(gameManager: GameManager) {
+    this.gameManager = gameManager;
     if (window.navigator.msPointerEnabled) {
       //Internet Explorer 10 style
       this.eventTouchstart = "MSPointerDown";
@@ -43,7 +43,7 @@ export default class InputManager {
       if (!modifiers) {
         if (mapped) {
           event.preventDefault();
-          self.eventManager.emit("move", mapped);
+          self.gameManager.move(mapped);
         }
       }
       // R key restarts the game
@@ -106,29 +106,29 @@ export default class InputManager {
         } else {
           direction = dy > 0 ? Direction.Down : Direction.Up;
         }
-        self.eventManager.emit("move", direction);
+        self.gameManager.move(direction);
       }
     });
   }
   private restart(event: Event) {
     event.preventDefault();
-    this.eventManager.emit("restart");
+    this.gameManager.restart();
   }
   private run(event: Event) {
     event.preventDefault();
-    this.eventManager.emit("run");
+    this.gameManager.toggleAi();
   }
   private plus(event: Event) {
     event.preventDefault();
-    this.eventManager.emit("plus");
+    this.gameManager.plus();
   }
   private minus(event: Event) {
     event.preventDefault();
-    this.eventManager.emit("minus");
+    this.gameManager.minus();
   }
   private keepPlaying(event: Event) {
     event.preventDefault();
-    this.eventManager.emit("keepPlaying");
+    this.gameManager.continuePlaying();
   }
   private bindButtonPress(selector: string, fn: (event: Event) => void) {
     var button = document.querySelector(selector)!;

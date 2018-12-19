@@ -2,37 +2,37 @@ import { Tile, SerializableTile } from "./tile";
 import Position from "./position";
 
 export interface SerializableGrid {
-  cells: (SerializableTile | null)[][];
+  tiles: (SerializableTile | null)[][];
 }
 
 export class Grid {
   private readonly size: number = 4;
-  public readonly cells: (Tile | null)[][];
+  public readonly tiles: (Tile | null)[][];
 
   public constructor(previousState?: SerializableGrid) {
-    this.cells = previousState ? this.fromState(previousState) : this.empty();
+    this.tiles = previousState ? this.fromState(previousState) : this.empty();
   }
 
   // Build a grid of the specified size
   private empty(): (Tile | null)[][] {
-    const cells: (Tile | null)[][] = [];
+    const tiles: (Tile | null)[][] = [];
     for (let x = 0; x < this.size; x++) {
       const row: (Tile | null)[] = [];
-      cells[x] = row;
+      tiles[x] = row;
       for (let y = 0; y < this.size; y++) {
         row.push(null);
       }
     }
-    return cells;
+    return tiles;
   }
 
   private fromState(state: SerializableGrid): (Tile | null)[][] {
-    const cells: (Tile | null)[][] = [];
+    const tiles: (Tile | null)[][] = [];
     for (let x = 0; x < this.size; x++) {
       const row: (Tile | null)[] = [];
-      cells[x] = row;
+      tiles[x] = row;
       for (var y = 0; y < this.size; y++) {
-        const tile = state.cells[x][y];
+        const tile = state.tiles[x][y];
         if (tile) {
           row.push(new Tile(tile.position, tile.value));
         } else {
@@ -40,21 +40,21 @@ export class Grid {
         }
       }
     }
-    return cells;
+    return tiles;
   }
 
   // Find the first available random position
-  public randomAvailableCell(): Position | null {
-    const cells = this.availableCells();
-    if (cells.length) {
-      return cells[Math.floor(Math.random() * cells.length)];
+  public randomAvailablePosition(): Position | null {
+    const tiles = this.availablePositions();
+    if (tiles.length) {
+      return tiles[Math.floor(Math.random() * tiles.length)];
     } else {
       return null;
     }
   }
-  private availableCells(): Position[] {
+  private availablePositions(): Position[] {
     const cells: Position[] = [];
-    this.eachCell((x, y, tile) => {
+    this.eachTile((x, y, tile) => {
       if (!tile) {
         cells.push({ x: x, y: y });
       }
@@ -62,36 +62,36 @@ export class Grid {
     return cells;
   }
   // Call callback for every cell
-  public eachCell(
+  public eachTile(
     callback: ((x: number, y: number, tile: Tile | null) => void)
   ): void {
     for (let x = 0; x < this.size; x++) {
       for (let y = 0; y < this.size; y++) {
-        callback(x, y, this.cells[x][y]);
+        callback(x, y, this.tiles[x][y]);
       }
     }
   }
   // Check if there are any cells available
-  public cellsAvailable(): boolean {
-    return !!this.availableCells().length;
+  public tilesAvailable(): boolean {
+    return !!this.availablePositions().length;
   }
   // Check if the specified cell is taken
-  public cellAvailable(cell: Position): boolean {
-    return !this.cellContent(cell);
+  public tileAvailable(position: Position): boolean {
+    return !this.tileAtPosition(position);
   }
-  public cellContent(position: Position): Tile | null {
+  public tileAtPosition(position: Position): Tile | null {
     if (this.withinBounds(position)) {
-      return this.cells[position.x][position.y];
+      return this.tiles[position.x][position.y];
     } else {
       return null;
     }
   }
   // Inserts a tile at its position
   public insertTile(tile: Tile): void {
-    this.cells[tile.x][tile.y] = tile;
+    this.tiles[tile.x][tile.y] = tile;
   }
-  public removeTile(tile: Position): void {
-    this.cells[tile.x][tile.y] = null;
+  public removeTileAtPosition(tile: Position): void {
+    this.tiles[tile.x][tile.y] = null;
   }
   public withinBounds(position: Position): boolean {
     return (
@@ -107,17 +107,17 @@ export class Grid {
       const row: (SerializableTile | null)[] = [];
       cellState[x] = row;
       for (var y = 0; y < this.size; y++) {
-        const tile = this.cells[x][y];
+        const tile = this.tiles[x][y];
         row.push(tile ? tile.serialize() : null);
       }
     }
     return {
-      cells: cellState
+      tiles: cellState
     };
   }
   public forAi(): Uint32Array {
     const b: number[] = [];
-    for (let row of this.cells) {
+    for (let row of this.tiles) {
       for (let tile of row) {
         b.push(tile ? tile.value : 0);
       }
