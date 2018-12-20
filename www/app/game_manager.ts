@@ -92,7 +92,7 @@ export default class GameManager {
             this.moveTile(tile, farthest);
           }
           if (!this.positionsEqual(position, tile)) {
-            moved = true; // The tile moved from its original cell!
+            moved = true; // The tile moved from its original position!
           }
         }
       }
@@ -216,11 +216,11 @@ export default class GameManager {
     });
   }
   // Move a tile and its representation
-  private moveTile(tile: Tile, cell: Position): void {
-    const cells: any = this.grid.tiles;
-    cells[tile.x][tile.y] = null;
-    cells[cell.x][cell.y] = tile;
-    tile.updatePosition(cell);
+  private moveTile(tile: Tile, position: Position): void {
+    const tiles: any = this.grid.tiles;
+    tiles[tile.x][tile.y] = null;
+    tiles[position.x][position.y] = tile;
+    tile.updatePosition(position);
   }
   // Get the vector representing the chosen direction
   private getVector(direction: Direction): Vector {
@@ -233,7 +233,7 @@ export default class GameManager {
       traversals.x.push(pos);
       traversals.y.push(pos);
     }
-    // Always traverse from the farthest cell in the chosen direction
+    // Always traverse from the farthest position in the chosen direction
     if (vector.x === 1) traversals.x = traversals.x.reverse();
     if (vector.y === 1) traversals.y = traversals.y.reverse();
     return traversals;
@@ -267,8 +267,8 @@ export default class GameManager {
         if (tile) {
           for (let direction = 0; direction < 4; direction++) {
             const vector = this.getVector(direction);
-            const cell = { x: x + vector.x, y: y + vector.y };
-            const other = this.grid.tileAtPosition(cell);
+            const position: Position = { x: x + vector.x, y: y + vector.y };
+            const other = this.grid.tileAtPosition(position);
             if (other && other.value === tile.value) {
               return true; // These two tiles can be merged
             }

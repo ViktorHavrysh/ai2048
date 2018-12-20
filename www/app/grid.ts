@@ -22,7 +22,7 @@ export class Grid {
       return null;
     }
   }
-  // Call callback for every cell
+  // Call callback for every tile
   public eachTile(
     callback: ((x: number, y: number, tile: Tile | null) => void)
   ): void {
@@ -32,11 +32,11 @@ export class Grid {
       }
     }
   }
-  // Check if there are any cells available
+  // Check if there are any tiles available
   public tilesAvailable(): boolean {
     return !!this.availablePositions().length;
   }
-  // Check if the specified cell is taken
+  // Check if the specified tile is taken
   public tileAvailable(position: Position): boolean {
     return !this.tileAtPosition(position);
   }
@@ -63,17 +63,17 @@ export class Grid {
     );
   }
   public serialize(): SerializableGrid {
-    const cellState: (SerializableTile | null)[][] = [];
+    const state: (SerializableTile | null)[][] = [];
     for (let x = 0; x < this.size; x++) {
       const row: (SerializableTile | null)[] = [];
-      cellState[x] = row;
+      state[x] = row;
       for (var y = 0; y < this.size; y++) {
         const tile = this.tiles[x][y];
         row.push(tile ? tile.serialize() : null);
       }
     }
     return {
-      tiles: cellState
+      tiles: state
     };
   }
   public forAi(): Uint32Array {

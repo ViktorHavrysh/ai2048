@@ -27,9 +27,9 @@ export class HTMLActuator {
       window.requestAnimationFrame(() => {
         this.clearContainer(this.tileContainer);
         for (const column of grid.tiles) {
-          for (const cell of column) {
-            if (cell) {
-              this.addTile(cell);
+          for (const tile of column) {
+            if (tile) {
+              this.addTile(tile);
             }
           }
         }
