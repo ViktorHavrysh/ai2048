@@ -8,7 +8,7 @@ use std::f32;
 use std::collections::HashMap;
 
 /// Return a number of interesting statistics together with a recommendation for the best move.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SearchResult {
     /// The game state for which analysis was conducted.
     pub root_grid: Grid,

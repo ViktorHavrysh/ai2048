@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::fmt::{self, Write};
 use std::sync::mpsc;
 
-const MIN_PROBABILITY: f32 = 0.0005;
+const MIN_PROBABILITY: f32 = 0.0001;
 const MAX_DEPTH: u8 = 12;
 
 #[derive(Debug)]

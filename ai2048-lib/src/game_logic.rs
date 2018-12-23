@@ -242,15 +242,18 @@ impl Grid {
         Grid::from_log(grid).unwrap()
     }
 
-    pub(crate) fn ai_moves_with2(self) -> impl Iterator<Item = Grid> {
+    /// Returns all possible moves with a new random 2 tile
+    pub fn ai_moves_with2(self) -> impl Iterator<Item = Grid> {
         AiMoves::new(self, 1)
     }
 
-    pub(crate) fn ai_moves_with4(self) -> impl Iterator<Item = Grid> {
+    /// Returns all possible moves with a new random 4 tile
+    pub fn ai_moves_with4(self) -> impl Iterator<Item = Grid> {
         AiMoves::new(self, 2)
     }
 
-    pub(crate) fn player_moves(self) -> impl Iterator<Item = (Move, Grid)> {
+    /// Returns all possible player moves
+    pub fn player_moves(self) -> impl Iterator<Item = (Move, Grid)> {
         MOVES.iter().filter_map(move |&m| {
             let new_grid = self.make_move(m);
             if new_grid == self {
@@ -261,7 +264,8 @@ impl Grid {
         })
     }
 
-    pub(crate) fn transpose(self) -> Grid {
+    /// Transposes the grid
+    pub fn transpose(self) -> Grid {
         // Black magic to transpose a grid quickly.
         let x = self.0;
         let a1 = x & 0xF0F0_0F0F_F0F0_0F0F;
@@ -275,7 +279,8 @@ impl Grid {
         Grid(ret)
     }
 
-    pub(crate) fn count_empty(self) -> usize {
+    /// Counts the number of empty tiles
+    pub fn count_empty(self) -> usize {
         let mut x = self.0;
         x |= (x >> 2) & 0x3333_3333_3333_3333;
         x |= x >> 1;
