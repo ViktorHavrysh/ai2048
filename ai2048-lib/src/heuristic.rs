@@ -23,7 +23,7 @@ fn eval_row(row: Row) -> f32 {
 // Pre-cache heuristic for every possible row with values that can fit a nibble
 lazy_static! {
     static ref CACHE: Box<[f32]> = {
-        let mut vec = vec![f32::default(); u16::MAX as usize];
+        let mut vec = vec![0f32; u16::MAX as usize];
         for (index, row) in vec.iter_mut().enumerate() {
             *row = eval_row_nocache(Row(index as u16));
         }
@@ -45,7 +45,7 @@ fn eval_row_nocache(row: Row) -> f32 {
     let adjacent = adjacent_row(row) * ADJACENT_STRENGTH;
     let sum = sum_row(row) * SUM_STRENGTH;
 
-    (NOT_LOST + monotonicity + empty + adjacent + sum).into()
+    NOT_LOST + monotonicity + empty + adjacent + sum
 }
 
 fn empty_tile_count_row(row: [u8; 4]) -> f32 {
