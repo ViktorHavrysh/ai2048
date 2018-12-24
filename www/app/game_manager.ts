@@ -13,25 +13,25 @@ interface Vector {
   y: number;
 }
 
+const Size = 4;
+const StartTiles = 2;
+const DirectionMap = new Map<Direction, Vector>([
+  [Direction.Up, { x: 0, y: -1 }],
+  [Direction.Right, { x: 1, y: 0 }],
+  [Direction.Down, { x: 0, y: 1 }],
+  [Direction.Left, { x: -1, y: 0 }]
+]);
+
 export default class GameManager {
-  private readonly size: number = 4;
   private readonly storageManager: StorageManager;
   private readonly actuator: Actuator;
   private readonly ai: Ai;
-  private readonly startTiles: number = 2;
   private keepPlaying = false;
   private grid: Grid = new Grid();
   private over = false;
   private won = false;
   private score = 0;
   private aiIsRunning = false;
-
-  private readonly directionMap = new Map<Direction, Vector>([
-    [Direction.Up, { x: 0, y: -1 }],
-    [Direction.Right, { x: 1, y: 0 }],
-    [Direction.Down, { x: 0, y: 1 }],
-    [Direction.Left, { x: -1, y: 0 }]
-  ]);
 
   public constructor(
     storageManager: StorageManager,
@@ -183,7 +183,7 @@ export default class GameManager {
   }
   // Set up the initial tiles to start the game with
   private addStartTiles(): void {
-    for (let i = 0; i < this.startTiles; i++) {
+    for (let i = 0; i < StartTiles; i++) {
       this.addRandomTile();
     }
   }
@@ -224,12 +224,12 @@ export default class GameManager {
   }
   // Get the vector representing the chosen direction
   private getVector(direction: Direction): Vector {
-    return this.directionMap.get(direction)!;
+    return DirectionMap.get(direction)!;
   }
   // Build a list of positions to traverse in the right order
   private buildTraversals(vector: Vector): { x: number[]; y: number[] } {
     const traversals: { x: number[]; y: number[] } = { x: [], y: [] };
-    for (let pos = 0; pos < this.size; pos++) {
+    for (let pos = 0; pos < Size; pos++) {
       traversals.x.push(pos);
       traversals.y.push(pos);
     }
@@ -261,8 +261,8 @@ export default class GameManager {
   }
   // Check for available matches between tiles (more expensive check)
   private tileMatchesAvailable(): boolean {
-    for (let x = 0; x < this.size; x++) {
-      for (let y = 0; y < this.size; y++) {
+    for (let x = 0; x < Size; x++) {
+      for (let y = 0; y < Size; y++) {
         const tile = this.grid.tileAtPosition({ x: x, y: y });
         if (tile) {
           for (let direction = 0; direction < 4; direction++) {
