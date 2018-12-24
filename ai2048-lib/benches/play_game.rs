@@ -29,45 +29,38 @@ fn calc_move(start: Grid) -> SearchResult {
 
 lazy_static! {
     static ref GRID_DEFAULT: Grid = Grid::default().add_random_tile();
-    static ref GRID_DEPTH_8: Grid = Grid::from_human([
-        [8, 2, 4, 2],
-        [32, 32, 4, 2],
-        [512, 128, 64, 2],
-        [1024, 256, 16, 0],
-    ])
-    .expect("couldn't parse obviously correct grid");
-}
-
-fn get_test_grid(depth: u8) -> Grid {
-    let grid = match depth {
-        8 => *GRID_DEPTH_8,
-        _ => panic!("No grid prepared for this depth"),
+    static ref GRID_DEPTH_8: Grid = {
+        let grid = Grid::from_human([
+            [8, 2, 4, 2],
+            [32, 32, 4, 2],
+            [512, 128, 64, 2],
+            [1024, 256, 16, 0],
+        ])
+        .expect("couldn't parse obviously correct grid");
+        assert_eq!(Searcher::new(0.1, 16).search(grid).depth, 8);
+        grid
     };
-    assert_eq!(Searcher::new(0.1, 16).search(grid).stats.depth, depth);
-    grid
 }
 
 fn single_moves(c: &mut Criterion) {
-    c.bench_function("depth 8 move", move |b| {
-        b.iter(|| calc_move(get_test_grid(8)))
-    });
+    c.bench_function("depth 8 move", move |b| b.iter(|| calc_move(*GRID_DEPTH_8)));
 }
 
 fn multiple_moves(c: &mut Criterion) {
     c.bench_function("100 moves post depth 8", |b| {
-        b.iter(|| play_moves(get_test_grid(8), 100))
+        b.iter(|| play_moves(*GRID_DEPTH_8, 100))
     });
 }
 
 criterion_group! {
     name = large_sample;
-    config = Criterion::default().sample_size(20);
+    config = Criterion::default().sample_size(10);
     targets = single_moves
 }
 
 criterion_group! {
     name = small_sample;
-    config = Criterion::default().sample_size(5);
+    config = Criterion::default().sample_size(3);
     targets = multiple_moves
 }
 

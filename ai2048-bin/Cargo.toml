@@ -9,4 +9,6 @@ edition = "2018"
 futures = "0.1.25"
 futures-cpupool = "0.1.8"
 chrono = "0.4.6"
-ai2048-lib = { path = "../ai2048-lib" }
+cfg-if = "0.1.6"
+jemallocator = "0.1.8"
+ai2048-lib = { path = "../ai2048-lib", features = ["parallel"] }

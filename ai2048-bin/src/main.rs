@@ -1,13 +1,22 @@
 use ai2048_lib::game_logic::{Grid, MOVES};
 use ai2048_lib::searcher::{SearchResult, Searcher};
+use cfg_if::cfg_if;
 use chrono::prelude::*;
 use chrono::Duration;
 use futures::Future;
 use futures_cpupool::CpuPool;
-use std::alloc::System;
 use std::collections::HashMap;
 use std::fmt::{self, Write};
 use std::sync::mpsc;
+
+cfg_if! {
+    // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
+    // allocator.
+    if #[cfg(target_os = "linux")] {
+        #[global_allocator]
+        static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+    }
+}
 
 const MIN_PROBABILITY: f32 = 0.0001;
 const MAX_DEPTH: u8 = 12;
@@ -43,9 +52,6 @@ impl From<mpsc::SendError<Signal>> for Error {
     }
 }
 
-#[global_allocator]
-static A: System = System;
-
 fn main() -> Result<(), Error> {
     let pool = CpuPool::new_num_cpus();
     let (tx, rx) = mpsc::channel();
@@ -58,9 +64,7 @@ fn main() -> Result<(), Error> {
             match message {
                 Signal::Stop => break,
                 Signal::Display(result, moves, one, overall) => {
-                    let entry = times
-                        .entry(result.stats.depth)
-                        .or_insert((0, Duration::zero()));
+                    let entry = times.entry(result.depth).or_insert((0, Duration::zero()));
                     *entry = (entry.0 + 1, entry.1 + one);
                     println!("{}", build_display(&result, moves, one, overall, &times)?);
                 }
@@ -124,51 +128,93 @@ fn build_display(
 
     writeln!(&mut s)?;
 
-    writeln!(&mut s, "Depth: {}", result.stats.depth)?;
-    writeln!(&mut s, "Cutoff probability: {}\n", MIN_PROBABILITY)?;
+    writeln!(&mut s, "Depth: {}", result.depth)?;
+    writeln!(&mut s, "Cutoff probability: {}", MIN_PROBABILITY)?;
 
-    writeln!(&mut s, "Cache size:     {:>10}", result.stats.cache_size)?;
-    writeln!(&mut s, "Cache hits:     {:>10}", result.stats.cache_hits)?;
-    writeln!(
-        &mut s,
-        "Cache ratio:    {:>10.4}\n",
-        result.stats.cache_hits as f64 / result.stats.cache_size as f64
-    )?;
-
-    writeln!(&mut s, "Total moves:    {:>10}", moves)?;
-    writeln!(
-        &mut s,
-        "Moves per second: {:>8.2}\n",
-        f64::from(moves) / (overall.num_seconds() as f64)
-    )?;
+    writeln!(&mut s)?;
 
     writeln!(
         &mut s,
-        "Time taken:            {:>8} ms",
-        one.num_milliseconds()
+        "Time taken:             {:>8.3} ms",
+        one.num_nanoseconds().unwrap() as f64 / 1_000_000.0
     )?;
     writeln!(
         &mut s,
-        "Time taken on average: {:>8} ms",
-        overall.num_milliseconds() / i64::from(moves)
+        "Nodes traveled:         {:>8} ({:>2.0}ns/node)",
+        result.stats.nodes,
+        one.num_nanoseconds().unwrap() as f64 / result.stats.nodes as f64
     )?;
     writeln!(
         &mut s,
-        "Time since game start: {:>8} ms\n",
-        overall.num_milliseconds()
+        "Unique:                 {:>8} [{:>4.1}%]",
+        result.stats.cache_size,
+        result.stats.cache_size as f32 * 100.0f32 / result.stats.nodes as f32
+    )?;
+    writeln!(&mut s, "Evaluated by:")?;
+    writeln!(
+        &mut s,
+        "Cached value:           {:>8} [{:>4.1}%]",
+        result.stats.cache_hits,
+        result.stats.cache_hits as f32 * 100.0f32 / result.stats.nodes as f32
+    )?;
+    writeln!(
+        &mut s,
+        "Heuristic:              {:>8} [{:>4.1}%]",
+        result.stats.evals,
+        result.stats.evals as f32 * 100.0f32 / result.stats.nodes as f32
+    )?;
+    writeln!(
+        &mut s,
+        "Averaging over children:{:>8} [{:>4.1}%]",
+        result.stats.average,
+        result.stats.average as f32 * 100.0f32 / result.stats.nodes as f32
+    )?;
+    writeln!(
+        &mut s,
+        "Reaching game over:     {:>8} [{:>4.1}%]",
+        result.stats.over,
+        result.stats.over as f32 * 100.0f32 / result.stats.nodes as f32
     )?;
 
+    writeln!(&mut s)?;
+
+    writeln!(
+        &mut s,
+        "DEPTH |   TOTAL TIME, ms |          MOVES | AVG TIME, ms"
+    )?;
+    writeln!(
+        &mut s,
+        "------+------------------+----------------+-------------"
+    )?;
     for depth in 3u8..=MAX_DEPTH {
-        let (moves, time) = times.get(&depth).cloned().unwrap_or((0, Duration::zero()));
+        let (moves_d, time) = times.get(&depth).cloned().unwrap_or((0, Duration::zero()));
+        let time_avg = match time.num_milliseconds() as f64 / moves_d as f64 {
+            nan if nan.is_nan() => String::default(),
+            not_nan => format!("{:12.3}", not_nan),
+        };
         writeln!(
             &mut s,
-            "Depth {:>2}: {:>8} ms, {:>4} moves, {:8.1} ms/move",
+            "{:>5} | {:>8} [{:>4.1}%] | {:>5} [{:>5.1}%] | {}",
             depth,
             time.num_milliseconds(),
-            moves,
-            time.num_milliseconds() as f64 / moves as f64
+            time.num_milliseconds() as f32 * 100.0f32 / overall.num_milliseconds() as f32,
+            moves_d,
+            moves_d as f32 * 100.0f32 / moves as f32,
+            time_avg
         )?;
     }
+    writeln!(
+        &mut s,
+        "------+------------------+----------------+-------------"
+    )?;
+    writeln!(
+        &mut s,
+        "TOTAL | {:>8}         | {:>5} ({:>5.1}/s)| {:12.3}",
+        overall.num_milliseconds(),
+        moves,
+        f64::from(moves) * 1000.0 / (overall.num_milliseconds() as f64),
+        overall.num_milliseconds() as f64 / moves as f64
+    )?;
 
     Ok(s)
 }
