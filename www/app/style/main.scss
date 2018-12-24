@@ -464,6 +464,13 @@ hr {
     float: left;
 }
 
+.throttle-button {
+    @include button;
+    display: block;
+    text-align: center;
+    float: left;
+}
+
 .minus-button {
     @include button;
     display: block;

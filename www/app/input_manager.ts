@@ -56,6 +56,7 @@ export default class InputManager {
     this.bindButtonPress(".retry-button", this.restart);
     this.bindButtonPress(".restart-button", this.restart);
     this.bindButtonPress(".run-button", this.run);
+    this.bindButtonPress(".throttle-button", this.throttle);
     this.bindButtonPress(".plus-button", this.plus);
     this.bindButtonPress(".minus-button", this.minus);
     this.bindButtonPress(".keep-playing-button", this.keepPlaying);
@@ -118,6 +119,10 @@ export default class InputManager {
   private run(event: Event) {
     event.preventDefault();
     this.gameManager.toggleAi();
+  }
+  private throttle(event: Event) {
+    event.preventDefault();
+    this.gameManager.toggleThrottle();
   }
   private plus(event: Event) {
     event.preventDefault();

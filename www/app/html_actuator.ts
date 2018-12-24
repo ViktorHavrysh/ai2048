@@ -10,6 +10,7 @@ export interface ActuatorMetadata {
   terminated: boolean;
   strength: number;
   aiIsOn(): boolean;
+  throttleIsOn(): boolean;
 }
 
 export class HTMLActuator {
@@ -20,6 +21,7 @@ export class HTMLActuator {
     ".strength-container"
   )!;
   private readonly runButton = document.querySelector(".run-button")!;
+  private readonly throttleButton = document.querySelector(".throttle-button")!;
   private readonly messageContainer = document.querySelector(".game-message")!;
   private score = 0;
   public actuate(grid: Grid, metadata: ActuatorMetadata): Promise<void> {
@@ -37,6 +39,7 @@ export class HTMLActuator {
         this.updateBestScore(metadata.bestScore);
         this.updateStrength(metadata.strength);
         this.updateRunButton(metadata.aiIsOn());
+        this.updateThrottleButton(metadata.throttleIsOn());
         if (metadata.terminated) {
           if (metadata.over) {
             this.message(false); // You lose
@@ -60,6 +63,13 @@ export class HTMLActuator {
       this.runButton.textContent = "Start AI";
     } else {
       this.runButton.textContent = "Stop AI";
+    }
+  }
+  public updateThrottleButton(throttleAi: boolean): any {
+    if (throttleAi) {
+      this.throttleButton.textContent = "Stop throttle";
+    } else {
+      this.throttleButton.textContent = "Start throttle";
     }
   }
   private clearContainer(container: Element): void {

@@ -32,6 +32,7 @@ export default class GameManager {
   private won = false;
   private score = 0;
   private aiIsRunning = false;
+  private throttleAi = true;
 
   public constructor(
     storageManager: StorageManager,
@@ -134,6 +135,10 @@ export default class GameManager {
       this.ai.chooseDirection(this.grid.forAi()).then(d => this.move(d));
     }
   }
+  public toggleThrottle(): void {
+    this.throttleAi = !this.throttleAi;
+    this.actuator.updateThrottleButton(this.throttleAi);
+  }
   private loadState(previousState: GameState) {
     this.grid = new Grid(previousState.grid);
     this.score = previousState.score;
@@ -168,12 +173,15 @@ export default class GameManager {
       bestScore: this.storageManager.getBestScore(),
       terminated: this.isGameTerminated(),
       strength: this.ai.getStrength(),
-      aiIsOn: () => this.aiIsRunning
+      aiIsOn: () => this.aiIsRunning,
+      throttleIsOn: () => this.throttleAi
     });
     if (this.aiIsRunning) {
       const to = timeout(100);
       const direction = await this.ai.chooseDirection(this.grid.forAi());
-      await to; // make sure moves are at least 100 milliseconds
+      if (this.throttleAi) {
+        await to; // make sure moves are at least 100 milliseconds
+      }
       this.move(direction);
     }
   }
