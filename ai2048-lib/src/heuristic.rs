@@ -1,17 +1,18 @@
 use crate::game_logic::{Grid, Row};
+use decorum::R32;
 use lazy_static::lazy_static;
 use std::{cmp, i32, u16};
 
-pub(crate) fn eval(grid: Grid) -> f32 {
+pub(crate) fn eval(grid: Grid) -> R32 {
     grid.rows()
         .iter()
         .chain(grid.transpose().rows().iter())
         .map(|&r| eval_row(r))
-        .sum()
+        .fold(R32::default(), |a, b| a + b)
 }
 
 // Safety: this is safe because the cache is populated for every possible u16 value.
-fn eval_row(row: Row) -> f32 {
+fn eval_row(row: Row) -> R32 {
     // Make sure row.0 is still u16
     let row: u16 = row.0;
     unsafe { *CACHE.get_unchecked(row as usize) }
@@ -19,8 +20,8 @@ fn eval_row(row: Row) -> f32 {
 
 // Pre-cache heuristic for every possible row with values that can fit a nibble
 lazy_static! {
-    static ref CACHE: Box<[f32]> = {
-        let mut vec = vec![0f32; u16::MAX as usize];
+    static ref CACHE: Box<[R32]> = {
+        let mut vec = vec![R32::default(); u16::MAX as usize];
         for (index, row) in vec.iter_mut().enumerate() {
             *row = eval_row_nocache(Row(index as u16));
         }
@@ -34,7 +35,7 @@ const EMPTY_STRENGTH: f32 = 270.0;
 const ADJACENT_STRENGTH: f32 = 700.0;
 const SUM_STRENGTH: f32 = 11.0;
 
-fn eval_row_nocache(row: Row) -> f32 {
+fn eval_row_nocache(row: Row) -> R32 {
     let row = row.unpack();
 
     let empty = empty_tile_count_row(row) * EMPTY_STRENGTH;
@@ -42,7 +43,7 @@ fn eval_row_nocache(row: Row) -> f32 {
     let adjacent = adjacent_row(row) * ADJACENT_STRENGTH;
     let sum = sum_row(row) * SUM_STRENGTH;
 
-    NOT_LOST + monotonicity + empty + adjacent + sum
+    (NOT_LOST + monotonicity + empty + adjacent + sum).into()
 }
 
 fn empty_tile_count_row(row: [u8; 4]) -> f32 {

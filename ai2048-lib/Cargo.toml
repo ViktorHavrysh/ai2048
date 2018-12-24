@@ -7,18 +7,23 @@ edition = "2018"
 
 [features]
 default = ["hashbrown", "fnv"]
+parallel = ["rayon", "chashmap"]
 
 [dependencies]
 lazy_static = "1.2.0"
 rand = "0.6.1"
 bytecount = "0.4.0"
 cfg-if = "0.1.6"
+decorum = "0.1.2"
 
 fnv = { version = "1.0.6", optional = true }
 fxhash = { version = "0.2.1", optional = true }
 
 hashbrown = { version = "0.1.7", optional = true }
 indexmap = { version = "1.0.2", optional = true }
+
+rayon = { version = "1.0.3", optional = true }
+chashmap = { version = "2.2.0", optional = true }
 
 [dev-dependencies]
 criterion = "0.2.5"
