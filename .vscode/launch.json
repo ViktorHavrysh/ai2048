@@ -1,13 +1,13 @@
 {
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "lldb",
-            "program": "${workspaceFolder}/target/debug/ai2048_bin",
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        }
-    ]
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "lldb",
+      "program": "${workspaceFolder}/target/debug/ai2048-bin",
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    }
+  ]
 }

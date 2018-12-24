@@ -3,7 +3,4 @@
 
 pub mod game_logic;
 pub mod heuristic;
-mod searcher_data;
-
-#[cfg_attr(feature = "parallel", path = "searcher_parallel.rs")]
 pub mod searcher;

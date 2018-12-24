@@ -343,13 +343,13 @@ impl Grid {
         Grid::from_columns([col0, col1, col2, col3])
     }
 
-    pub(crate) fn count_distinct_tiles(self) -> usize {
+    pub(crate) fn count_distinct_tiles(self) -> u32 {
         self.unpack_log()
             .iter()
             .flatten()
             .filter(|&&x| x != 0)
             .collect::<HashSet<_>>()
-            .len()
+            .len() as u32
     }
 }
 
