@@ -2,9 +2,9 @@
 
 use crate::game_logic::{Grid, Move};
 use crate::heuristic;
-use decorum::R32;
 use rayon::prelude::*;
 use std::collections::HashMap;
+use std::f32;
 
 type Cache<K, V> = chashmap::CHashMap<K, V>;
 
@@ -36,11 +36,11 @@ pub struct SearchStats {
 
 #[derive(Clone, Debug, Default)]
 struct SearchState {
-    cache: Cache<Grid, (R32, R32)>,
+    cache: Cache<Grid, (f32, f32)>,
     hits: usize,
 }
 impl SearchState {
-    fn get_cached(&self, grid: Grid) -> Option<(R32, R32)> {
+    fn get_cached(&self, grid: Grid) -> Option<(f32, f32)> {
         let read_guard = self.cache.get(&grid)?;
         let (stored_probability, eval) = *read_guard;
         Some((stored_probability, eval))
@@ -49,7 +49,7 @@ impl SearchState {
 
 /// Searches for the best move at the current grid state
 pub struct Searcher {
-    min_probability: R32,
+    min_probability: f32,
     max_depth: u8,
 }
 
@@ -67,7 +67,7 @@ impl Searcher {
 
     /// Perform a search for the best move
     pub fn search(&self, grid: Grid) -> SearchResult {
-        let mut state = SearchState::default();
+        let state = SearchState::default();
         let depth = std::cmp::min(
             self.max_depth as i8,
             std::cmp::max(3, (grid.count_distinct_tiles() as i8) - 2),
@@ -106,10 +106,10 @@ impl Searcher {
     fn player_move_eval(
         &self,
         grid: Grid,
-        probability: R32,
+        probability: f32,
         depth: i8,
         state: &SearchState,
-    ) -> R32 {
+    ) -> f32 {
         if let Some((stored_probability, eval)) = state.get_cached(grid) {
             if probability <= stored_probability {
                 // state.hits += 1;
@@ -118,7 +118,7 @@ impl Searcher {
         }
 
         let eval = if grid.game_over() {
-            R32::default()
+            0.0f32
         } else if depth <= 0 || probability < self.min_probability {
             heuristic::eval(grid)
         } else {
@@ -126,8 +126,7 @@ impl Searcher {
                 .collect::<Vec<_>>()
                 .par_iter()
                 .map(|(_, b)| self.computer_move_eval(*b, probability, depth, state))
-                .max()
-                .unwrap()
+                .reduce(|| f32::NAN, f32::max)
         };
 
         state.cache.insert(grid, (probability, eval));
@@ -138,10 +137,10 @@ impl Searcher {
     fn computer_move_eval(
         &self,
         grid: Grid,
-        probability: R32,
+        probability: f32,
         depth: i8,
         state: &SearchState,
-    ) -> R32 {
+    ) -> f32 {
         let count = grid.count_empty() as f32;
 
         let prob2 = probability * PROBABILITY_OF2 / count;
@@ -152,7 +151,7 @@ impl Searcher {
             .collect::<Vec<_>>()
             .par_iter()
             .map(|b| self.player_move_eval(*b, prob2, depth - 1, state))
-            .reduce(|| R32::default(), |a, b| a + b);
+            .reduce(|| 0.0f32, |a, b| a + b);
         let avg_with2 = sum_with2 / count;
 
         let sum_with4 = grid
@@ -160,7 +159,7 @@ impl Searcher {
             .collect::<Vec<_>>()
             .par_iter()
             .map(|b| self.player_move_eval(*b, prob4, depth - 1, state))
-            .reduce(|| R32::default(), |a, b| a + b);
+            .reduce(|| 0.0f32, |a, b| a + b);
         let avg_with4 = sum_with4 / count;
 
         avg_with2 * PROBABILITY_OF2 + avg_with4 * PROBABILITY_OF4

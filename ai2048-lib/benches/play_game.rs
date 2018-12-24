@@ -61,13 +61,13 @@ fn multiple_moves(c: &mut Criterion) {
 
 criterion_group! {
     name = large_sample;
-    config = Criterion::default().sample_size(20);
+    config = Criterion::default().sample_size(10);
     targets = single_moves
 }
 
 criterion_group! {
     name = small_sample;
-    config = Criterion::default().sample_size(5);
+    config = Criterion::default().sample_size(3);
     targets = multiple_moves
 }
 

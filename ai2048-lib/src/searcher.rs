@@ -130,7 +130,7 @@ impl Searcher {
         let eval = if grid.game_over() {
             0f32
         } else if depth <= 0 || probability < self.min_probability {
-            heuristic::eval(grid).into()
+            heuristic::eval(grid)
         } else {
             grid.player_moves()
                 .map(|(_, b)| self.computer_move_eval(b, probability, depth, state))
