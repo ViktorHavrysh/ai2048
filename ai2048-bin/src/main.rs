@@ -186,7 +186,7 @@ fn build_display(
         &mut s,
         "------+------------------+----------------+-------------"
     )?;
-    for depth in 3u8..=MAX_DEPTH {
+    for depth in 3..=MAX_DEPTH {
         let (moves_d, time) = times.get(&depth).cloned().unwrap_or((0, Duration::zero()));
         let time_avg = match time.num_milliseconds() as f64 / moves_d as f64 {
             nan if nan.is_nan() => String::default(),
@@ -194,7 +194,7 @@ fn build_display(
         };
         writeln!(
             &mut s,
-            "{:>5} | {:>8} [{:>4.1}%] | {:>5} [{:>5.1}%] | {}",
+            "{:>5} | {:>8} [{:>4.1}%] | {:>5}  [{:>4.1}%] | {}",
             depth,
             time.num_milliseconds(),
             time.num_milliseconds() as f32 * 100.0f32 / overall.num_milliseconds() as f32,

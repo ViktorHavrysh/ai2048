@@ -167,7 +167,7 @@ export default class GameManager {
       won: this.won,
       bestScore: this.storageManager.getBestScore(),
       terminated: this.isGameTerminated(),
-      strength: this.ai.strength(),
+      strength: this.ai.getStrength(),
       aiIsOn: () => this.aiIsRunning
     });
     if (this.aiIsRunning) {
@@ -203,7 +203,7 @@ export default class GameManager {
       over: this.over,
       won: this.won,
       keepPlaying: this.keepPlaying,
-      aiStrength: this.ai.strength()
+      aiStrength: this.ai.getStrength()
     };
   }
   // Save all tile positions and remove merger info
