@@ -1,38 +1,13 @@
 //! Searcher looks for the best move given a game position
 
-use crate::game_logic::{Grid, Move};
+use crate::game_logic::Grid;
 use crate::heuristic;
 use rayon::prelude::*;
-use std::collections::HashMap;
 use std::f32;
 
+pub use crate::searcher_data::{SearchResult, SearchStats};
+
 type Cache<K, V> = chashmap::CHashMap<K, V>;
-
-/// Return a number of interesting statistics together with a recommendation for the best move.
-#[derive(Clone, Debug, Default)]
-pub struct SearchResult {
-    /// The game state for which analysis was conducted.
-    pub root_grid: Grid,
-    /// A map of evaluations. Can be empty if the player has no more moves, that is,
-    /// in a game over state.
-    pub move_evaluations: HashMap<Move, f32>,
-    /// The best move, if one exists. Can be `None` if the player has no available
-    /// moves, that is, in a game over state.
-    pub best_move: Option<Move>,
-    /// Some search statistics
-    pub stats: SearchStats,
-}
-
-/// Some search statistics
-#[derive(Clone, Debug, Default)]
-pub struct SearchStats {
-    /// The size of the cache
-    pub cache_size: usize,
-    /// The number of cache hits
-    pub cache_hits: usize,
-    /// Search depth
-    pub depth: u8,
-}
 
 #[derive(Clone, Debug, Default)]
 struct SearchState {
@@ -67,6 +42,7 @@ impl Searcher {
 
     /// Perform a search for the best move
     pub fn search(&self, grid: Grid) -> SearchResult {
+        let mut stats = SearchStats::default();
         let state = SearchState::default();
         let depth = std::cmp::min(
             self.max_depth as i8,
@@ -89,17 +65,14 @@ impl Searcher {
             .map(|(mv, eval)| (mv, eval.into()))
             .collect();
 
-        let stats = SearchStats {
-            cache_size: state.cache.len(),
-            cache_hits: state.hits,
-            depth: depth as u8,
-        };
+        stats.cache_size = state.cache.len() as u32;
 
         SearchResult {
             root_grid: grid,
+            depth: depth as u8,
+            stats,
             move_evaluations,
             best_move,
-            stats,
         }
     }
 

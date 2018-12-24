@@ -1,4 +1,5 @@
 use ai2048_lib::game_logic::{Grid, Move};
+use ai2048_lib::heuristic;
 use criterion::Criterion;
 use criterion::{criterion_group, criterion_main};
 use lazy_static::lazy_static;
@@ -47,10 +48,14 @@ fn game_over(c: &mut Criterion) {
     c.bench_function("game over", |b| b.iter(|| TEST_GRID.game_over()));
 }
 
+fn heuristic(c: &mut Criterion) {
+    c.bench_function("eval", |b| b.iter(|| heuristic::eval(*TEST_GRID)));
+}
+
 criterion_group! {
     name = huge_sample;
     config = Criterion::default().sample_size(50);
-    targets = make_move, transpose, count_empty, possible_moves, game_over
+    targets = make_move, transpose, count_empty, possible_moves, game_over, heuristic
 }
 
 criterion_main!(huge_sample);

@@ -1,10 +1,11 @@
 //! Searcher looks for the best move given a game position
 
-use crate::game_logic::{Grid, Move};
+use crate::game_logic::Grid;
 use crate::heuristic;
+use cfg_if::cfg_if;
 use std::f32;
 
-use cfg_if::cfg_if;
+pub use crate::searcher_data::{SearchResult, SearchStats};
 
 cfg_if! {
     if #[cfg(feature = "fnv")] {
@@ -26,38 +27,10 @@ cfg_if! {
     }
 }
 
-use std::collections::HashMap;
-
-/// Return a number of interesting statistics together with a recommendation for the best move.
-#[derive(Clone, Debug, Default)]
-pub struct SearchResult {
-    /// The game state for which analysis was conducted.
-    pub root_grid: Grid,
-    /// A map of evaluations. Can be empty if the player has no more moves, that is,
-    /// in a game over state.
-    pub move_evaluations: HashMap<Move, f32>,
-    /// The best move, if one exists. Can be `None` if the player has no available
-    /// moves, that is, in a game over state.
-    pub best_move: Option<Move>,
-    /// Some search statistics
-    pub stats: SearchStats,
-}
-
-/// Some search statistics
-#[derive(Clone, Debug, Default)]
-pub struct SearchStats {
-    /// The size of the cache
-    pub cache_size: usize,
-    /// The number of cache hits
-    pub cache_hits: usize,
-    /// Search depth
-    pub depth: u8,
-}
-
 #[derive(Clone, Debug, Default)]
 struct SearchState {
     cache: Cache<Grid, (f32, f32)>,
-    hits: usize,
+    stats: SearchStats,
 }
 
 /// Searches for the best move at the current grid state
@@ -99,17 +72,14 @@ impl Searcher {
 
         let move_evaluations = move_evaluations.into_iter().collect();
 
-        let stats = SearchStats {
-            cache_size: state.cache.len(),
-            cache_hits: state.hits,
-            depth: depth as u8,
-        };
+        state.stats.cache_size = state.cache.len() as u32;
 
         SearchResult {
+            stats: state.stats,
             root_grid: grid,
             move_evaluations,
             best_move,
-            stats,
+            depth: depth as u8,
         }
     }
 
@@ -120,18 +90,23 @@ impl Searcher {
         depth: i8,
         state: &mut SearchState,
     ) -> f32 {
+        state.stats.nodes += 1;
+
         if let Some(&(stored_probability, eval)) = state.cache.get(&grid) {
             if probability <= stored_probability {
-                state.hits += 1;
+                state.stats.cache_hits += 1;
                 return eval;
             }
         }
 
         let eval = if grid.game_over() {
+            state.stats.over += 1;
             0f32
         } else if depth <= 0 || probability < self.min_probability {
+            state.stats.evals += 1;
             heuristic::eval(grid)
         } else {
+            state.stats.average += 1;
             grid.player_moves()
                 .map(|(_, b)| self.computer_move_eval(b, probability, depth, state))
                 .fold(f32::NAN, f32::max)
@@ -149,6 +124,9 @@ impl Searcher {
         depth: i8,
         state: &mut SearchState,
     ) -> f32 {
+        state.stats.nodes += 1;
+        state.stats.average += 1;
+
         let count = grid.count_empty() as f32;
 
         let prob2 = probability * PROBABILITY_OF2 / count;

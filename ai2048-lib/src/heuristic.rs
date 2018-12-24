@@ -1,8 +1,11 @@
+//! Heuristic to evaluate position
+
 use crate::game_logic::{Grid, Row};
 use lazy_static::lazy_static;
 use std::{cmp, i32, u16};
 
-pub(crate) fn eval(grid: Grid) -> f32 {
+/// Evaluate grid based on heuristics
+pub fn eval(grid: Grid) -> f32 {
     grid.rows()
         .iter()
         .chain(grid.transpose().rows().iter())

@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2018"
 
 [features]
-default = ["hashbrown", "fnv", "parallel"]
+default = ["hashbrown", "fnv"]
 parallel = ["rayon", "chashmap"]
 
 [dependencies]
