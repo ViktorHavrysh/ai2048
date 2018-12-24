@@ -7,12 +7,9 @@ import { HTMLActuator as Actuator } from "./html_actuator";
 import InputManager from "./input_manager";
 import StorageManager from "./local_storage_manager";
 
-const minProb = 0.0001;
-const initialStrength = 8;
-
 function init() {
   const storageManager = new StorageManager();
-  const ai = new Ai(minProb, initialStrength);
+  const ai = new Ai();
   const actuator = new Actuator();
   const gameManager = new GameManager(storageManager, actuator, ai);
   gameManager.setup();

@@ -1,25 +1,27 @@
 import GameManager from "game_manager";
 import { Direction } from "./direction";
 
+const KeyMap: { [index: number]: Direction } = {
+  38: Direction.Up,
+  39: Direction.Right,
+  40: Direction.Down,
+  37: Direction.Left,
+  75: Direction.Up,
+  76: Direction.Right,
+  74: Direction.Down,
+  72: Direction.Left,
+  87: Direction.Up,
+  68: Direction.Right,
+  83: Direction.Down,
+  65: Direction.Left // A
+};
+
 export default class InputManager {
   private readonly gameManager: GameManager;
   private readonly eventTouchstart: string;
   private readonly eventTouchmove: string;
   private readonly eventTouchend: string;
-  private readonly keyMap: { [index: number]: Direction } = {
-    38: Direction.Up,
-    39: Direction.Right,
-    40: Direction.Down,
-    37: Direction.Left,
-    75: Direction.Up,
-    76: Direction.Right,
-    74: Direction.Down,
-    72: Direction.Left,
-    87: Direction.Up,
-    68: Direction.Right,
-    83: Direction.Down,
-    65: Direction.Left // A
-  };
+
   public constructor(gameManager: GameManager) {
     this.gameManager = gameManager;
     if (window.navigator.msPointerEnabled) {
@@ -38,7 +40,7 @@ export default class InputManager {
     document.addEventListener("keydown", event => {
       const modifiers =
         event.altKey || event.ctrlKey || event.metaKey || event.shiftKey;
-      const mapped = this.keyMap[event.which];
+      const mapped = KeyMap[event.which];
       if (!modifiers) {
         if (mapped) {
           event.preventDefault();

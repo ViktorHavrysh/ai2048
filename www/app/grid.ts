@@ -5,9 +5,10 @@ export interface SerializableGrid {
   tiles: (SerializableTile | null)[][];
 }
 
+const Size = 4;
+
 export class Grid {
   public readonly tiles: (Tile | null)[][];
-  private readonly size: number = 4;
 
   public constructor(previousState?: SerializableGrid) {
     this.tiles = previousState ? this.fromState(previousState) : this.empty();
@@ -26,8 +27,8 @@ export class Grid {
   public eachTile(
     callback: ((x: number, y: number, tile: Tile | null) => void)
   ): void {
-    for (let x = 0; x < this.size; x++) {
-      for (let y = 0; y < this.size; y++) {
+    for (let x = 0; x < Size; x++) {
+      for (let y = 0; y < Size; y++) {
         callback(x, y, this.tiles[x][y]);
       }
     }
@@ -57,17 +58,17 @@ export class Grid {
   public withinBounds(position: Position): boolean {
     return (
       position.x >= 0 &&
-      position.x < this.size &&
+      position.x < Size &&
       position.y >= 0 &&
-      position.y < this.size
+      position.y < Size
     );
   }
   public serialize(): SerializableGrid {
     const state: (SerializableTile | null)[][] = [];
-    for (let x = 0; x < this.size; x++) {
+    for (let x = 0; x < Size; x++) {
       const row: (SerializableTile | null)[] = [];
       state[x] = row;
-      for (var y = 0; y < this.size; y++) {
+      for (var y = 0; y < Size; y++) {
         const tile = this.tiles[x][y];
         row.push(tile ? tile.serialize() : null);
       }
@@ -89,10 +90,10 @@ export class Grid {
   // Build a grid of the specified size
   private empty(): (Tile | null)[][] {
     const tiles: (Tile | null)[][] = [];
-    for (let x = 0; x < this.size; x++) {
+    for (let x = 0; x < Size; x++) {
       const row: (Tile | null)[] = [];
       tiles[x] = row;
-      for (let y = 0; y < this.size; y++) {
+      for (let y = 0; y < Size; y++) {
         row.push(null);
       }
     }
@@ -101,10 +102,10 @@ export class Grid {
 
   private fromState(state: SerializableGrid): (Tile | null)[][] {
     const tiles: (Tile | null)[][] = [];
-    for (let x = 0; x < this.size; x++) {
+    for (let x = 0; x < Size; x++) {
       const row: (Tile | null)[] = [];
       tiles[x] = row;
-      for (var y = 0; y < this.size; y++) {
+      for (var y = 0; y < Size; y++) {
         const tile = state.tiles[x][y];
         if (tile) {
           row.push(new Tile(tile.position, tile.value));

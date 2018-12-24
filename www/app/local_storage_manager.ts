@@ -1,4 +1,4 @@
-import { GameState, version } from "./game_state";
+import { GameState, Version } from "./game_state";
 
 export default class LocalStorageManager {
   private readonly bestScoreKey = "bestScore";
@@ -16,11 +16,11 @@ export default class LocalStorageManager {
     const stateJSON = this.storage.getItem(this.gameStateKey);
     if (!stateJSON) return null;
     const store = JSON.parse(stateJSON);
-    if (!store.version || store.version !== version) return null;
+    if (!store.version || store.version !== Version) return null;
     return store.state;
   }
   public setGameState(gameState: GameState): void {
-    const store = { version: version, state: gameState };
+    const store = { version: Version, state: gameState };
     this.storage.setItem(this.gameStateKey, JSON.stringify(store));
   }
   public clearGameState(): void {
