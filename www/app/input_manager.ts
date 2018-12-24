@@ -1,12 +1,12 @@
+import GameManager from "game_manager";
 import { Direction } from "./direction";
-import EventManager from "./event_manager";
 
 export default class InputManager {
-  private readonly eventManager: EventManager;
+  private readonly gameManager: GameManager;
   private readonly eventTouchstart: string;
   private readonly eventTouchmove: string;
   private readonly eventTouchend: string;
-  private readonly map: { [index: number]: Direction } = {
+  private readonly keyMap: { [index: number]: Direction } = {
     38: Direction.Up,
     39: Direction.Right,
     40: Direction.Down,
@@ -20,10 +20,10 @@ export default class InputManager {
     83: Direction.Down,
     65: Direction.Left // A
   };
-  public constructor(eventManager: EventManager) {
-    this.eventManager = eventManager;
+  public constructor(gameManager: GameManager) {
+    this.gameManager = gameManager;
     if (window.navigator.msPointerEnabled) {
-      //Internet Explorer 10 style
+      // Internet Explorer 10 style
       this.eventTouchstart = "MSPointerDown";
       this.eventTouchmove = "MSPointerMove";
       this.eventTouchend = "MSPointerUp";
@@ -34,21 +34,20 @@ export default class InputManager {
     }
   }
   public listen(): void {
-    const self = this;
     // Respond to direction keys
     document.addEventListener("keydown", event => {
       const modifiers =
         event.altKey || event.ctrlKey || event.metaKey || event.shiftKey;
-      const mapped = this.map[event.which];
+      const mapped = this.keyMap[event.which];
       if (!modifiers) {
         if (mapped) {
           event.preventDefault();
-          self.eventManager.emit("move", mapped);
+          this.gameManager.move(mapped);
         }
       }
       // R key restarts the game
       if (!modifiers && event.which === 82) {
-        self.restart.call(self, event);
+        this.restart(event);
       }
     });
     // Respond to button presses
@@ -106,32 +105,32 @@ export default class InputManager {
         } else {
           direction = dy > 0 ? Direction.Down : Direction.Up;
         }
-        self.eventManager.emit("move", direction);
+        this.gameManager.move(direction);
       }
     });
   }
   private restart(event: Event) {
     event.preventDefault();
-    this.eventManager.emit("restart");
+    this.gameManager.restart();
   }
   private run(event: Event) {
     event.preventDefault();
-    this.eventManager.emit("run");
+    this.gameManager.toggleAi();
   }
   private plus(event: Event) {
     event.preventDefault();
-    this.eventManager.emit("plus");
+    this.gameManager.plus();
   }
   private minus(event: Event) {
     event.preventDefault();
-    this.eventManager.emit("minus");
+    this.gameManager.minus();
   }
   private keepPlaying(event: Event) {
     event.preventDefault();
-    this.eventManager.emit("keepPlaying");
+    this.gameManager.continuePlaying();
   }
   private bindButtonPress(selector: string, fn: (event: Event) => void) {
-    var button = document.querySelector(selector)!;
+    const button = document.querySelector(selector)!;
     button.addEventListener("click", fn.bind(this));
     button.addEventListener(this.eventTouchend, fn.bind(this));
   }

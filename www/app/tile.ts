@@ -11,7 +11,7 @@ export class Tile {
   public y: number;
   public previousPosition: Position | null = null;
   public mergedFrom: Tile[] | null = null;
-  public constructor(position: Position, value: number = 2) {
+  public constructor(position: Position, value = 2) {
     this.x = position.x;
     this.y = position.y;
     this.value = value;

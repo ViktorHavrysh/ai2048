@@ -1,6 +1,5 @@
-import EventManager from "./event_manager";
-import { Direction } from "./direction";
 import PromiseWorker from "promise-worker";
+import { Direction } from "./direction";
 
 interface MessageForAi {
   grid: Uint32Array;
@@ -12,11 +11,7 @@ export default class Ai {
   private readonly worker: PromiseWorker;
   private readonly minProb: number;
   private maxDepth: number;
-  public constructor(
-    eventManager: EventManager,
-    minProb: number,
-    maxDepth: number
-  ) {
+  public constructor(minProb: number, maxDepth: number) {
     this.worker = new PromiseWorker(new Worker("./worker.js"));
     this.minProb = minProb;
     this.maxDepth = maxDepth;
@@ -36,8 +31,11 @@ export default class Ai {
     }
     return this.maxDepth;
   }
+  public setStrength(strength: number): void {
+    this.maxDepth = strength;
+  }
   public async chooseDirection(grid: Uint32Array): Promise<Direction> {
-    let message: MessageForAi = {
+    const message: MessageForAi = {
       grid: grid,
       minProb: this.minProb,
       maxDepth: this.maxDepth

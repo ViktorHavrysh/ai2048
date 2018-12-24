@@ -1,30 +1,23 @@
-import "./style/main.scss";
 import "./favicon.ico";
+import "./style/main.scss";
 
+import Ai from "./ai";
+import GameManager from "./game_manager";
+import { HTMLActuator as Actuator } from "./html_actuator";
 import InputManager from "./input_manager";
 import StorageManager from "./local_storage_manager";
-import { HTMLActuator as Actuator } from "./html_actuator";
-import { GameManager } from "./game_manager";
-import Ai from "./ai";
-import EventManager from "./event_manager";
 
 const minProb = 0.0001;
 const initialStrength = 8;
 
 function init() {
-  const eventManager = new EventManager();
-  const inputManager = new InputManager(eventManager);
   const storageManager = new StorageManager();
-  const ai = new Ai(eventManager, minProb, initialStrength);
-  const actuator = new Actuator(eventManager);
-  const gameManager = new GameManager(
-    eventManager,
-    storageManager,
-    actuator,
-    ai
-  );
-  inputManager.listen();
+  const ai = new Ai(minProb, initialStrength);
+  const actuator = new Actuator();
+  const gameManager = new GameManager(storageManager, actuator, ai);
   gameManager.setup();
+  const inputManager = new InputManager(gameManager);
+  inputManager.listen();
 }
 
 // Wait till the browser is ready to render the game (avoids glitches)
