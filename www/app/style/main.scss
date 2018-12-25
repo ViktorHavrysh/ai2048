@@ -522,6 +522,19 @@ hr {
         padding: 15px 10px;
         min-width: 40px;
     }
+    .strength-container {
+        margin-top: 0;
+        padding: 15px 15px;
+        min-width: 40px;
+    }
+    .strength-container:after {
+        font-size: 12px;
+    }
+    .plus-button,
+    .minus-button,
+    .throttle-button {
+        padding: 0 15px;
+    }
     .heading {
         margin-bottom: 10px;
     } // Show intro and restart button side by side
