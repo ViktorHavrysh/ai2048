@@ -67,9 +67,9 @@ export class HTMLActuator {
   }
   public updateThrottleButton(throttleAi: boolean): any {
     if (throttleAi) {
-      this.throttleButton.textContent = "Stop throttle";
+      this.throttleButton.textContent = "Unthrottle";
     } else {
-      this.throttleButton.textContent = "Start throttle";
+      this.throttleButton.textContent = "Throttle";
     }
   }
   private clearContainer(container: Element): void {
