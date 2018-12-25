@@ -6,3 +6,6 @@ www/node_modules
 ai2048-wasm/bin
 ai2048-wasm/pkg
 wasm-pack.log
+flame.svg
+perf.data
+perf.data.old

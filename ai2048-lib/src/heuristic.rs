@@ -31,7 +31,7 @@ lazy_static! {
     };
 }
 
-const NOT_LOST: f32 = 1_600_000f32;
+const NOT_LOST: f32 = 200_000f32;
 const MONOTONICITY_STRENGTH: f32 = 47.0;
 const EMPTY_STRENGTH: f32 = 270.0;
 const ADJACENT_STRENGTH: f32 = 700.0;

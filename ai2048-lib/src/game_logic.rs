@@ -174,6 +174,27 @@ impl Grid {
         result
     }
 
+    /// Parses a grid from the representation given by the `Display` implementation
+    pub fn from_str(s: &str) -> Option<Grid> {
+        let vec: Vec<u32> = s
+            .split(|c: char| !c.is_numeric())
+            .flat_map(|s| s.parse::<u32>())
+            .collect();
+
+        if vec.len() != 16 {
+            return None;
+        }
+
+        let grid: [[u32; 4]; 4] = [
+            [vec[0], vec[1], vec[2], vec[3]],
+            [vec[4], vec[5], vec[6], vec[7]],
+            [vec[8], vec[9], vec[10], vec[11]],
+            [vec[12], vec[13], vec[14], vec[15]],
+        ];
+
+        Grid::from_human(grid)
+    }
+
     fn from_log(grid: [[u8; 4]; 4]) -> Option<Grid> {
         let mut rows = [Row::default(); 4];
         for (x, &row) in grid.iter().enumerate() {
@@ -739,5 +760,20 @@ mod tests {
             Grid::from_log([[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12, 13, 14, 15]]).unwrap();
 
         assert_eq!(grid, expected);
+    }
+
+    #[test]
+    fn can_parse_from_display() {
+        let grid = Grid::from_human([
+            [1, 2, 4, 8],
+            [16, 32, 64, 128],
+            [256, 512, 1024, 2048],
+            [4096, 8192, 16384, 32768],
+        ])
+        .unwrap();
+
+        let back = Grid::from_str(&grid.to_string()).unwrap();
+
+        assert_eq!(grid, back);
     }
 }
