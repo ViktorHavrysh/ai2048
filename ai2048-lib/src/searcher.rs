@@ -55,8 +55,6 @@ pub struct SearchStats {
     pub cache_hits: u32,
     /// Evaluated with heuristic
     pub evals: u32,
-    /// Evaluated as game over
-    pub over: u32,
     /// Evaluated as average of children
     pub average: u32,
 }
@@ -70,7 +68,6 @@ impl Add for SearchStats {
             cache_size: self.cache_size + other.cache_size,
             cache_hits: self.cache_hits + other.cache_hits,
             evals: self.evals + other.evals,
-            over: self.over + other.over,
             average: self.average + other.average,
         }
     }
@@ -125,7 +122,7 @@ fn search_inner(grid: Grid, min_probability: f32, max_depth: u8) -> SearchResult
         })
         .collect::<Vec<_>>();
 
-    move_evaluations.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+    move_evaluations.sort_by(|a, b| b.1.partial_cmp(&a.1).expect("Failed to sort evaluations"));
 
     let best_move = move_evaluations.iter().cloned().next().map(|(mv, _)| mv);
 
@@ -171,7 +168,7 @@ fn search_inner(grid: Grid, min_probability: f32, max_depth: u8) -> SearchResult
         .map(|(_, _, stats)| stats.clone())
         .fold(SearchStats::default(), |a, b| a + b);
 
-    move_evaluations.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+    move_evaluations.sort_by(|a, b| b.1.partial_cmp(&a.1).expect("Failed to sort evaluations"));
 
     let best_move = move_evaluations.iter().map(|(mv, _, _)| *mv).next();
 
@@ -192,6 +189,11 @@ fn search_inner(grid: Grid, min_probability: f32, max_depth: u8) -> SearchResult
 fn player_move_eval(grid: Grid, probability: f32, depth: i8, state: &mut SearchState) -> f32 {
     state.stats.nodes += 1;
 
+    if depth <= 0 || probability < state.min_probability {
+        state.stats.evals += 1;
+        return heuristic::eval(grid);
+    }
+
     if let Some(&(stored_probability, eval)) = state.cache.get(&grid) {
         if probability <= stored_probability {
             state.stats.cache_hits += 1;
@@ -199,18 +201,11 @@ fn player_move_eval(grid: Grid, probability: f32, depth: i8, state: &mut SearchS
         }
     }
 
-    let eval = if grid.game_over() {
-        state.stats.over += 1;
-        0f32
-    } else if depth <= 0 || probability < state.min_probability {
-        state.stats.evals += 1;
-        heuristic::eval(grid)
-    } else {
-        state.stats.average += 1;
-        grid.player_moves()
-            .map(|(_, b)| computer_move_eval(b, probability, depth, state))
-            .fold(f32::NAN, f32::max)
-    };
+    state.stats.average += 1;
+    let eval = grid
+        .player_moves()
+        .map(|(_, b)| computer_move_eval(b, probability, depth, state))
+        .fold(0f32, f32::max);
 
     state.cache.insert(grid, (probability, eval));
 

@@ -146,7 +146,7 @@ fn build_display(
     )?;
     writeln!(
         &mut s,
-        "Unique:                 {:>8} [{:>4.1}%]",
+        "In cache:               {:>8} [{:>4.1}%]",
         result.stats.cache_size,
         result.stats.cache_size as f32 * 100.0f32 / result.stats.nodes as f32
     )?;
@@ -168,12 +168,6 @@ fn build_display(
         "Averaging over children:{:>8} [{:>4.1}%]",
         result.stats.average,
         result.stats.average as f32 * 100.0f32 / result.stats.nodes as f32
-    )?;
-    writeln!(
-        &mut s,
-        "Reaching game over:     {:>8} [{:>4.1}%]",
-        result.stats.over,
-        result.stats.over as f32 * 100.0f32 / result.stats.nodes as f32
     )?;
 
     writeln!(&mut s)?;
