@@ -13,10 +13,10 @@ pub fn eval(grid: Grid) -> f32 {
         .sum()
 }
 
-// Safety: this is safe because the cache is populated for every possible u16 value.
 fn eval_row(row: Row) -> f32 {
     // Make sure row.0 is still u16
     let row: u16 = row.0;
+    // Safety: this is safe because the cache is populated for every possible u16 value.
     unsafe { *CACHE.get_unchecked(row as usize) }
 }
 

@@ -2,6 +2,7 @@
 
 members = [
     "ai2048-bin",
+    "ai2048-test",
     "ai2048-lib",
     "ai2048-wasm",
 ]
