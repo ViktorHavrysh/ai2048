@@ -13,13 +13,13 @@ interface Strength {
 }
 
 const StrengthMap: { [index: number]: Strength } = {
-  1: { minProb: 0.001, maxDepth: 5 },
-  2: { minProb: 0.0009, maxDepth: 6 },
-  3: { minProb: 0.0008, maxDepth: 7 },
-  4: { minProb: 0.0007, maxDepth: 8 },
-  5: { minProb: 0.0006, maxDepth: 9 },
-  6: { minProb: 0.0005, maxDepth: 10 },
-  7: { minProb: 0.0004, maxDepth: 11 },
+  1: { minProb: 0.02, maxDepth: 12 },
+  2: { minProb: 0.01, maxDepth: 12 },
+  3: { minProb: 0.005, maxDepth: 12 },
+  4: { minProb: 0.003, maxDepth: 12 },
+  5: { minProb: 0.002, maxDepth: 12 },
+  6: { minProb: 0.001, maxDepth: 12 },
+  7: { minProb: 0.0005, maxDepth: 12 },
   8: { minProb: 0.0003, maxDepth: 12 },
   9: { minProb: 0.0002, maxDepth: 12 },
   10: { minProb: 0.0001, maxDepth: 12 }

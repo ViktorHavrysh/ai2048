@@ -188,6 +188,18 @@ fn search_inner(grid: Grid, min_probability: f32, max_depth: u8) -> SearchResult
 
 fn player_move_eval(grid: Grid, probability: f32, depth: i8, state: &mut SearchState) -> f32 {
     state.stats.nodes += 1;
+    state.stats.average += 1;
+
+    let eval = grid
+        .player_moves()
+        .map(|(_, b)| computer_move_eval(b, probability, depth, state))
+        .fold(0f32, f32::max);
+
+    eval
+}
+
+fn computer_move_eval(grid: Grid, probability: f32, depth: i8, state: &mut SearchState) -> f32 {
+    state.stats.nodes += 1;
 
     if depth <= 0 || probability < state.min_probability {
         state.stats.evals += 1;
@@ -201,19 +213,6 @@ fn player_move_eval(grid: Grid, probability: f32, depth: i8, state: &mut SearchS
         }
     }
 
-    state.stats.average += 1;
-    let eval = grid
-        .player_moves()
-        .map(|(_, b)| computer_move_eval(b, probability, depth, state))
-        .fold(0f32, f32::max);
-
-    state.cache.insert(grid, (probability, eval));
-
-    eval
-}
-
-fn computer_move_eval(grid: Grid, probability: f32, depth: i8, state: &mut SearchState) -> f32 {
-    state.stats.nodes += 1;
     state.stats.average += 1;
 
     let count = grid.count_empty() as f32;
@@ -233,5 +232,9 @@ fn computer_move_eval(grid: Grid, probability: f32, depth: i8, state: &mut Searc
         .sum::<f32>();
     let avg_with4 = sum_with4 / count;
 
-    avg_with2 * PROBABILITY_OF2 + avg_with4 * PROBABILITY_OF4
+    let eval = avg_with2 * PROBABILITY_OF2 + avg_with4 * PROBABILITY_OF4;
+
+    state.cache.insert(grid, (probability, eval));
+
+    eval
 }

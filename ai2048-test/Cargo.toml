@@ -1,0 +1,11 @@
+[package]
+name = "ai2048-test"
+version = "0.1.0"
+authors = ["Victor Gavrish <victor.gavrish@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+ai2048-lib = { path = "../ai2048-lib" }
+rayon = "1.0.3"
+chrono = "0.4.6"
+itertools = "0.8.0"
