@@ -6,9 +6,11 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-ai2048-lib = { path = "../ai2048-lib" }
+ai2048-lib = { path = "../ai2048-lib", features = ["parallel"] }
 futures = "0.1.25"
 futures-cpupool = "0.1.8"
 chrono = "0.4.6"
-cfg-if = "0.1.6"
+cfg-if = "0.1.7"
+
+[target.'cfg(target_os = "linux")'.dependencies]
 jemallocator = "0.1.9"

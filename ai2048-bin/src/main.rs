@@ -10,8 +10,6 @@ use std::fmt::{self, Write};
 use std::sync::mpsc;
 
 cfg_if! {
-    // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
-    // allocator.
     if #[cfg(target_os = "linux")] {
         #[global_allocator]
         static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
@@ -136,13 +134,13 @@ fn build_display(
     writeln!(
         &mut s,
         "Time taken:             {:>8.3} ms",
-        one.num_nanoseconds().unwrap() as f64 / 1_000_000.0
+        one.num_nanoseconds().unwrap() as f32 / 1_000_000.0f32
     )?;
     writeln!(
         &mut s,
         "Nodes traveled:         {:>8} ({:>2.0}ns/node)",
         result.stats.nodes,
-        one.num_nanoseconds().unwrap() as f64 / result.stats.nodes as f64
+        one.num_nanoseconds().unwrap() as f32 / result.stats.nodes as f32
     )?;
     writeln!(
         &mut s,
@@ -182,7 +180,7 @@ fn build_display(
     )?;
     for depth in 3..=MAX_DEPTH {
         let (moves_d, time) = times.get(&depth).cloned().unwrap_or((0, Duration::zero()));
-        let time_avg = match time.num_milliseconds() as f64 / moves_d as f64 {
+        let time_avg = match time.num_milliseconds() as f32 / moves_d as f32 {
             nan if nan.is_nan() => String::default(),
             not_nan => format!("{:12.3}", not_nan),
         };
@@ -206,8 +204,8 @@ fn build_display(
         "TOTAL | {:>8}         | {:>5} ({:>5.1}/s)| {:12.3}",
         overall.num_milliseconds(),
         moves,
-        f64::from(moves) * 1000.0 / (overall.num_milliseconds() as f64),
-        overall.num_milliseconds() as f64 / moves as f64
+        moves as f32 * 1000.0 / (overall.num_milliseconds() as f32),
+        overall.num_milliseconds() as f32 / moves as f32
     )?;
 
     Ok(s)

@@ -48,7 +48,7 @@ fn main() {
 
     let elapsed = Utc::now() - start;
 
-    results.sort_by_key(|result| -(result.biggest as i64));
+    results.sort_by_key(|result| -i64::from(result.biggest));
     let grouped_by_biggest: Vec<(u32, usize)> = results
         .iter()
         .group_by(|result| result.biggest)

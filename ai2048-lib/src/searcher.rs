@@ -12,6 +12,8 @@ cfg_if! {
         type BuildHasher = fnv::FnvBuildHasher;
     } else if #[cfg(feature = "fxhash")] {
         type BuildHasher = fxhash::FxBuildHasher;
+    } else if #[cfg(feature = "t1ha")] {
+        type BuildHasher = t1ha::T1haBuildHasher;
     } else {
         type BuildHasher = std::collections::hash_map::RandomState;
     }
@@ -111,7 +113,7 @@ fn search_inner(grid: Grid, min_probability: f32, max_depth: u8) -> SearchResult
         std::cmp::max(3, (grid.count_distinct_tiles() as i8) - 2),
     );
     let mut state = SearchState {
-        min_probability: min_probability,
+        min_probability,
         ..SearchState::default()
     };
     let mut move_evaluations = grid
@@ -154,7 +156,7 @@ fn search_inner(grid: Grid, min_probability: f32, max_depth: u8) -> SearchResult
         .par_iter()
         .map(|(m, b)| {
             let mut state = SearchState {
-                min_probability: min_probability,
+                min_probability,
                 ..SearchState::default()
             };
             let eval = computer_move_eval(*b, 1.0f32, depth, &mut state);
@@ -190,12 +192,10 @@ fn player_move_eval(grid: Grid, probability: f32, depth: i8, state: &mut SearchS
     state.stats.nodes += 1;
     state.stats.average += 1;
 
-    let eval = grid
+    grid
         .player_moves()
         .map(|(_, b)| computer_move_eval(b, probability, depth, state))
-        .fold(0f32, f32::max);
-
-    eval
+        .fold(0f32, f32::max)
 }
 
 fn computer_move_eval(grid: Grid, probability: f32, depth: i8, state: &mut SearchState) -> f32 {
