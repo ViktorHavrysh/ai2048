@@ -11,24 +11,24 @@
   "devDependencies": {
     "@wasm-tool/wasm-pack-plugin": "0.1.6",
     "awesome-typescript-loader": "^5.2.1",
-    "css-loader": "^2.0.2",
+    "css-loader": "^2.1.1",
     "file-loader": "^2.0.0",
     "html-webpack-plugin": "^3.2.0",
     "node-sass": "^4.11.0",
-    "prettier": "^1.15.3",
-    "prettier-tslint": "^0.4.1",
+    "prettier": "^1.16.4",
+    "prettier-tslint": "^0.4.2",
     "sass-loader": "^7.1.0",
     "source-map-loader": "^0.2.4",
     "style-loader": "^0.23.1",
     "tsconfig-paths-webpack-plugin": "^3.2.0",
-    "tslint": "^5.12.0",
+    "tslint": "^5.13.1",
     "tslint-loader": "^3.5.4",
-    "typescript": "^3.2.2",
-    "webpack": "^4.28.2",
-    "webpack-cli": "^3.1.2",
-    "webpack-dev-server": "^3.1.14"
+    "typescript": "^3.3.3333",
+    "webpack": "^4.29.6",
+    "webpack-cli": "^3.2.3",
+    "webpack-dev-server": "^3.2.1"
   },
   "dependencies": {
-    "promise-worker": "^2.0.0"
+    "promise-worker": "^2.0.1"
   }
 }
