@@ -1,18 +1,16 @@
 use ai2048_lib::game_logic::Grid;
-use ai2048_lib::searcher::{SearchResult, Searcher};
+use ai2048_lib::searcher::{self, SearchResult};
 use criterion::Criterion;
 use criterion::{criterion_group, criterion_main};
 use lazy_static::lazy_static;
 
 const MIN_PROBABILITY: f32 = 0.0001;
-const MAX_DEPTH: u8 = 12;
 
 fn play_moves(start: Grid, moves: u32) -> SearchResult {
-    let searcher = Searcher::new(MIN_PROBABILITY, MAX_DEPTH);
     let mut grid = start;
     let mut result = SearchResult::default();
     for _ in 0..moves {
-        result = searcher.search(grid);
+        result = searcher::search(grid, MIN_PROBABILITY);
         if let Some(mv) = result.best_move {
             grid = grid.make_move(mv).add_random_tile();
         } else {
@@ -23,8 +21,7 @@ fn play_moves(start: Grid, moves: u32) -> SearchResult {
 }
 
 fn calc_move(start: Grid) -> SearchResult {
-    let searcher = Searcher::new(MIN_PROBABILITY, MAX_DEPTH);
-    searcher.search(start)
+    searcher::search(start, MIN_PROBABILITY)
 }
 
 lazy_static! {
@@ -37,7 +34,7 @@ lazy_static! {
             [1024, 256, 16, 0],
         ])
         .expect("couldn't parse obviously correct grid");
-        assert_eq!(Searcher::new(0.1, 16).search(grid).depth, 8);
+        assert_eq!(searcher::search(grid, 0.1).depth, 8);
         grid
     };
 }
