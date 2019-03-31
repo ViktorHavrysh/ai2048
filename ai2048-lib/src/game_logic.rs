@@ -1,10 +1,10 @@
 //! 2048 game logic is implemented here.
+pub(crate) use crate::build_common::{Column, Row};
+use crate::build_generated::{lookup_down, lookup_left, lookup_right, lookup_up};
 use rand::{self, Rng};
 use std::collections::HashSet;
-use std::{fmt, u16};
 use std::fmt::Display;
-pub(crate) use crate::build_common::{Row, Column};
-use crate::build_generated::{lookup_down, lookup_left, lookup_right, lookup_up};
+use std::{fmt, u16};
 
 /// Represents a move.
 #[derive(Eq, PartialEq, Hash, Copy, Clone, Debug)]

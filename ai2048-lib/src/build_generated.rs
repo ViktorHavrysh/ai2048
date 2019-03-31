@@ -1,4 +1,4 @@
-use crate::build_common::{CACHE_SIZE, Row, Column};
+use crate::build_common::{Column, Row, CACHE_SIZE};
 
 include!(concat!(env!("OUT_DIR"), "/build_generated.rs"));
 
@@ -6,6 +6,7 @@ const CACHE_LEFT: [Row; CACHE_SIZE] = move_left_table();
 const CACHE_RIGHT: [Row; CACHE_SIZE] = move_right_table();
 const CACHE_UP: [Column; CACHE_SIZE] = move_up_table();
 const CACHE_DOWN: [Column; CACHE_SIZE] = move_down_table();
+const CACHE_HEUR: [f32; CACHE_SIZE] = heur_table();
 
 // Safety: these are safe because caches are populated for every possible u16 value
 pub(crate) fn lookup_left(row: Row) -> Row {
@@ -28,19 +29,50 @@ pub(crate) fn lookup_down(row: Row) -> Column {
     let row: u16 = row.0;
     unsafe { *CACHE_DOWN.get_unchecked(row as usize) }
 }
+pub(crate) fn lookup_heur(row: Row) -> f32 {
+    // Make sure row.0 is still u16
+    let row: u16 = row.0;
+    unsafe { *CACHE_HEUR.get_unchecked(row as usize) }
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::build_common::{self, CACHE_SIZE, Row};
+    use crate::build_common;
 
     #[test]
     fn caches_are_correct() {
-        for index in 0..CACHE_SIZE {
-            assert_eq!(build_common::move_row_left(Row::from_index(index)), CACHE_LEFT[index], "index = {}", index);
-            assert_eq!(build_common::move_row_right(Row::from_index(index)), CACHE_RIGHT[index], "index = {}", index);
-            assert_eq!(build_common::move_row_up(Row::from_index(index)), CACHE_UP[index], "index = {}", index);
-            assert_eq!(build_common::move_row_down(Row::from_index(index)), CACHE_DOWN[index], "index = {}", index);
+        for (index, row) in build_common::all_rows() {
+            assert_eq!(
+                build_common::move_row_left(row),
+                CACHE_LEFT[index],
+                "index = {}",
+                index
+            );
+            assert_eq!(
+                build_common::move_row_right(row),
+                CACHE_RIGHT[index],
+                "index = {}",
+                index
+            );
+            assert_eq!(
+                build_common::move_row_up(row),
+                CACHE_UP[index],
+                "index = {}",
+                index
+            );
+            assert_eq!(
+                build_common::move_row_down(row),
+                CACHE_DOWN[index],
+                "index = {}",
+                index
+            );
+            assert_eq!(
+                build_common::eval_row(row),
+                CACHE_HEUR[index],
+                "index = {}",
+                index
+            );
         }
     }
 }

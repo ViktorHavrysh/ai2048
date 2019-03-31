@@ -1,8 +1,15 @@
+// a lot of this is used by build.rs at compile time
 #![allow(dead_code)]
 
-use std::{fmt, u16};
+use std::{cmp, fmt, u16};
 
 pub(crate) const CACHE_SIZE: usize = u16::MAX as usize + 1;
+
+pub(crate) fn all_rows() -> impl Iterator<Item = (usize, Row)> {
+    (0..CACHE_SIZE)
+        .map(|index| Row::from_index(index))
+        .enumerate()
+}
 
 #[derive(Eq, PartialEq, Hash, Copy, Clone, Default)]
 pub(crate) struct Row(pub(crate) u16);
@@ -128,4 +135,62 @@ fn move_row_left_raw(from_row: [u8; 4]) -> [u8; 4] {
     // If there is a tile which does not fit a nibble, merge into a 32768 instead
     to_row.iter_mut().filter(|i| **i > 15).for_each(|i| *i = 15);
     to_row
+}
+
+const NOT_LOST: f32 = 200_000f32;
+const MONOTONICITY_STRENGTH: f32 = 47.0;
+const EMPTY_STRENGTH: f32 = 270.0;
+const ADJACENT_STRENGTH: f32 = 700.0;
+const SUM_STRENGTH: f32 = 11.0;
+
+pub(crate) fn eval_row(row: Row) -> f32 {
+    let empty = empty_tile_count_row(row) * EMPTY_STRENGTH;
+    let monotonicity = monotonicity_row(row) * MONOTONICITY_STRENGTH;
+    let adjacent = adjacent_row(row) * ADJACENT_STRENGTH;
+    let sum = sum_row(row) * SUM_STRENGTH;
+    NOT_LOST + monotonicity + empty + adjacent + sum
+}
+
+fn empty_tile_count_row(row: Row) -> f32 {
+    row.unpack().iter().filter(|&i| *i == 0).count() as f32
+}
+
+fn monotonicity_row(row: Row) -> f32 {
+    let row = row.unpack();
+
+    let mut left = 0;
+    let mut right = 0;
+
+    for (&current, &next) in row.iter().zip(row.iter().skip(1)) {
+        if current > next {
+            left += i32::from(current).pow(4) - i32::from(next).pow(4);
+        } else if next > current {
+            right += i32::from(next).pow(4) - i32::from(current).pow(4);
+        }
+    }
+
+    -cmp::min(left, right) as f32
+}
+
+fn adjacent_row(row: Row) -> f32 {
+    let row = row.unpack();
+
+    let mut adjacent_count = 0;
+    let mut y = 0;
+
+    while y < 3 {
+        if row[y] != 0 && row[y] == row[y + 1] {
+            adjacent_count += 1;
+            y += 2;
+        } else {
+            y += 1;
+        }
+    }
+
+    adjacent_count as f32
+}
+
+fn sum_row(row: Row) -> f32 {
+    let row = row.unpack();
+    -row.iter().map(|&v| f32::from(v).powf(3.5)).sum::<f32>()
 }
