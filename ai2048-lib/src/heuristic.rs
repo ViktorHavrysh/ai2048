@@ -23,7 +23,7 @@ fn eval_row(row: Row) -> f32 {
 // Pre-cache heuristic for every possible row with values that can fit a nibble
 lazy_static! {
     static ref CACHE: Box<[f32]> = {
-        let mut vec = vec![0f32; u16::MAX as usize];
+        let mut vec = vec![0f32; u16::MAX as usize + 1];
         for (index, row) in vec.iter_mut().enumerate() {
             *row = eval_row_nocache(Row(index as u16));
         }
@@ -38,21 +38,20 @@ const ADJACENT_STRENGTH: f32 = 700.0;
 const SUM_STRENGTH: f32 = 11.0;
 
 fn eval_row_nocache(row: Row) -> f32 {
-    let row = row.unpack();
-
     let empty = empty_tile_count_row(row) * EMPTY_STRENGTH;
     let monotonicity = monotonicity_row(row) * MONOTONICITY_STRENGTH;
     let adjacent = adjacent_row(row) * ADJACENT_STRENGTH;
     let sum = sum_row(row) * SUM_STRENGTH;
-
     NOT_LOST + monotonicity + empty + adjacent + sum
 }
 
-fn empty_tile_count_row(row: [u8; 4]) -> f32 {
-    bytecount::count(&row, 0) as f32
+fn empty_tile_count_row(row: Row) -> f32 {
+    bytecount::count(&row.unpack(), 0) as f32
 }
 
-fn monotonicity_row(row: [u8; 4]) -> f32 {
+fn monotonicity_row(row: Row) -> f32 {
+    let row = row.unpack();
+
     let mut left = 0;
     let mut right = 0;
 
@@ -67,7 +66,9 @@ fn monotonicity_row(row: [u8; 4]) -> f32 {
     -cmp::min(left, right) as f32
 }
 
-fn adjacent_row(row: [u8; 4]) -> f32 {
+fn adjacent_row(row: Row) -> f32 {
+    let row = row.unpack();
+
     let mut adjacent_count = 0;
     let mut y = 0;
 
@@ -83,6 +84,7 @@ fn adjacent_row(row: [u8; 4]) -> f32 {
     adjacent_count as f32
 }
 
-fn sum_row(row: [u8; 4]) -> f32 {
-    -row.iter().map(|v| f32::from(*v).powf(3.5)).sum::<f32>()
+fn sum_row(row: Row) -> f32 {
+    let row = row.unpack();
+    -row.iter().map(|&v| f32::from(v).powf(3.5)).sum::<f32>()
 }

@@ -1,5 +1,5 @@
 use ai2048_lib::game_logic::{Grid, MOVES};
-use ai2048_lib::searcher::{SearchResult, Searcher};
+use ai2048_lib::searcher::{self, SearchResult};
 use cfg_if::cfg_if;
 use chrono::prelude::*;
 use chrono::Duration;
@@ -16,8 +16,7 @@ cfg_if! {
     }
 }
 
-const MIN_PROBABILITY: f32 = 0.0001;
-const MAX_DEPTH: u8 = 12;
+const MIN_PROBABILITY: f32 = 0.001;
 
 #[derive(Debug)]
 enum Error {
@@ -73,14 +72,13 @@ fn main() -> Result<(), Error> {
     });
 
     let compute_loop = pool.spawn_fn(move || {
-        let searcher = Searcher::new(MIN_PROBABILITY, MAX_DEPTH);
         let mut grid = Grid::default().add_random_tile().add_random_tile();
         let start_overall = Utc::now();
         let mut moves = 0;
         loop {
             moves += 1;
             let start_one = Utc::now();
-            let result = searcher.search(grid);
+            let result = searcher::search(grid, MIN_PROBABILITY);
             let end = Utc::now();
             tx.send(Signal::Display(
                 result.clone(),
@@ -146,26 +144,26 @@ fn build_display(
         &mut s,
         "In cache:               {:>8} [{:>4.1}%]",
         result.stats.cache_size,
-        result.stats.cache_size as f32 * 100.0f32 / result.stats.nodes as f32
+        f64::from(result.stats.cache_size) * 100.0 / f64::from(result.stats.nodes)
     )?;
     writeln!(&mut s, "Evaluated by:")?;
     writeln!(
         &mut s,
         "Cached value:           {:>8} [{:>4.1}%]",
         result.stats.cache_hits,
-        result.stats.cache_hits as f32 * 100.0f32 / result.stats.nodes as f32
+        f64::from(result.stats.cache_hits) * 100.0 / f64::from(result.stats.nodes)
     )?;
     writeln!(
         &mut s,
         "Heuristic:              {:>8} [{:>4.1}%]",
         result.stats.evals,
-        result.stats.evals as f32 * 100.0f32 / result.stats.nodes as f32
+        f64::from(result.stats.evals) * 100.0 / f64::from(result.stats.nodes)
     )?;
     writeln!(
         &mut s,
         "Averaging over children:{:>8} [{:>4.1}%]",
         result.stats.average,
-        result.stats.average as f32 * 100.0f32 / result.stats.nodes as f32
+        f64::from(result.stats.average) * 100.0 / f64::from(result.stats.nodes)
     )?;
 
     writeln!(&mut s)?;
@@ -178,7 +176,7 @@ fn build_display(
         &mut s,
         "------+------------------+----------------+-------------"
     )?;
-    for depth in 3..=MAX_DEPTH {
+    for depth in searcher::MIN_DEPTH..=searcher::MAX_DEPTH {
         let (moves_d, time) = times.get(&depth).cloned().unwrap_or((0, Duration::zero()));
         let time_avg = match time.num_milliseconds() as f32 / moves_d as f32 {
             nan if nan.is_nan() => String::default(),
@@ -189,9 +187,9 @@ fn build_display(
             "{:>5} | {:>8} [{:>4.1}%] | {:>5}  [{:>4.1}%] | {}",
             depth,
             time.num_milliseconds(),
-            time.num_milliseconds() as f32 * 100.0f32 / overall.num_milliseconds() as f32,
+            time.num_milliseconds() as f64 * 100.0 / overall.num_milliseconds() as f64,
             moves_d,
-            moves_d as f32 * 100.0f32 / moves as f32,
+            f64::from(moves_d) * 100.0 / f64::from(moves),
             time_avg
         )?;
     }

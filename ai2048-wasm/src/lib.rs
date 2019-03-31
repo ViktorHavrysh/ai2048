@@ -1,7 +1,7 @@
 #![allow(clippy::needless_pass_by_value)]
 
 use ai2048_lib::game_logic;
-use ai2048_lib::searcher::Searcher;
+use ai2048_lib::searcher;
 use cfg_if::cfg_if;
 use console_error_panic_hook::set_once as set_panic_hook;
 use wasm_bindgen::prelude::*;
@@ -46,10 +46,9 @@ impl From<Option<game_logic::Move>> for Move {
 }
 
 #[wasm_bindgen]
-pub fn evaluate_position(grid: Box<[u32]>, min_prob: f32, max_depth: u8) -> Move {
+pub fn evaluate_position(grid: Box<[u32]>, min_prob: f32) -> Move {
     let grid = transform_grid(&grid);
-    let searcher = Searcher::new(min_prob, max_depth);
-    let result = searcher.search(grid);
+    let result = searcher::search(grid, min_prob);
     result.best_move.into()
 }
 

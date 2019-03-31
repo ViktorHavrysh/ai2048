@@ -34,10 +34,10 @@ fn consume_iter<T>(iter: impl Iterator<Item = T>) {
 
 fn possible_moves(c: &mut Criterion) {
     c.bench_function("random moves with 2", |b| {
-        b.iter(|| consume_iter(TEST_GRID.ai_moves_with2()))
+        b.iter(|| consume_iter(TEST_GRID.random_moves_with2()))
     });
     c.bench_function("random moves with 4", |b| {
-        b.iter(|| consume_iter(TEST_GRID.ai_moves_with4()))
+        b.iter(|| consume_iter(TEST_GRID.random_moves_with4()))
     });
     c.bench_function("player moves", |b| {
         b.iter(|| consume_iter(TEST_GRID.player_moves()))

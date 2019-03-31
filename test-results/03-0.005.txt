@@ -1,0 +1,109 @@
+MIN_PROBABILITY: 0.005
+Result #  1 (  3): Finished:   25 sec; Survived:  5584 moves;  4.5 ms per move; Biggest tile:  8192
+Result #  2 (  7): Finished:   35 sec; Survived:  6986 moves;  5.1 ms per move; Biggest tile:  8192
+Result #  3 ( 12): Finished:   41 sec; Survived:  7397 moves;  5.6 ms per move; Biggest tile:  8192
+Result #  4 (  9): Finished:   42 sec; Survived:  7454 moves;  5.7 ms per move; Biggest tile:  8192
+Result #  5 (  4): Finished:   54 sec; Survived:  9329 moves;  5.8 ms per move; Biggest tile: 16384
+Result #  6 ( 13): Finished:   31 sec; Survived:  6403 moves;  5.0 ms per move; Biggest tile:  8192
+Result #  7 (  5): Finished:   69 sec; Survived: 11169 moves;  6.2 ms per move; Biggest tile: 16384
+Result #  8 ( 18): Finished:   17 sec; Survived:  3724 moves;  4.6 ms per move; Biggest tile:  4096
+Result #  9 ( 10): Finished:   98 sec; Survived: 14442 moves;  6.8 ms per move; Biggest tile: 16384
+Result # 10 (  8): Finished:  103 sec; Survived: 14682 moves;  7.1 ms per move; Biggest tile: 16384
+Result # 11 (  2): Finished:  107 sec; Survived: 14936 moves;  7.2 ms per move; Biggest tile: 16384
+Result # 12 (  1): Finished:  110 sec; Survived: 14947 moves;  7.4 ms per move; Biggest tile: 16384
+Result # 13 ( 14): Finished:   86 sec; Survived: 13026 moves;  6.6 ms per move; Biggest tile: 16384
+Result # 14 ( 21): Finished:   24 sec; Survived:  5631 moves;  4.4 ms per move; Biggest tile:  8192
+Result # 15 ( 11): Finished:  133 sec; Survived: 18320 moves;  7.3 ms per move; Biggest tile: 32768
+Result # 16 ( 24): Finished:   35 sec; Survived:  6405 moves;  5.6 ms per move; Biggest tile:  8192
+Result # 17 ( 19): Finished:   78 sec; Survived: 12301 moves;  6.4 ms per move; Biggest tile: 16384
+Result # 18 ( 16): Finished:  112 sec; Survived: 14847 moves;  7.6 ms per move; Biggest tile: 16384
+Result # 19 ( 26): Finished:   39 sec; Survived:  7204 moves;  5.5 ms per move; Biggest tile:  8192
+Result # 20 (  6): Finished:  168 sec; Survived: 22304 moves;  7.6 ms per move; Biggest tile: 32768
+Result # 21 ( 20): Finished:  109 sec; Survived: 14848 moves;  7.4 ms per move; Biggest tile: 16384
+Result # 22 ( 29): Finished:   43 sec; Survived:  7433 moves;  5.8 ms per move; Biggest tile:  8192
+Result # 23 ( 30): Finished:   37 sec; Survived:  7476 moves;  5.1 ms per move; Biggest tile:  8192
+Result # 24 ( 23): Finished:   98 sec; Survived: 13991 moves;  7.0 ms per move; Biggest tile: 16384
+Result # 25 ( 22): Finished:  107 sec; Survived: 14638 moves;  7.4 ms per move; Biggest tile: 16384
+Result # 26 ( 27): Finished:   81 sec; Survived: 12945 moves;  6.3 ms per move; Biggest tile: 16384
+Result # 27 ( 34): Finished:   28 sec; Survived:  6090 moves;  4.7 ms per move; Biggest tile:  8192
+Result # 28 ( 15): Finished:  180 sec; Survived: 22399 moves;  8.1 ms per move; Biggest tile: 32768
+Result # 29 ( 33): Finished:   44 sec; Survived:  7492 moves;  5.9 ms per move; Biggest tile:  8192
+Result # 30 ( 25): Finished:  111 sec; Survived: 14916 moves;  7.5 ms per move; Biggest tile: 16384
+Result # 31 ( 17): Finished:  197 sec; Survived: 24181 moves;  8.2 ms per move; Biggest tile: 32768
+Result # 32 ( 28): Finished:  106 sec; Survived: 14887 moves;  7.1 ms per move; Biggest tile: 16384
+Result # 33 ( 35): Finished:   67 sec; Survived: 11128 moves;  6.1 ms per move; Biggest tile: 16384
+Result # 34 ( 32): Finished:  103 sec; Survived: 14853 moves;  7.0 ms per move; Biggest tile: 16384
+Result # 35 ( 31): Finished:  113 sec; Survived: 14631 moves;  7.7 ms per move; Biggest tile: 16384
+Result # 36 ( 41): Finished:   53 sec; Survived:  9253 moves;  5.7 ms per move; Biggest tile: 16384
+Result # 37 ( 42): Finished:   49 sec; Survived:  9557 moves;  5.2 ms per move; Biggest tile: 16384
+Result # 38 ( 44): Finished:   39 sec; Survived:  6956 moves;  5.6 ms per move; Biggest tile:  8192
+Result # 39 ( 39): Finished:   82 sec; Survived: 13055 moves;  6.3 ms per move; Biggest tile: 16384
+Result # 40 ( 47): Finished:   34 sec; Survived:  6585 moves;  5.2 ms per move; Biggest tile:  8192
+Result # 41 ( 36): Finished:  113 sec; Survived: 14803 moves;  7.7 ms per move; Biggest tile: 16384
+Result # 42 ( 38): Finished:  105 sec; Survived: 14924 moves;  7.1 ms per move; Biggest tile: 16384
+Result # 43 ( 37): Finished:  110 sec; Survived: 14866 moves;  7.4 ms per move; Biggest tile: 16384
+Result # 44 ( 49): Finished:   40 sec; Survived:  7414 moves;  5.5 ms per move; Biggest tile:  8192
+Result # 45 ( 52): Finished:   31 sec; Survived:  6242 moves;  5.0 ms per move; Biggest tile:  8192
+Result # 46 ( 43): Finished:   97 sec; Survived: 14014 moves;  6.9 ms per move; Biggest tile: 16384
+Result # 47 ( 51): Finished:   69 sec; Survived: 10969 moves;  6.3 ms per move; Biggest tile: 16384
+Result # 48 ( 50): Finished:   86 sec; Survived: 13008 moves;  6.6 ms per move; Biggest tile: 16384
+Result # 49 ( 48): Finished:  106 sec; Survived: 14688 moves;  7.2 ms per move; Biggest tile: 16384
+Result # 50 ( 57): Finished:   68 sec; Survived: 11137 moves;  6.1 ms per move; Biggest tile: 16384
+Result # 51 ( 54): Finished:   93 sec; Survived: 13953 moves;  6.7 ms per move; Biggest tile: 16384
+Result # 52 ( 53): Finished:   95 sec; Survived: 13987 moves;  6.9 ms per move; Biggest tile: 16384
+Result # 53 ( 40): Finished:  200 sec; Survived: 25137 moves;  8.0 ms per move; Biggest tile: 32768
+Result # 54 ( 46): Finished:  161 sec; Survived: 21454 moves;  7.5 ms per move; Biggest tile: 32768
+Result # 55 ( 45): Finished:  176 sec; Survived: 22344 moves;  7.9 ms per move; Biggest tile: 32768
+Result # 56 ( 63): Finished:   41 sec; Survived:  7439 moves;  5.6 ms per move; Biggest tile:  8192
+Result # 57 ( 58): Finished:  109 sec; Survived: 14924 moves;  7.4 ms per move; Biggest tile: 16384
+Result # 58 ( 56): Finished:  138 sec; Survived: 18645 moves;  7.4 ms per move; Biggest tile: 32768
+Result # 59 ( 61): Finished:   75 sec; Survived: 11677 moves;  6.4 ms per move; Biggest tile: 16384
+Result # 60 ( 60): Finished:   90 sec; Survived: 13994 moves;  6.5 ms per move; Biggest tile: 16384
+Result # 61 ( 59): Finished:  102 sec; Survived: 14912 moves;  6.9 ms per move; Biggest tile: 16384
+Result # 62 ( 66): Finished:   41 sec; Survived:  7423 moves;  5.6 ms per move; Biggest tile:  8192
+Result # 63 ( 65): Finished:   83 sec; Survived: 13057 moves;  6.4 ms per move; Biggest tile: 16384
+Result # 64 ( 69): Finished:   55 sec; Survived:  9778 moves;  5.6 ms per move; Biggest tile: 16384
+Result # 65 ( 64): Finished:  111 sec; Survived: 14857 moves;  7.5 ms per move; Biggest tile: 16384
+Result # 66 ( 55): Finished:  206 sec; Survived: 25734 moves;  8.0 ms per move; Biggest tile: 32768
+Result # 67 ( 62): Finished:  133 sec; Survived: 18588 moves;  7.2 ms per move; Biggest tile: 32768
+Result # 68 ( 78): Finished:   18 sec; Survived:  3748 moves;  4.8 ms per move; Biggest tile:  4096
+Result # 69 ( 70): Finished:  103 sec; Survived: 13960 moves;  7.4 ms per move; Biggest tile: 16384
+Result # 70 ( 68): Finished:  111 sec; Survived: 14904 moves;  7.5 ms per move; Biggest tile: 16384
+Result # 71 ( 73): Finished:  117 sec; Survived: 14903 moves;  7.9 ms per move; Biggest tile: 16384
+Result # 72 ( 71): Finished:  128 sec; Survived: 14909 moves;  8.6 ms per move; Biggest tile: 16384
+Result # 73 ( 67): Finished:  157 sec; Survived: 18590 moves;  8.5 ms per move; Biggest tile: 32768
+Result # 74 ( 74): Finished:  132 sec; Survived: 14924 moves;  8.9 ms per move; Biggest tile: 16384
+Result # 75 ( 81): Finished:   42 sec; Survived:  6308 moves;  6.7 ms per move; Biggest tile:  8192
+Result # 76 ( 75): Finished:  106 sec; Survived: 13474 moves;  7.9 ms per move; Biggest tile: 16384
+Result # 77 ( 76): Finished:  128 sec; Survived: 14929 moves;  8.6 ms per move; Biggest tile: 16384
+Result # 78 ( 82): Finished:   78 sec; Survived: 11133 moves;  7.0 ms per move; Biggest tile: 16384
+Result # 79 ( 87): Finished:   38 sec; Survived:  7424 moves;  5.2 ms per move; Biggest tile:  8192
+Result # 80 ( 77): Finished:  120 sec; Survived: 14799 moves;  8.1 ms per move; Biggest tile: 16384
+Result # 81 ( 80): Finished:  107 sec; Survived: 13879 moves;  7.7 ms per move; Biggest tile: 16384
+Result # 82 ( 72): Finished:  187 sec; Survived: 22021 moves;  8.5 ms per move; Biggest tile: 32768
+Result # 83 ( 92): Finished:   10 sec; Survived:  3164 moves;  3.5 ms per move; Biggest tile:  4096
+Result # 84 ( 89): Finished:   25 sec; Survived:  5715 moves;  4.5 ms per move; Biggest tile:  8192
+Result # 85 ( 79): Finished:  127 sec; Survived: 14624 moves;  8.7 ms per move; Biggest tile: 16384
+Result # 86 ( 95): Finished:   20 sec; Survived:  4868 moves;  4.1 ms per move; Biggest tile:  8192
+Result # 87 ( 85): Finished:   85 sec; Survived: 13026 moves;  6.6 ms per move; Biggest tile: 16384
+Result # 88 ( 96): Finished:   24 sec; Survived:  4903 moves;  5.0 ms per move; Biggest tile:  8192
+Result # 89 ( 83): Finished:  125 sec; Survived: 14810 moves;  8.5 ms per move; Biggest tile: 16384
+Result # 90 ( 94): Finished:   89 sec; Survived: 11186 moves;  8.0 ms per move; Biggest tile: 16384
+Result # 91 (100): Finished:   54 sec; Survived:  7040 moves;  7.7 ms per move; Biggest tile:  8192
+Result # 92 ( 90): Finished:  105 sec; Survived: 12847 moves;  8.2 ms per move; Biggest tile: 16384
+Result # 93 ( 91): Finished:  106 sec; Survived: 12993 moves;  8.2 ms per move; Biggest tile: 16384
+Result # 94 ( 84): Finished:  178 sec; Survived: 21831 moves;  8.2 ms per move; Biggest tile: 32768
+Result # 95 ( 93): Finished:  117 sec; Survived: 14891 moves;  7.9 ms per move; Biggest tile: 16384
+Result # 96 ( 97): Finished:  105 sec; Survived: 14446 moves;  7.3 ms per move; Biggest tile: 16384
+Result # 97 ( 86): Finished:  174 sec; Survived: 22179 moves;  7.9 ms per move; Biggest tile: 32768
+Result # 98 ( 99): Finished:  104 sec; Survived: 14921 moves;  7.0 ms per move; Biggest tile: 16384
+Result # 99 ( 98): Finished:  109 sec; Survived: 14713 moves;  7.4 ms per move; Biggest tile: 16384
+Result #100 ( 88): Finished:  198 sec; Survived: 25199 moves;  7.9 ms per move; Biggest tile: 32768
+32768:  15.0%
+16384:  73.0%
+ 8192:  97.0%
+ 4096: 100.0%
+ 2048: 100.0%
+Average moves: 12876.34
+Average duration: PT91.991577891S
+The whole test took 13 min 31 sec

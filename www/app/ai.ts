@@ -4,25 +4,19 @@ import { Direction } from "./direction";
 interface MessageForAi {
   grid: Uint32Array;
   minProb: number;
-  maxDepth: number;
 }
 
-interface Strength {
-  minProb: number;
-  maxDepth: number;
-}
-
-const StrengthMap: { [index: number]: Strength } = {
-  1: { minProb: 0.02, maxDepth: 12 },
-  2: { minProb: 0.01, maxDepth: 12 },
-  3: { minProb: 0.005, maxDepth: 12 },
-  4: { minProb: 0.003, maxDepth: 12 },
-  5: { minProb: 0.002, maxDepth: 12 },
-  6: { minProb: 0.001, maxDepth: 12 },
-  7: { minProb: 0.0005, maxDepth: 12 },
-  8: { minProb: 0.0003, maxDepth: 12 },
-  9: { minProb: 0.0002, maxDepth: 12 },
-  10: { minProb: 0.0001, maxDepth: 12 }
+const StrengthMap: { [index: number]: number } = {
+  1: 0.02,
+  2: 0.01,
+  3: 0.005,
+  4: 0.003,
+  5: 0.002,
+  6: 0.001,
+  7: 0.0005,
+  8: 0.0003,
+  9: 0.0002,
+  10: 0.0001
 };
 const MinStrength = 1;
 const MaxStrength = 10;
@@ -55,11 +49,10 @@ export default class Ai {
     return this.strength;
   }
   public async chooseDirection(grid: Uint32Array): Promise<Direction> {
-    const strength = StrengthMap[this.strength];
+    const minProb = StrengthMap[this.strength];
     const message: MessageForAi = {
       grid: grid,
-      minProb: strength.minProb,
-      maxDepth: strength.maxDepth
+      minProb: minProb
     };
     const reply = await this.worker.postMessage(message);
     return reply;

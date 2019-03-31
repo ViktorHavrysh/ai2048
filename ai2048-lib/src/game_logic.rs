@@ -175,7 +175,7 @@ impl Grid {
     }
 
     /// Parses a grid from the representation given by the `Display` implementation
-    pub fn from_str(s: &str) -> Option<Grid> {
+    pub fn from_display(s: &str) -> Option<Grid> {
         let vec: Vec<u32> = s
             .split(|c: char| !c.is_numeric())
             .flat_map(|s| s.parse::<u32>())
@@ -258,19 +258,19 @@ impl Grid {
             .nth(position)
             .unwrap();
 
-        *value = if rng.gen_bool(0.1) { 2 } else { 1 };
+        *value = if rng.gen_bool(0.9) { 1 } else { 2 };
 
         Grid::from_log(grid).unwrap()
     }
 
     /// Returns all possible moves with a new random 2 tile
-    pub fn ai_moves_with2(self) -> impl Iterator<Item = Grid> {
-        AiMoves::new(self, 1)
+    pub fn random_moves_with2(self) -> impl Iterator<Item = Grid> {
+        RandomMoves::new(self, 1)
     }
 
     /// Returns all possible moves with a new random 4 tile
-    pub fn ai_moves_with4(self) -> impl Iterator<Item = Grid> {
-        AiMoves::new(self, 2)
+    pub fn random_moves_with4(self) -> impl Iterator<Item = Grid> {
+        RandomMoves::new(self, 2)
     }
 
     /// Returns all possible player moves
@@ -364,25 +364,31 @@ impl Grid {
         Grid::from_columns([col0, col1, col2, col3])
     }
 
-    pub(crate) fn count_distinct_tiles(self) -> u32 {
+    /// The number of different tiles (excluding empty tiles) on the grid
+    pub fn count_distinct_tiles(self) -> u8 {
         self.unpack_log()
             .iter()
             .flatten()
             .filter(|&&x| x != 0)
             .collect::<HashSet<_>>()
-            .len() as u32
+            .len() as u8
+    }
+
+    /// The biggest tile on the grid
+    pub fn biggest_tile(self) -> u32 {
+        self.unpack_human().iter().flatten().cloned().max().unwrap()
     }
 }
 
-struct AiMoves {
+struct RandomMoves {
     grid: Grid,
     index: u8,
     val: u8,
 }
 
-impl AiMoves {
-    fn new(grid: Grid, new_value: u8) -> AiMoves {
-        AiMoves {
+impl RandomMoves {
+    fn new(grid: Grid, new_value: u8) -> RandomMoves {
+        RandomMoves {
             grid,
             index: 16,
             val: new_value,
@@ -390,7 +396,7 @@ impl AiMoves {
     }
 }
 
-impl Iterator for AiMoves {
+impl Iterator for RandomMoves {
     type Item = Grid;
 
     fn next(&mut self) -> Option<Grid> {
@@ -441,12 +447,10 @@ fn move_row_left(row: Row) -> Row {
         to_row[last_index as usize] = last;
     }
 
-    Row::pack(to_row).unwrap_or_else(|index| {
-        // There is a 65536 tile which does not fit a nibble
-        // Merge into a 32768 instead
-        to_row[index] = 15;
-        Row::pack(to_row).unwrap()
-    })
+    // If there is a tile which does not fit a nibble, merge into a 32768 instead
+    to_row.iter_mut().filter(|i| **i > 15).for_each(|i| *i = 15);
+
+    Row::pack(to_row).unwrap()
 }
 
 // Safety: these are safe because caches are populated for every possible u16 value
@@ -471,30 +475,31 @@ fn lookup_down(row: Row) -> Column {
     unsafe { *CACHE_DOWN.get_unchecked(row as usize) }
 }
 
+const CACHE_SIZE: usize = u16::MAX as usize + 1;
 lazy_static! {
     static ref CACHE_LEFT: Box<[Row]> = {
-        let mut vec = vec![Row::default(); u16::MAX as usize];
+        let mut vec = vec![Row::default(); CACHE_SIZE];
         for (index, row) in vec.iter_mut().enumerate() {
             *row = move_row_left(Row(index as u16));
         }
         vec.into()
     };
     static ref CACHE_RIGHT: Box<[Row]> = {
-        let mut vec = vec![Row::default(); u16::MAX as usize];
+        let mut vec = vec![Row::default(); CACHE_SIZE];
         for (index, row) in vec.iter_mut().enumerate() {
             *row = move_row_left(Row(index as u16).reverse()).reverse();
         }
         vec.into()
     };
     static ref CACHE_UP: Box<[Column]> = {
-        let mut vec = vec![Column::default(); u16::MAX as usize];
+        let mut vec = vec![Column::default(); CACHE_SIZE];
         for (index, col) in vec.iter_mut().enumerate() {
             *col = Column::from_row(CACHE_LEFT[index]);
         }
         vec.into()
     };
     static ref CACHE_DOWN: Box<[Column]> = {
-        let mut vec = vec![Column::default(); u16::MAX as usize];
+        let mut vec = vec![Column::default(); CACHE_SIZE];
         for (index, col) in vec.iter_mut().enumerate() {
             *col = Column::from_row(CACHE_RIGHT[index]);
         }
@@ -639,7 +644,7 @@ mod tests {
             Grid::from_human([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 2, 8, 8]]).unwrap(),
         ];
 
-        let actual = grid.ai_moves_with2().collect::<Vec<_>>();
+        let actual = grid.random_moves_with2().collect::<Vec<_>>();
 
         assert_eq!(expected, actual);
     }
@@ -656,7 +661,7 @@ mod tests {
             Grid::from_human([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 4, 8, 8]]).unwrap(),
         ];
 
-        let actual = grid.ai_moves_with4().collect::<Vec<_>>();
+        let actual = grid.random_moves_with4().collect::<Vec<_>>();
 
         assert_eq!(expected, actual);
     }
@@ -772,7 +777,7 @@ mod tests {
         ])
         .unwrap();
 
-        let back = Grid::from_str(&grid.to_string()).unwrap();
+        let back = Grid::from_display(&grid.to_string()).unwrap();
 
         assert_eq!(grid, back);
     }

@@ -1,13 +1,12 @@
 use ai2048_lib::game_logic::Grid;
-use ai2048_lib::searcher::Searcher;
+use ai2048_lib::searcher;
 use chrono::prelude::*;
 use chrono::Duration;
 use itertools::Itertools;
 use rayon::prelude::*;
 use std::sync::Mutex;
 
-const MIN_PROBABILITY: f32 = 0.005;
-const MAX_DEPTH: u8 = 12;
+const MIN_PROBABILITY: f32 = 0.001;
 const TOTAL_RUNS: usize = 100;
 
 fn main() {
@@ -39,7 +38,7 @@ fn main() {
                 started,
                 run_result.elapsed.num_seconds(),
                 run_result.moves,
-                run_result.per_move().num_microseconds().unwrap() as f32 / 1000.0f32,
+                run_result.per_move().num_microseconds().unwrap() as f64 / 1000.0,
                 run_result.biggest,
             );
             run_result
@@ -93,18 +92,17 @@ impl RunResult {
 }
 
 fn run_one() -> RunResult {
-    let searcher = Searcher::new(MIN_PROBABILITY, MAX_DEPTH);
     let mut grid = Grid::default().add_random_tile().add_random_tile();
     let start_overall = Utc::now();
     let mut moves = 0;
     loop {
         moves += 1;
-        let result = searcher.search(grid);
+        let result = searcher::search(grid, MIN_PROBABILITY);
         if let Some(mv) = result.best_move {
             grid = grid.make_move(mv).add_random_tile();
         } else {
             let elapsed = Utc::now() - start_overall;
-            let biggest = grid.unpack_human().iter().flatten().cloned().max().unwrap();
+            let biggest = grid.biggest_tile();
             return RunResult {
                 moves,
                 biggest,

@@ -82,44 +82,42 @@ struct SearchState {
     min_probability: f32,
 }
 
-/// Searches for the best move at the current grid state
-pub struct Searcher {
-    min_probability: f32,
-    max_depth: u8,
-}
+/// Minimum variable depth
+pub const MIN_DEPTH: u8 = 3;
+/// Maximum variable depth
+pub const MAX_DEPTH: u8 = 14;
 
 const PROBABILITY_OF2: f32 = 0.9;
 const PROBABILITY_OF4: f32 = 0.1;
 
-impl Searcher {
-    /// Create a new searcher
-    pub fn new(min_probability: f32, max_depth: u8) -> Searcher {
-        Searcher {
-            min_probability,
-            max_depth,
-        }
-    }
+/// Investigate a game state and determine move evaluations.
+/// The search will stop recursing into child nodes as soon as a position at least as improbably as `min_probability` is reached.
+pub fn search(grid: Grid, min_probability: f32) -> SearchResult {
+    let depth = calculate_depth(grid);
 
-    /// Perform a search for the best move
-    pub fn search(&self, grid: Grid) -> SearchResult {
-        search_inner(grid, self.min_probability, self.max_depth)
-    }
+    search_inner(grid, depth, min_probability)
+}
+
+fn calculate_depth(grid: Grid) -> u8 {
+    let stage_adjustment = match grid.biggest_tile() {
+        x if x > 8192 => 0,
+        x if x > 4096 => 1,
+        _ => 2,
+    };
+    let depth = grid.count_distinct_tiles().saturating_sub(stage_adjustment);
+    num::clamp(depth, MIN_DEPTH, MAX_DEPTH)
 }
 
 #[cfg(not(feature = "parallel"))]
-fn search_inner(grid: Grid, min_probability: f32, max_depth: u8) -> SearchResult {
-    let depth = std::cmp::min(
-        max_depth as i8,
-        std::cmp::max(3, (grid.count_distinct_tiles() as i8) - 2),
-    );
+fn search_inner(root_grid: Grid, depth: u8, min_probability: f32) -> SearchResult {
     let mut state = SearchState {
         min_probability,
         ..SearchState::default()
     };
-    let mut move_evaluations = grid
+    let mut move_evaluations = root_grid
         .player_moves()
-        .map(|(m, b)| {
-            let eval = computer_move_eval(b, 1.0f32, depth, &mut state);
+        .map(|(m, g)| {
+            let eval = player_move_eval(g, 1.0f32, depth, &mut state);
             (m, eval)
         })
         .collect::<Vec<_>>();
@@ -134,32 +132,27 @@ fn search_inner(grid: Grid, min_probability: f32, max_depth: u8) -> SearchResult
 
     SearchResult {
         stats: state.stats,
-        root_grid: grid,
+        root_grid,
         move_evaluations,
         best_move,
-        depth: depth as u8,
+        depth,
     }
 }
 
 #[cfg(feature = "parallel")]
-fn search_inner(grid: Grid, min_probability: f32, max_depth: u8) -> SearchResult {
+fn search_inner(root_grid: Grid, depth: u8, min_probability: f32) -> SearchResult {
     use rayon::prelude::*;
 
-    let depth = std::cmp::min(
-        max_depth as i8,
-        std::cmp::max(3, (grid.count_distinct_tiles() as i8) - 2),
-    );
-
-    let mut move_evaluations = grid
+    let mut move_evaluations = root_grid
         .player_moves()
         .collect::<Vec<_>>()
         .par_iter()
-        .map(|(m, b)| {
+        .map(|(m, g)| {
             let mut state = SearchState {
                 min_probability,
                 ..SearchState::default()
             };
-            let eval = computer_move_eval(*b, 1.0f32, depth, &mut state);
+            let eval = player_move_eval(*g, 1.0f32, depth, &mut state);
             state.stats.cache_size = state.cache.len() as u32;
             (*m, eval, state.stats)
         })
@@ -180,28 +173,27 @@ fn search_inner(grid: Grid, min_probability: f32, max_depth: u8) -> SearchResult
         .collect();
 
     SearchResult {
-        root_grid: grid,
-        depth: depth as u8,
+        root_grid,
+        depth,
         stats,
         move_evaluations,
         best_move,
     }
 }
 
-fn player_move_eval(grid: Grid, probability: f32, depth: i8, state: &mut SearchState) -> f32 {
+fn random_move_eval(grid: Grid, probability: f32, depth: u8, state: &mut SearchState) -> f32 {
     state.stats.nodes += 1;
     state.stats.average += 1;
 
-    grid
-        .player_moves()
-        .map(|(_, b)| computer_move_eval(b, probability, depth, state))
+    grid.player_moves()
+        .map(|(_, g)| player_move_eval(g, probability, depth, state))
         .fold(0f32, f32::max)
 }
 
-fn computer_move_eval(grid: Grid, probability: f32, depth: i8, state: &mut SearchState) -> f32 {
+fn player_move_eval(grid: Grid, probability: f32, depth: u8, state: &mut SearchState) -> f32 {
     state.stats.nodes += 1;
 
-    if depth <= 0 || probability < state.min_probability {
+    if depth == 0 || probability < state.min_probability {
         state.stats.evals += 1;
         return heuristic::eval(grid);
     }
@@ -221,14 +213,14 @@ fn computer_move_eval(grid: Grid, probability: f32, depth: i8, state: &mut Searc
     let prob4 = probability * PROBABILITY_OF4 / count;
 
     let sum_with2 = grid
-        .ai_moves_with2()
-        .map(|b| player_move_eval(b, prob2, depth - 1, state))
+        .random_moves_with2()
+        .map(|g| random_move_eval(g, prob2, depth - 1, state))
         .sum::<f32>();
     let avg_with2 = sum_with2 / count;
 
     let sum_with4 = grid
-        .ai_moves_with4()
-        .map(|b| player_move_eval(b, prob4, depth - 1, state))
+        .random_moves_with4()
+        .map(|g| random_move_eval(g, prob4, depth - 1, state))
         .sum::<f32>();
     let avg_with4 = sum_with4 / count;
 
