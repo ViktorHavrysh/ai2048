@@ -4,6 +4,7 @@ license = "LGPL"
 name = "ai2048-lib"
 version = "0.1.0"
 edition = "2018"
+build = "build.rs"
 
 [features]
 default = ["hashbrown", "fnv"]

@@ -1,8 +1,10 @@
 //! 2048 game logic is implemented here.
-use lazy_static::lazy_static;
 use rand::{self, Rng};
 use std::collections::HashSet;
 use std::{fmt, u16};
+use std::fmt::Display;
+pub(crate) use crate::build_common::{Row, Column};
+use crate::build_generated::{lookup_down, lookup_left, lookup_right, lookup_up};
 
 /// Represents a move.
 #[derive(Eq, PartialEq, Hash, Copy, Clone, Debug)]
@@ -21,7 +23,7 @@ pub enum Move {
 /// All possible moves.
 pub const MOVES: [Move; 4] = [Move::Left, Move::Right, Move::Up, Move::Down];
 
-impl fmt::Display for Move {
+impl Display for Move {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Move::Down => "Down".fmt(f),
@@ -32,78 +34,11 @@ impl fmt::Display for Move {
     }
 }
 
-#[derive(Eq, PartialEq, Hash, Copy, Clone, Default)]
-pub(crate) struct Row(pub(crate) u16);
-
-impl fmt::Debug for Row {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let unpacked = self.unpack();
-        write!(
-            f,
-            "[{:0>4b} {:0>4b} {:0>4b} {:0>4b}]",
-            unpacked[0], unpacked[1], unpacked[2], unpacked[3]
-        )
-    }
-}
-
-impl Row {
-    // Tries to pack four bytes into four nibbles.
-    // If a byte doesn't fit a nibble, returns the index of this byte in `Err`.
-    pub(crate) fn pack(row: [u8; 4]) -> Result<Row, usize> {
-        let mut result = 0;
-        for (index, &tile) in row.iter().enumerate() {
-            if tile > 0b1111 {
-                return Err(index);
-            }
-            result <<= 4;
-            result += u16::from(tile);
-        }
-        Ok(Row(result))
-    }
-
-    pub(crate) fn unpack(self) -> [u8; 4] {
-        let row = self.0;
-        let tile0 = ((row & 0b1111_0000_0000_0000) >> 12) as u8;
-        let tile1 = ((row & 0b0000_1111_0000_0000) >> 8) as u8;
-        let tile2 = ((row & 0b0000_0000_1111_0000) >> 4) as u8;
-        let tile3 = (row & 0b0000_0000_0000_1111) as u8;
-        [tile0, tile1, tile2, tile3]
-    }
-
-    fn reverse(self) -> Self {
-        Row((self.0 >> 12)
-            | ((self.0 >> 4) & 0b0000_0000_1111_0000)
-            | ((self.0 << 4) & 0b0000_1111_0000_0000)
-            | (self.0 << 12))
-    }
-}
-
-#[derive(Debug, Clone, Copy, Default)]
-struct Column(u64);
-
-impl Column {
-    // 0 2 4 8
-    // becomes
-    // 0
-    // 2
-    // 4
-    // 8
-    fn from_row(row: Row) -> Self {
-        const COLUMN_MASK: u64 = 0x000F_000F_000F_000F;
-        let col = (u64::from(row.0)
-            | u64::from(row.0) << 12
-            | u64::from(row.0) << 24
-            | u64::from(row.0) << 36)
-            & COLUMN_MASK;
-        Column(col)
-    }
-}
-
 /// `Grid` is the game state. Limitation: can encode tiles of up to 32768.
 #[derive(Eq, PartialEq, Hash, Copy, Clone, Default)]
 pub struct Grid(u64);
 
-impl fmt::Display for Grid {
+impl Display for Grid {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for row in self.unpack_human().iter() {
             for &tile in row {
@@ -161,7 +96,7 @@ impl Grid {
 
     /// Unpacks a human-readable representation from `Grid`'s internal representation
     pub fn unpack_human(self) -> [[u32; 4]; 4] {
-        let mut result = [[0; 4]; 4];
+        let mut result = [[0u32; 4]; 4];
         let grid_u8 = self.unpack_log();
         for (x, row) in grid_u8.iter().enumerate() {
             for (y, &tile) in row.iter().enumerate() {
@@ -412,99 +347,6 @@ impl Iterator for RandomMoves {
             }
         }
     }
-}
-
-// Not much effort spent optimizing this, since it's going to be cached anyway
-fn move_row_left(row: Row) -> Row {
-    let from_row = row.unpack();
-
-    let mut to_row = [0; 4];
-    let mut last = 0;
-    let mut last_index = 0;
-
-    for &tile in from_row.iter() {
-        if tile == 0 {
-            continue;
-        }
-
-        if last == 0 {
-            last = tile;
-            continue;
-        }
-
-        if tile == last {
-            to_row[last_index as usize] = last + 1;
-            last = 0;
-        } else {
-            to_row[last_index as usize] = last;
-            last = tile;
-        }
-
-        last_index += 1;
-    }
-
-    if last != 0 {
-        to_row[last_index as usize] = last;
-    }
-
-    // If there is a tile which does not fit a nibble, merge into a 32768 instead
-    to_row.iter_mut().filter(|i| **i > 15).for_each(|i| *i = 15);
-
-    Row::pack(to_row).unwrap()
-}
-
-// Safety: these are safe because caches are populated for every possible u16 value
-fn lookup_left(row: Row) -> Row {
-    // Make sure row.0 is still u16
-    let row: u16 = row.0;
-    unsafe { *CACHE_LEFT.get_unchecked(row as usize) }
-}
-fn lookup_right(row: Row) -> Row {
-    // Make sure row.0 is still u16
-    let row: u16 = row.0;
-    unsafe { *CACHE_RIGHT.get_unchecked(row as usize) }
-}
-fn lookup_up(row: Row) -> Column {
-    // Make sure row.0 is still u16
-    let row: u16 = row.0;
-    unsafe { *CACHE_UP.get_unchecked(row as usize) }
-}
-fn lookup_down(row: Row) -> Column {
-    // Make sure row.0 is still u16
-    let row: u16 = row.0;
-    unsafe { *CACHE_DOWN.get_unchecked(row as usize) }
-}
-
-const CACHE_SIZE: usize = u16::MAX as usize + 1;
-lazy_static! {
-    static ref CACHE_LEFT: Box<[Row]> = {
-        let mut vec = vec![Row::default(); CACHE_SIZE];
-        for (index, row) in vec.iter_mut().enumerate() {
-            *row = move_row_left(Row(index as u16));
-        }
-        vec.into()
-    };
-    static ref CACHE_RIGHT: Box<[Row]> = {
-        let mut vec = vec![Row::default(); CACHE_SIZE];
-        for (index, row) in vec.iter_mut().enumerate() {
-            *row = move_row_left(Row(index as u16).reverse()).reverse();
-        }
-        vec.into()
-    };
-    static ref CACHE_UP: Box<[Column]> = {
-        let mut vec = vec![Column::default(); CACHE_SIZE];
-        for (index, col) in vec.iter_mut().enumerate() {
-            *col = Column::from_row(CACHE_LEFT[index]);
-        }
-        vec.into()
-    };
-    static ref CACHE_DOWN: Box<[Column]> = {
-        let mut vec = vec![Column::default(); CACHE_SIZE];
-        for (index, col) in vec.iter_mut().enumerate() {
-            *col = Column::from_row(CACHE_RIGHT[index]);
-        }
-        vec.into()
-    };
 }
 
 #[cfg(test)]

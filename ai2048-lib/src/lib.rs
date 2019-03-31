@@ -4,3 +4,5 @@
 pub mod game_logic;
 pub mod heuristic;
 pub mod searcher;
+mod build_common;
+mod build_generated;
