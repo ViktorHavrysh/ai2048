@@ -16,7 +16,7 @@ cfg_if! {
     }
 }
 
-const MIN_PROBABILITY: f32 = 0.001;
+const MIN_PROBABILITY: f32 = 0.0001;
 
 #[derive(Debug)]
 enum Error {
