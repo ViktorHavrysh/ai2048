@@ -23,7 +23,7 @@ fn eval_row(row: Row) -> f32 {
 // Pre-cache heuristic for every possible row with values that can fit a nibble
 lazy_static! {
     static ref CACHE: Box<[f32]> = {
-        let mut vec = vec![0f32; u16::MAX as usize];
+        let mut vec = vec![0f32; u16::MAX as usize + 1];
         for (index, row) in vec.iter_mut().enumerate() {
             *row = eval_row_nocache(Row(index as u16));
         }
