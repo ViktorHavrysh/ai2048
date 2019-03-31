@@ -475,30 +475,31 @@ fn lookup_down(row: Row) -> Column {
     unsafe { *CACHE_DOWN.get_unchecked(row as usize) }
 }
 
+const CACHE_SIZE: usize = u16::MAX as usize + 1;
 lazy_static! {
     static ref CACHE_LEFT: Box<[Row]> = {
-        let mut vec = vec![Row::default(); u16::MAX as usize + 1];
+        let mut vec = vec![Row::default(); CACHE_SIZE];
         for (index, row) in vec.iter_mut().enumerate() {
             *row = move_row_left(Row(index as u16));
         }
         vec.into()
     };
     static ref CACHE_RIGHT: Box<[Row]> = {
-        let mut vec = vec![Row::default(); u16::MAX as usize + 1];
+        let mut vec = vec![Row::default(); CACHE_SIZE];
         for (index, row) in vec.iter_mut().enumerate() {
             *row = move_row_left(Row(index as u16).reverse()).reverse();
         }
         vec.into()
     };
     static ref CACHE_UP: Box<[Column]> = {
-        let mut vec = vec![Column::default(); u16::MAX as usize + 1];
+        let mut vec = vec![Column::default(); CACHE_SIZE];
         for (index, col) in vec.iter_mut().enumerate() {
             *col = Column::from_row(CACHE_LEFT[index]);
         }
         vec.into()
     };
     static ref CACHE_DOWN: Box<[Column]> = {
-        let mut vec = vec![Column::default(); u16::MAX as usize + 1];
+        let mut vec = vec![Column::default(); CACHE_SIZE];
         for (index, col) in vec.iter_mut().enumerate() {
             *col = Column::from_row(CACHE_RIGHT[index]);
         }
