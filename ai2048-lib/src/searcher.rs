@@ -1,7 +1,7 @@
 //! Searcher looks for the best move given a game position
 
-use crate::game_logic::{Grid, Move};
-use crate::heuristic;
+use crate::game_logic::{GameEngine, Grid, Move};
+use crate::heuristic::Heuristic;
 use cfg_if::cfg_if;
 use std::collections::HashMap;
 use std::f32;
@@ -80,6 +80,8 @@ struct SearchState {
     cache: Cache<Grid, (f32, f32)>,
     stats: SearchStats,
     min_probability: f32,
+    game_engine: GameEngine,
+    heuristic: Heuristic,
 }
 
 /// Minimum variable depth
@@ -94,7 +96,6 @@ const PROBABILITY_OF4: f32 = 0.1;
 /// The search will stop recursing into child nodes as soon as a position at least as improbably as `min_probability` is reached.
 pub fn search(grid: Grid, min_probability: f32) -> SearchResult {
     let depth = calculate_depth(grid);
-
     search_inner(grid, depth, min_probability)
 }
 
@@ -110,12 +111,14 @@ fn calculate_depth(grid: Grid) -> u8 {
 
 #[cfg(not(feature = "parallel"))]
 fn search_inner(root_grid: Grid, depth: u8, min_probability: f32) -> SearchResult {
+    let game_engine = GameEngine::new();
+    let heuristic = Heuristic::new();
     let mut state = SearchState {
         min_probability,
         ..SearchState::default()
     };
-    let mut move_evaluations = root_grid
-        .player_moves()
+    let mut move_evaluations = game_engine
+        .player_moves(root_grid)
         .map(|(m, g)| {
             let eval = player_move_eval(g, 1.0f32, depth, &mut state);
             (m, eval)
@@ -143,8 +146,9 @@ fn search_inner(root_grid: Grid, depth: u8, min_probability: f32) -> SearchResul
 fn search_inner(root_grid: Grid, depth: u8, min_probability: f32) -> SearchResult {
     use rayon::prelude::*;
 
-    let mut move_evaluations = root_grid
-        .player_moves()
+    let game_engine = GameEngine::new();
+    let mut move_evaluations = game_engine
+        .player_moves(root_grid)
         .collect::<Vec<_>>()
         .par_iter()
         .map(|(m, g)| {
@@ -185,7 +189,9 @@ fn random_move_eval(grid: Grid, probability: f32, depth: u8, state: &mut SearchS
     state.stats.nodes += 1;
     state.stats.average += 1;
 
-    grid.player_moves()
+    state
+        .game_engine
+        .player_moves(grid)
         .map(|(_, g)| player_move_eval(g, probability, depth, state))
         .fold(0f32, f32::max)
 }
@@ -195,7 +201,7 @@ fn player_move_eval(grid: Grid, probability: f32, depth: u8, state: &mut SearchS
 
     if depth == 0 || probability < state.min_probability {
         state.stats.evals += 1;
-        return heuristic::eval(grid);
+        return state.heuristic.eval(grid);
     }
 
     if let Some(&(stored_probability, eval)) = state.cache.get(&grid) {
@@ -212,14 +218,16 @@ fn player_move_eval(grid: Grid, probability: f32, depth: u8, state: &mut SearchS
     let prob2 = probability * PROBABILITY_OF2 / count;
     let prob4 = probability * PROBABILITY_OF4 / count;
 
-    let sum_with2 = grid
-        .random_moves_with2()
+    let sum_with2 = state
+        .game_engine
+        .random_moves_with2(grid)
         .map(|g| random_move_eval(g, prob2, depth - 1, state))
         .sum::<f32>();
     let avg_with2 = sum_with2 / count;
 
-    let sum_with4 = grid
-        .random_moves_with4()
+    let sum_with4 = state
+        .game_engine
+        .random_moves_with4(grid)
         .map(|g| random_move_eval(g, prob4, depth - 1, state))
         .sum::<f32>();
     let avg_with4 = sum_with4 / count;

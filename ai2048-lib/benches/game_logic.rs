@@ -1,5 +1,5 @@
-use ai2048_lib::game_logic::{Grid, Move};
-use ai2048_lib::heuristic;
+use ai2048_lib::game_logic::{GameEngine, Grid, Move};
+use ai2048_lib::heuristic::Heuristic;
 use criterion::Criterion;
 use criterion::{criterion_group, criterion_main};
 use lazy_static::lazy_static;
@@ -10,12 +10,19 @@ lazy_static! {
 }
 
 fn make_move(c: &mut Criterion) {
-    c.bench_function("move left", |b| b.iter(|| TEST_GRID.make_move(Move::Left)));
-    c.bench_function("move right", |b| {
-        b.iter(|| TEST_GRID.make_move(Move::Right))
+    let game_engine = GameEngine::new();
+    c.bench_function("move left", move |b| {
+        b.iter(|| game_engine.make_move(*TEST_GRID, Move::Left))
     });
-    c.bench_function("move up", |b| b.iter(|| TEST_GRID.make_move(Move::Up)));
-    c.bench_function("move down", |b| b.iter(|| TEST_GRID.make_move(Move::Down)));
+    c.bench_function("move right", move |b| {
+        b.iter(|| game_engine.make_move(*TEST_GRID, Move::Right))
+    });
+    c.bench_function("move up", move |b| {
+        b.iter(|| game_engine.make_move(*TEST_GRID, Move::Up))
+    });
+    c.bench_function("move down", move |b| {
+        b.iter(|| game_engine.make_move(*TEST_GRID, Move::Down))
+    });
 }
 
 fn transpose(c: &mut Criterion) {
@@ -33,23 +40,28 @@ fn consume_iter<T>(iter: impl Iterator<Item = T>) {
 }
 
 fn possible_moves(c: &mut Criterion) {
-    c.bench_function("random moves with 2", |b| {
-        b.iter(|| consume_iter(TEST_GRID.random_moves_with2()))
+    let game_engine = GameEngine::new();
+    c.bench_function("random moves with 2", move |b| {
+        b.iter(|| consume_iter(game_engine.random_moves_with2(*TEST_GRID)));
     });
-    c.bench_function("random moves with 4", |b| {
-        b.iter(|| consume_iter(TEST_GRID.random_moves_with4()))
+    c.bench_function("random moves with 4", move |b| {
+        b.iter(|| consume_iter(game_engine.random_moves_with4(*TEST_GRID)))
     });
-    c.bench_function("player moves", |b| {
-        b.iter(|| consume_iter(TEST_GRID.player_moves()))
+    c.bench_function("player moves", move |b| {
+        b.iter(|| consume_iter(game_engine.player_moves(*TEST_GRID)))
     });
 }
 
 fn game_over(c: &mut Criterion) {
-    c.bench_function("game over", |b| b.iter(|| TEST_GRID.game_over()));
+    let game_engine = GameEngine::new();
+    c.bench_function("game over", move |b| {
+        b.iter(|| game_engine.game_over(*TEST_GRID))
+    });
 }
 
 fn heuristic(c: &mut Criterion) {
-    c.bench_function("eval", |b| b.iter(|| heuristic::eval(*TEST_GRID)));
+    let heuristic = Heuristic::new();
+    c.bench_function("eval", move |b| b.iter(|| heuristic.eval(*TEST_GRID)));
 }
 
 criterion_group! {
