@@ -1,4 +1,4 @@
-use ai2048_lib::game_logic::{Grid, MOVES};
+use ai2048_lib::game_logic::{GameEngine, Grid, MOVES};
 use ai2048_lib::searcher::{self, SearchResult};
 use cfg_if::cfg_if;
 use chrono::prelude::*;
@@ -72,6 +72,7 @@ fn main() -> Result<(), Error> {
     });
 
     let compute_loop = pool.spawn_fn(move || {
+        let game_engine = GameEngine::new();
         let mut grid = Grid::default().add_random_tile().add_random_tile();
         let start_overall = Utc::now();
         let mut moves = 0;
@@ -88,7 +89,7 @@ fn main() -> Result<(), Error> {
             ))?;
 
             if let Some(mv) = result.best_move {
-                grid = grid.make_move(mv).add_random_tile();
+                grid = game_engine.make_move(grid, mv).add_random_tile();
             } else {
                 tx.send(Signal::Stop)?;
                 let res: Result<(), Error> = Ok(());

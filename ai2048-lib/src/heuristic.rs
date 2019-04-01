@@ -4,20 +4,39 @@ use crate::game_logic::{Grid, Row};
 use lazy_static::lazy_static;
 use std::{cmp, i32, u16};
 
-/// Evaluate grid based on heuristics
-pub fn eval(grid: Grid) -> f32 {
-    grid.rows()
-        .iter()
-        .chain(grid.transpose().rows().iter())
-        .map(|&r| eval_row(r))
-        .sum()
+/// Heuristic for evaluating grids
+#[derive(Debug, Clone, Copy)]
+pub struct Heuristic {
+    cache: &'static [f32],
 }
 
-fn eval_row(row: Row) -> f32 {
-    // Make sure row.0 is still u16
-    let row: u16 = row.0;
-    // Safety: this is safe because the cache is populated for every possible u16 value.
-    unsafe { *CACHE.get_unchecked(row as usize) }
+impl Default for Heuristic {
+    fn default() -> Self {
+        Self { cache: &CACHE }
+    }
+}
+
+impl Heuristic {
+    /// Initializes the heuristic
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Evaluates a row and spits out a representation of how good it is. Bigger is better.
+    pub fn eval(&self, grid: Grid) -> f32 {
+        grid.rows()
+            .iter()
+            .chain(grid.transpose().rows().iter())
+            .map(|&r| self.eval_row(r))
+            .sum()
+    }
+
+    fn eval_row(&self, row: Row) -> f32 {
+        // Make sure row.0 is still u16
+        let row: u16 = row.0;
+        // Safety: this is safe because the cache is populated for every possible u16 value.
+        unsafe { *self.cache.get_unchecked(row as usize) }
+    }
 }
 
 // Pre-cache heuristic for every possible row with values that can fit a nibble

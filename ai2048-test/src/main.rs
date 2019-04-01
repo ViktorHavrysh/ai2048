@@ -1,4 +1,4 @@
-use ai2048_lib::game_logic::Grid;
+use ai2048_lib::game_logic::{GameEngine, Grid};
 use ai2048_lib::searcher;
 use chrono::prelude::*;
 use chrono::Duration;
@@ -92,6 +92,7 @@ impl RunResult {
 }
 
 fn run_one() -> RunResult {
+    let game_engine = GameEngine::new();
     let mut grid = Grid::default().add_random_tile().add_random_tile();
     let start_overall = Utc::now();
     let mut moves = 0;
@@ -99,7 +100,7 @@ fn run_one() -> RunResult {
         moves += 1;
         let result = searcher::search(grid, MIN_PROBABILITY);
         if let Some(mv) = result.best_move {
-            grid = grid.make_move(mv).add_random_tile();
+            grid = game_engine.make_move(grid, mv).add_random_tile();
         } else {
             let elapsed = Utc::now() - start_overall;
             let biggest = grid.biggest_tile();

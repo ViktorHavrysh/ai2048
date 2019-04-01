@@ -2,35 +2,8 @@
 use lazy_static::lazy_static;
 use rand::{self, Rng};
 use std::collections::HashSet;
+use std::fmt::Display;
 use std::{fmt, u16};
-
-/// Represents a move.
-#[derive(Eq, PartialEq, Hash, Copy, Clone, Debug)]
-#[repr(u8)]
-pub enum Move {
-    /// Move left.
-    Left = 0,
-    /// Move right.
-    Right = 1,
-    /// Move up.
-    Up = 2,
-    /// Move down.
-    Down = 3,
-}
-
-/// All possible moves.
-pub const MOVES: [Move; 4] = [Move::Left, Move::Right, Move::Up, Move::Down];
-
-impl fmt::Display for Move {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            Move::Down => "Down".fmt(f),
-            Move::Left => "Left".fmt(f),
-            Move::Right => "Right".fmt(f),
-            Move::Up => "Up".fmt(f),
-        }
-    }
-}
 
 #[derive(Eq, PartialEq, Hash, Copy, Clone, Default)]
 pub(crate) struct Row(pub(crate) u16);
@@ -61,6 +34,10 @@ impl Row {
         Ok(Row(result))
     }
 
+    pub(crate) fn from_index(index: usize) -> Self {
+        Row(index as u16)
+    }
+
     pub(crate) fn unpack(self) -> [u8; 4] {
         let row = self.0;
         let tile0 = ((row & 0b1111_0000_0000_0000) >> 12) as u8;
@@ -76,6 +53,63 @@ impl Row {
             | ((self.0 << 4) & 0b0000_1111_0000_0000)
             | (self.0 << 12))
     }
+}
+
+const ROW_COUNT: usize = u16::MAX as usize + 1;
+
+pub(crate) fn all_rows() -> impl Iterator<Item = (usize, Row)> {
+    (0..ROW_COUNT).map(|index| (index, Row::from_index(index)))
+}
+
+// Not much effort spent optimizing this, since it's going to be cached anyway
+fn move_row_left(row: Row) -> Row {
+    let from_row = row.unpack();
+
+    let mut to_row = [0; 4];
+    let mut last = 0;
+    let mut last_index = 0;
+
+    for &tile in from_row.iter() {
+        if tile == 0 {
+            continue;
+        }
+
+        if last == 0 {
+            last = tile;
+            continue;
+        }
+
+        if tile == last {
+            to_row[last_index as usize] = last + 1;
+            last = 0;
+        } else {
+            to_row[last_index as usize] = last;
+            last = tile;
+        }
+
+        last_index += 1;
+    }
+
+    if last != 0 {
+        to_row[last_index as usize] = last;
+    }
+
+    // If there is a tile which does not fit a nibble, merge into a 32768 instead
+    to_row.iter_mut().filter(|i| **i > 15).for_each(|i| *i = 15);
+
+    Row::pack(to_row).unwrap()
+}
+
+fn move_row_right(row: Row) -> Row {
+    move_row_left(row.reverse()).reverse()
+}
+
+fn move_row_up(row: Row) -> Column {
+    Column::from_row(move_row_left(row))
+}
+
+fn move_row_down(row: Row) -> Column {
+    Column::from_row(move_row_right(row))
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -96,6 +130,113 @@ impl Column {
             | u64::from(row.0) << 36)
             & COLUMN_MASK;
         Column(col)
+    }
+}
+
+lazy_static! {
+    static ref CACHE_LEFT: Box<[Row]> = {
+        let mut vec = vec![Row::default(); ROW_COUNT];
+        for (index, row) in all_rows() {
+            vec[index] = move_row_left(row);
+        }
+        vec.into()
+    };
+    static ref CACHE_RIGHT: Box<[Row]> = {
+        let mut vec = vec![Row::default(); ROW_COUNT];
+        for (index, row) in all_rows() {
+            vec[index] = move_row_right(row);
+        }
+        vec.into()
+    };
+    static ref CACHE_UP: Box<[Column]> = {
+        let mut vec = vec![Column::default(); ROW_COUNT];
+        for (index, row) in all_rows() {
+            vec[index] = move_row_up(row);
+        }
+        vec.into()
+    };
+    static ref CACHE_DOWN: Box<[Column]> = {
+        let mut vec = vec![Column::default(); ROW_COUNT];
+        for (index, row) in all_rows() {
+            vec[index] = move_row_down(row);
+        }
+        vec.into()
+    };
+}
+
+#[derive(Debug, Copy, Clone)]
+struct Cache {
+    left: &'static [Row],
+    right: &'static [Row],
+    up: &'static [Column],
+    down: &'static [Column],
+}
+
+impl Cache {
+    // Safety: these are safe because caches are populated for every possible u16 value
+    fn lookup_left(&self, row: Row) -> Row {
+        // Make sure row.0 is still u16
+        let row: u16 = row.0;
+        unsafe { *self.left.get_unchecked(row as usize) }
+    }
+    fn lookup_right(&self, row: Row) -> Row {
+        // Make sure row.0 is still u16
+        let row: u16 = row.0;
+        unsafe { *self.right.get_unchecked(row as usize) }
+    }
+    fn lookup_up(&self, row: Row) -> Column {
+        // Make sure row.0 is still u16
+        let row: u16 = row.0;
+        unsafe { *self.up.get_unchecked(row as usize) }
+    }
+    fn lookup_down(&self, row: Row) -> Column {
+        // Make sure row.0 is still u16
+        let row: u16 = row.0;
+        unsafe { *self.down.get_unchecked(row as usize) }
+    }
+}
+
+/// Represents a move.
+#[derive(Eq, PartialEq, Hash, Copy, Clone, Debug)]
+#[repr(u8)]
+pub enum Move {
+    /// Move left.
+    Left = 0,
+    /// Move right.
+    Right = 1,
+    /// Move up.
+    Up = 2,
+    /// Move down.
+    Down = 3,
+}
+
+/// All possible moves.
+pub const MOVES: [Move; 4] = [Move::Left, Move::Right, Move::Up, Move::Down];
+
+impl Display for Move {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Move::Down => "Down".fmt(f),
+            Move::Left => "Left".fmt(f),
+            Move::Right => "Right".fmt(f),
+            Move::Up => "Up".fmt(f),
+        }
+    }
+}
+
+fn to_log(n: u32) -> Option<u8> {
+    use std::f32;
+
+    let log = match n {
+        0 => 0f32,
+        _ => (n as f32).log2(),
+    };
+
+    let rounded = log.round();
+    if (rounded - log) < 1e-10 {
+        Some(rounded as u8)
+    } else {
+        None
     }
 }
 
@@ -126,22 +267,6 @@ impl fmt::Debug for Grid {
     }
 }
 
-fn to_log(n: u32) -> Option<u8> {
-    use std::f32;
-
-    let log = match n {
-        0 => 0f32,
-        _ => (n as f32).log2(),
-    };
-
-    let rounded = log.round();
-    if (rounded - log) < 1e-10 {
-        Some(rounded as u8)
-    } else {
-        None
-    }
-}
-
 impl Grid {
     /// Creates a new `Grid` from an array of human-looking numbers. If a tile fails to be
     /// a power of 2, or is larger than 32768, returns `None`.
@@ -161,7 +286,7 @@ impl Grid {
 
     /// Unpacks a human-readable representation from `Grid`'s internal representation
     pub fn unpack_human(self) -> [[u32; 4]; 4] {
-        let mut result = [[0; 4]; 4];
+        let mut result = [[0u32; 4]; 4];
         let grid_u8 = self.unpack_log();
         for (x, row) in grid_u8.iter().enumerate() {
             for (y, &tile) in row.iter().enumerate() {
@@ -237,11 +362,6 @@ impl Grid {
         grid
     }
 
-    /// Find out if the game is lost in the current state
-    pub fn game_over(self) -> bool {
-        MOVES.iter().find(|&&m| self.make_move(m) != self).is_none()
-    }
-
     /// Creates a new `Grid` with a random tile (90% of times a `2`, 10% of times a `4`) added to a
     /// random empty tile on the grid.
     pub fn add_random_tile(self) -> Grid {
@@ -261,28 +381,6 @@ impl Grid {
         *value = if rng.gen_bool(0.9) { 1 } else { 2 };
 
         Grid::from_log(grid).unwrap()
-    }
-
-    /// Returns all possible moves with a new random 2 tile
-    pub fn random_moves_with2(self) -> impl Iterator<Item = Grid> {
-        RandomMoves::new(self, 1)
-    }
-
-    /// Returns all possible moves with a new random 4 tile
-    pub fn random_moves_with4(self) -> impl Iterator<Item = Grid> {
-        RandomMoves::new(self, 2)
-    }
-
-    /// Returns all possible player moves
-    pub fn player_moves(self) -> impl Iterator<Item = (Move, Grid)> {
-        MOVES.iter().filter_map(move |&m| {
-            let new_grid = self.make_move(m);
-            if new_grid == self {
-                None
-            } else {
-                Some((m, new_grid))
-            }
-        })
     }
 
     /// Transposes the grid
@@ -317,53 +415,6 @@ impl Grid {
         (x & 0xf) as usize
     }
 
-    /// Returns a `Grid` that would result from making a certain `Move` in the current state.
-    /// Limitation: if two 32768 tiles would be merged as a result of the move, the resulting tile becomes a 32768 instead.
-    pub fn make_move(self, mv: Move) -> Grid {
-        match mv {
-            Move::Left => self.move_left(),
-            Move::Right => self.move_right(),
-            Move::Up => self.move_up(),
-            Move::Down => self.move_down(),
-        }
-    }
-
-    fn move_left(self) -> Grid {
-        let rows = self.rows();
-        let row0 = lookup_left(rows[0]);
-        let row1 = lookup_left(rows[1]);
-        let row2 = lookup_left(rows[2]);
-        let row3 = lookup_left(rows[3]);
-        Grid::from_rows([row0, row1, row2, row3])
-    }
-
-    fn move_right(self) -> Grid {
-        let rows = self.rows();
-        let row0 = lookup_right(rows[0]);
-        let row1 = lookup_right(rows[1]);
-        let row2 = lookup_right(rows[2]);
-        let row3 = lookup_right(rows[3]);
-        Grid::from_rows([row0, row1, row2, row3])
-    }
-
-    fn move_up(self) -> Grid {
-        let rows = self.transpose().rows();
-        let col0 = lookup_up(rows[0]);
-        let col1 = lookup_up(rows[1]);
-        let col2 = lookup_up(rows[2]);
-        let col3 = lookup_up(rows[3]);
-        Grid::from_columns([col0, col1, col2, col3])
-    }
-
-    fn move_down(self) -> Grid {
-        let rows = self.transpose().rows();
-        let col0 = lookup_down(rows[0]);
-        let col1 = lookup_down(rows[1]);
-        let col2 = lookup_down(rows[2]);
-        let col3 = lookup_down(rows[3]);
-        Grid::from_columns([col0, col1, col2, col3])
-    }
-
     /// The number of different tiles (excluding empty tiles) on the grid
     pub fn count_distinct_tiles(self) -> u8 {
         self.unpack_log()
@@ -377,6 +428,109 @@ impl Grid {
     /// The biggest tile on the grid
     pub fn biggest_tile(self) -> u32 {
         self.unpack_human().iter().flatten().cloned().max().unwrap()
+    }
+}
+
+/// Game engine capable of manipulating game state
+#[derive(Debug, Copy, Clone)]
+pub struct GameEngine {
+    cache: Cache,
+}
+
+impl Default for GameEngine {
+    fn default() -> Self {
+        Self {
+            cache: Cache {
+                left: &CACHE_LEFT,
+                right: &CACHE_RIGHT,
+                up: &CACHE_UP,
+                down: &CACHE_DOWN,
+            },
+        }
+    }
+}
+
+impl GameEngine {
+    /// Initialized the game engine
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Find out if the game is lost at the game state represented by the grid
+    pub fn game_over(self, grid: Grid) -> bool {
+        MOVES
+            .iter()
+            .find(|&&m| self.make_move(grid, m) != grid)
+            .is_none()
+    }
+
+    /// Returns all possible moves with a new random 2 tile
+    pub fn random_moves_with2(self, grid: Grid) -> impl Iterator<Item = Grid> {
+        RandomMoves::new(grid, 1)
+    }
+
+    /// Returns all possible moves with a new random 4 tile
+    pub fn random_moves_with4(self, grid: Grid) -> impl Iterator<Item = Grid> {
+        RandomMoves::new(grid, 2)
+    }
+
+    /// Returns all possible player moves
+    pub fn player_moves(self, grid: Grid) -> impl Iterator<Item = (Move, Grid)> {
+        MOVES.iter().filter_map(move |&m| {
+            let new_grid = self.make_move(grid, m);
+            if new_grid == grid {
+                None
+            } else {
+                Some((m, new_grid))
+            }
+        })
+    }
+
+    /// Returns a `Grid` that would result from making a certain `Move` in the current state.
+    /// Limitation: if two 32768 tiles would be merged as a result of the move, the resulting tile becomes a 32768 instead.
+    pub fn make_move(self, grid: Grid, mv: Move) -> Grid {
+        match mv {
+            Move::Left => self.move_left(grid),
+            Move::Right => self.move_right(grid),
+            Move::Up => self.move_up(grid),
+            Move::Down => self.move_down(grid),
+        }
+    }
+
+    fn move_left(self, grid: Grid) -> Grid {
+        let rows = grid.rows();
+        let row0 = self.cache.lookup_left(rows[0]);
+        let row1 = self.cache.lookup_left(rows[1]);
+        let row2 = self.cache.lookup_left(rows[2]);
+        let row3 = self.cache.lookup_left(rows[3]);
+        Grid::from_rows([row0, row1, row2, row3])
+    }
+
+    fn move_right(self, grid: Grid) -> Grid {
+        let rows = grid.rows();
+        let row0 = self.cache.lookup_right(rows[0]);
+        let row1 = self.cache.lookup_right(rows[1]);
+        let row2 = self.cache.lookup_right(rows[2]);
+        let row3 = self.cache.lookup_right(rows[3]);
+        Grid::from_rows([row0, row1, row2, row3])
+    }
+
+    fn move_up(self, grid: Grid) -> Grid {
+        let rows = grid.transpose().rows();
+        let col0 = self.cache.lookup_up(rows[0]);
+        let col1 = self.cache.lookup_up(rows[1]);
+        let col2 = self.cache.lookup_up(rows[2]);
+        let col3 = self.cache.lookup_up(rows[3]);
+        Grid::from_columns([col0, col1, col2, col3])
+    }
+
+    fn move_down(self, grid: Grid) -> Grid {
+        let rows = grid.transpose().rows();
+        let col0 = self.cache.lookup_down(rows[0]);
+        let col1 = self.cache.lookup_down(rows[1]);
+        let col2 = self.cache.lookup_down(rows[2]);
+        let col3 = self.cache.lookup_down(rows[3]);
+        Grid::from_columns([col0, col1, col2, col3])
     }
 }
 
@@ -412,99 +566,6 @@ impl Iterator for RandomMoves {
             }
         }
     }
-}
-
-// Not much effort spent optimizing this, since it's going to be cached anyway
-fn move_row_left(row: Row) -> Row {
-    let from_row = row.unpack();
-
-    let mut to_row = [0; 4];
-    let mut last = 0;
-    let mut last_index = 0;
-
-    for &tile in from_row.iter() {
-        if tile == 0 {
-            continue;
-        }
-
-        if last == 0 {
-            last = tile;
-            continue;
-        }
-
-        if tile == last {
-            to_row[last_index as usize] = last + 1;
-            last = 0;
-        } else {
-            to_row[last_index as usize] = last;
-            last = tile;
-        }
-
-        last_index += 1;
-    }
-
-    if last != 0 {
-        to_row[last_index as usize] = last;
-    }
-
-    // If there is a tile which does not fit a nibble, merge into a 32768 instead
-    to_row.iter_mut().filter(|i| **i > 15).for_each(|i| *i = 15);
-
-    Row::pack(to_row).unwrap()
-}
-
-// Safety: these are safe because caches are populated for every possible u16 value
-fn lookup_left(row: Row) -> Row {
-    // Make sure row.0 is still u16
-    let row: u16 = row.0;
-    unsafe { *CACHE_LEFT.get_unchecked(row as usize) }
-}
-fn lookup_right(row: Row) -> Row {
-    // Make sure row.0 is still u16
-    let row: u16 = row.0;
-    unsafe { *CACHE_RIGHT.get_unchecked(row as usize) }
-}
-fn lookup_up(row: Row) -> Column {
-    // Make sure row.0 is still u16
-    let row: u16 = row.0;
-    unsafe { *CACHE_UP.get_unchecked(row as usize) }
-}
-fn lookup_down(row: Row) -> Column {
-    // Make sure row.0 is still u16
-    let row: u16 = row.0;
-    unsafe { *CACHE_DOWN.get_unchecked(row as usize) }
-}
-
-const CACHE_SIZE: usize = u16::MAX as usize + 1;
-lazy_static! {
-    static ref CACHE_LEFT: Box<[Row]> = {
-        let mut vec = vec![Row::default(); CACHE_SIZE];
-        for (index, row) in vec.iter_mut().enumerate() {
-            *row = move_row_left(Row(index as u16));
-        }
-        vec.into()
-    };
-    static ref CACHE_RIGHT: Box<[Row]> = {
-        let mut vec = vec![Row::default(); CACHE_SIZE];
-        for (index, row) in vec.iter_mut().enumerate() {
-            *row = move_row_left(Row(index as u16).reverse()).reverse();
-        }
-        vec.into()
-    };
-    static ref CACHE_UP: Box<[Column]> = {
-        let mut vec = vec![Column::default(); CACHE_SIZE];
-        for (index, col) in vec.iter_mut().enumerate() {
-            *col = Column::from_row(CACHE_LEFT[index]);
-        }
-        vec.into()
-    };
-    static ref CACHE_DOWN: Box<[Column]> = {
-        let mut vec = vec![Column::default(); CACHE_SIZE];
-        for (index, col) in vec.iter_mut().enumerate() {
-            *col = Column::from_row(CACHE_RIGHT[index]);
-        }
-        vec.into()
-    };
 }
 
 #[cfg(test)]
@@ -586,54 +647,59 @@ mod tests {
 
     #[test]
     fn can_make_move_left() {
+        let game_engine = GameEngine::new();
         let grid =
             Grid::from_human([[2, 2, 4, 4], [0, 2, 2, 0], [0, 2, 2, 2], [2, 0, 0, 2]]).unwrap();
         let expected =
             Grid::from_human([[4, 8, 0, 0], [4, 0, 0, 0], [4, 2, 0, 0], [4, 0, 0, 0]]).unwrap();
 
-        let actual = grid.make_move(Move::Left);
+        let actual = game_engine.make_move(grid, Move::Left);
 
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn can_make_move_right() {
+        let game_engine = GameEngine::new();
         let grid =
             Grid::from_human([[2, 2, 4, 4], [0, 2, 2, 0], [0, 2, 2, 2], [2, 0, 0, 2]]).unwrap();
         let expected =
             Grid::from_human([[0, 0, 4, 8], [0, 0, 0, 4], [0, 0, 2, 4], [0, 0, 0, 4]]).unwrap();
 
-        let actual = grid.make_move(Move::Right);
+        let actual = game_engine.make_move(grid, Move::Right);
 
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn can_make_move_up() {
+        let game_engine = GameEngine::new();
         let grid =
             Grid::from_human([[2, 2, 4, 4], [0, 2, 2, 0], [0, 2, 2, 2], [2, 0, 0, 2]]).unwrap();
         let expected =
             Grid::from_human([[4, 4, 4, 4], [0, 2, 4, 4], [0, 0, 0, 0], [0, 0, 0, 0]]).unwrap();
 
-        let actual = grid.make_move(Move::Up);
+        let actual = game_engine.make_move(grid, Move::Up);
 
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn can_make_move_down() {
+        let game_engine = GameEngine::new();
         let grid =
             Grid::from_human([[2, 2, 4, 4], [0, 2, 2, 0], [0, 2, 2, 2], [2, 0, 0, 2]]).unwrap();
         let expected =
             Grid::from_human([[0, 0, 0, 0], [0, 0, 0, 0], [0, 2, 4, 4], [4, 4, 4, 4]]).unwrap();
 
-        let actual = grid.make_move(Move::Down);
+        let actual = game_engine.make_move(grid, Move::Down);
 
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn can_possible_grids_with2() {
+        let game_engine = GameEngine::new();
         let grid =
             Grid::from_human([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap();
 
@@ -644,13 +710,14 @@ mod tests {
             Grid::from_human([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 2, 8, 8]]).unwrap(),
         ];
 
-        let actual = grid.random_moves_with2().collect::<Vec<_>>();
+        let actual = game_engine.random_moves_with2(grid).collect::<Vec<_>>();
 
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn can_possible_grids_with4() {
+        let game_engine = GameEngine::new();
         let grid =
             Grid::from_human([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap();
 
@@ -661,17 +728,18 @@ mod tests {
             Grid::from_human([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 4, 8, 8]]).unwrap(),
         ];
 
-        let actual = grid.random_moves_with4().collect::<Vec<_>>();
+        let actual = game_engine.random_moves_with4(grid).collect::<Vec<_>>();
 
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn can_make_player_moves() {
+        let game_engine = GameEngine::new();
         let grid =
             Grid::from_human([[0, 0, 0, 2], [0, 2, 0, 2], [4, 0, 0, 2], [0, 0, 0, 2]]).unwrap();
 
-        let mut player_moves = grid.player_moves();
+        let mut player_moves = game_engine.player_moves(grid);
 
         assert_eq!(
             Some((
@@ -709,14 +777,15 @@ mod tests {
 
     #[test]
     fn can_detect_terminal_state() {
+        let game_engine = GameEngine::new();
         let terminal_grid =
             Grid::from_human([[4, 16, 8, 4], [8, 128, 32, 2], [2, 32, 16, 8], [4, 2, 4, 2]])
                 .unwrap();
         let normal_grid =
             Grid::from_human([[0, 8, 8, 8], [8, 8, 0, 8], [8, 8, 8, 0], [8, 0, 8, 8]]).unwrap();
 
-        assert!(terminal_grid.game_over());
-        assert!(!normal_grid.game_over());
+        assert!(game_engine.game_over(terminal_grid));
+        assert!(!game_engine.game_over(normal_grid));
     }
 
     #[test]
