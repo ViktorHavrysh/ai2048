@@ -25,7 +25,7 @@ export class HTMLActuator {
   private readonly messageContainer = document.querySelector(".game-message")!;
   private score = 0;
   public actuate(grid: Grid, metadata: ActuatorMetadata): Promise<void> {
-    return new Promise((resolve, _reject) => {
+    return new Promise(resolve => {
       window.requestAnimationFrame(() => {
         this.clearContainer(this.tileContainer);
         for (const column of grid.tiles) {
