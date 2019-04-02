@@ -68,7 +68,7 @@ export class Grid {
     for (let x = 0; x < Size; x++) {
       const row: (SerializableTile | null)[] = [];
       state[x] = row;
-      for (var y = 0; y < Size; y++) {
+      for (let y = 0; y < Size; y++) {
         const tile = this.tiles[x][y];
         row.push(tile ? tile.serialize() : null);
       }
@@ -105,7 +105,7 @@ export class Grid {
     for (let x = 0; x < Size; x++) {
       const row: (Tile | null)[] = [];
       tiles[x] = row;
-      for (var y = 0; y < Size; y++) {
+      for (let y = 0; y < Size; y++) {
         const tile = state.tiles[x][y];
         if (tile) {
           row.push(new Tile(tile.position, tile.value));

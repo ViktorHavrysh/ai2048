@@ -40,9 +40,9 @@ export default class InputManager {
     document.addEventListener("keydown", event => {
       const modifiers =
         event.altKey || event.ctrlKey || event.metaKey || event.shiftKey;
-      const mapped = KeyMap[event.which];
       if (!modifiers) {
-        if (mapped) {
+        const mapped = KeyMap[event.which];
+        if (typeof mapped !== "undefined") {
           event.preventDefault();
           this.gameManager.move(mapped);
         }
