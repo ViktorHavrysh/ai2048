@@ -9,7 +9,6 @@ nvm install v12.13
 curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
 # build website
-mkdir -p target && ln -sf ../target ai2048-wasm/target
 cd www
 npm install
 npm run build
