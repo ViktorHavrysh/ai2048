@@ -6,6 +6,6 @@ edition = "2018"
 
 [dependencies]
 ai2048-lib = { path = "../ai2048-lib" }
-rayon = "1.0.3"
-chrono = "0.4.6"
-itertools = "0.8.0"
+rayon = "1.2.1"
+chrono = "0.4.10"
+itertools = "0.8.2"
