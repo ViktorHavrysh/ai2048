@@ -3,11 +3,11 @@ use ai2048_lib::searcher::{self, SearchResult};
 use cfg_if::cfg_if;
 use chrono::prelude::*;
 use chrono::Duration;
-use futures::Future;
-use futures_cpupool::CpuPool;
 use std::collections::HashMap;
 use std::fmt::{self, Write};
-use std::sync::mpsc;
+use crossbeam::thread;
+use crossbeam::unbounded;
+use crossbeam::{SendError, RecvError};
 
 cfg_if! {
     if #[cfg(target_os = "linux")] {
@@ -21,8 +21,8 @@ const MIN_PROBABILITY: f32 = 0.001;
 #[derive(Debug)]
 enum Error {
     Fmt(fmt::Error),
-    Recv(mpsc::RecvError),
-    Send(mpsc::SendError<Signal>),
+    Recv(RecvError),
+    Send(SendError<Signal>),
 }
 
 #[derive(Debug)]
@@ -37,70 +37,70 @@ impl From<fmt::Error> for Error {
     }
 }
 
-impl From<mpsc::RecvError> for Error {
-    fn from(error: mpsc::RecvError) -> Self {
+impl From<RecvError> for Error {
+    fn from(error: RecvError) -> Self {
         Error::Recv(error)
     }
 }
 
-impl From<mpsc::SendError<Signal>> for Error {
-    fn from(error: mpsc::SendError<Signal>) -> Self {
+impl From<SendError<Signal>> for Error {
+    fn from(error: SendError<Signal>) -> Self {
         Error::Send(error)
     }
 }
 
-fn main() -> Result<(), Error> {
-    let pool = CpuPool::new_num_cpus();
-    let (tx, rx) = mpsc::channel();
+fn main() {
+    thread::scope(|s| {
+        let (tx, rx) = unbounded();
 
-    let display_loop = pool.spawn_fn(move || {
-        let mut times: HashMap<u8, (i32, chrono::Duration)> = HashMap::new();
-        loop {
-            let message = rx.recv()?;
+        let display_loop = s.spawn(move |_| -> Result<(), Error> {
+            let mut times: HashMap<u8, (i32, chrono::Duration)> = HashMap::new();
+            loop {
+                let message = rx.recv()?;
 
-            match message {
-                Signal::Stop => break,
-                Signal::Display(result, moves, one, overall) => {
-                    let entry = times.entry(result.depth).or_insert((0, Duration::zero()));
-                    *entry = (entry.0 + 1, entry.1 + one);
-                    println!("{}", build_display(&result, moves, one, overall, &times)?);
-                }
-            };
-        }
-        println!("Game over!");
-        Ok(())
-    });
-
-    let compute_loop = pool.spawn_fn(move || {
-        let game_engine = GameEngine::new();
-        let mut grid = Grid::default().add_random_tile().add_random_tile();
-        let start_overall = Utc::now();
-        let mut moves = 0;
-        loop {
-            moves += 1;
-            let start_one = Utc::now();
-            let result = searcher::search(grid, MIN_PROBABILITY);
-            let end = Utc::now();
-            tx.send(Signal::Display(
-                result.clone(),
-                moves,
-                end - start_one,
-                end - start_overall,
-            ))?;
-
-            if let Some(mv) = result.best_move {
-                grid = game_engine.make_move(grid, mv).add_random_tile();
-            } else {
-                tx.send(Signal::Stop)?;
-                let res: Result<(), Error> = Ok(());
-                return res;
+                match message {
+                    Signal::Stop => break,
+                    Signal::Display(result, moves, one, overall) => {
+                        let entry = times.entry(result.depth).or_insert((0, Duration::zero()));
+                        *entry = (entry.0 + 1, entry.1 + one);
+                        println!("{}", build_display(&result, moves, one, overall, &times)?);
+                    }
+                };
             }
-        }
-    });
+            println!("Game over!");
+            Ok(())
+        });
 
-    compute_loop.join(display_loop).wait()?;
+        let compute_loop = s.spawn(move |_| {
+            let game_engine = GameEngine::new();
+            let mut grid = Grid::default().add_random_tile().add_random_tile();
+            let start_overall = Utc::now();
+            let mut moves = 0;
+            loop {
+                moves += 1;
+                let start_one = Utc::now();
+                let result = searcher::search(grid, MIN_PROBABILITY);
+                let end = Utc::now();
+                tx.send(Signal::Display(
+                    result.clone(),
+                    moves,
+                    end - start_one,
+                    end - start_overall,
+                ))?;
 
-    Ok(())
+                if let Some(mv) = result.best_move {
+                    grid = game_engine.make_move(grid, mv).add_random_tile();
+                } else {
+                    tx.send(Signal::Stop)?;
+                    let res: Result<(), Error> = Ok(());
+                    return res;
+                }
+            }
+        });
+
+        display_loop.join().unwrap().unwrap();
+        compute_loop.join().unwrap().unwrap();
+    }).unwrap();
 }
 
 fn build_display(
